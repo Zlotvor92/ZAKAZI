@@ -228,6 +228,8 @@ export async function createPopulatedTenant(
     [tenantId, staffId],
   );
 
+  // Red u `appointment_events` se ne upisuje ovde — triger nad `appointments`
+  // ga napravi sam, i to je upravo ono što treba da važi i u testovima.
   const appointment = await insertAppointment(db, {
     tenantId,
     staffId,
@@ -235,13 +237,6 @@ export async function createPopulatedTenant(
     clientId,
     startAt: "2026-09-10T08:00:00Z",
   });
-
-  await db.query(
-    `insert into appointment_events
-       (tenant_id, appointment_id, from_status, to_status, actor_type, actor_id)
-     values ($1, $2, null, 'confirmed', 'user', $3)`,
-    [tenantId, appointment.id, userId],
-  );
 
   return { tenantId, userId, staffId, serviceId, clientId, appointmentId: appointment.id };
 }

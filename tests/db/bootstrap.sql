@@ -42,12 +42,16 @@ begin
 end
 $$;
 
+-- Prazan string se odbacuje pre pretvaranja u jsonb, tačno kao kod Supabase-a.
+-- Jednom postavljena, ova promenljiva ostaje definisana do kraja sesije i
+-- `rollback` je vrati na praznu vrednost umesto da je ukloni, pa bi
+-- `''::jsonb` oborio svaki poziv posle prvog predstavljanja korisnikom.
 create or replace function auth.uid() returns uuid
 language sql
 stable
 as $$
   select nullif(
-    current_setting('request.jwt.claims', true)::jsonb ->> 'sub',
+    nullif(current_setting('request.jwt.claims', true), '')::jsonb ->> 'sub',
     ''
   )::uuid
 $$;
