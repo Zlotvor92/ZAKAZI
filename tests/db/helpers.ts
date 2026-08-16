@@ -54,6 +54,58 @@ export async function inSavepoint<T>(
   }
 }
 
+/**
+ * Predstavlja se kao ulogovani korisnik do kraja bloka: postavlja JWT
+ * tvrdnje koje `auth.uid()` čita i spušta rolu na `authenticated`, jer vlasnik
+ * tabele u Postgresu ne podleže RLS-u i test bez toga ne bi ništa dokazao.
+ */
+export async function asUser<T>(
+  db: pg.PoolClient,
+  userId: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  await db.query("select set_config('request.jwt.claims', $1, true)", [
+    JSON.stringify({ sub: userId, role: "authenticated" }),
+  ]);
+  await db.query("set local role authenticated");
+  try {
+    return await fn();
+  } finally {
+    await db.query("reset role");
+    await db.query("select set_config('request.jwt.claims', '', true)");
+  }
+}
+
+/** Neulogovan posetilac: rola `anon`, bez ijedne JWT tvrdnje. */
+export async function asAnon<T>(
+  db: pg.PoolClient,
+  fn: () => Promise<T>,
+): Promise<T> {
+  await db.query("set local role anon");
+  try {
+    return await fn();
+  } finally {
+    await db.query("reset role");
+  }
+}
+
+export async function createUser(
+  db: pg.PoolClient,
+  tenantId: string,
+  role: "owner" | "staff" = "owner",
+): Promise<string> {
+  const result = await db.query<{ id: string }>(
+    "insert into auth.users (id, email) values (gen_random_uuid(), $1) returning id",
+    [`vlasnik-${unique()}@primer.rs`],
+  );
+  const userId = result.rows[0]!.id;
+  await db.query(
+    "insert into memberships (user_id, tenant_id, role) values ($1, $2, $3)",
+    [userId, tenantId, role],
+  );
+  return userId;
+}
+
 export async function createTenant(db: pg.PoolClient): Promise<string> {
   const slug = `salon-${unique()}`;
   const result = await db.query<{ id: string }>(
@@ -140,4 +192,56 @@ export async function insertAppointment(
   );
   const row = result.rows[0]!;
   return { id: row.id, endAt: row.end_at };
+}
+
+export type TenantFixture = {
+  tenantId: string;
+  userId: string;
+  staffId: string;
+  serviceId: string;
+  clientId: string;
+  appointmentId: string;
+};
+
+/** Salon sa po jednim redom u svakoj tabeli, da izolacija ima šta da krije. */
+export async function createPopulatedTenant(
+  db: pg.PoolClient,
+): Promise<TenantFixture> {
+  const tenantId = await createTenant(db);
+  const userId = await createUser(db, tenantId);
+  const staffId = await createStaff(db, tenantId);
+  const serviceId = await createService(db, tenantId);
+  const clientId = await createClient(db, tenantId);
+
+  await db.query(
+    "insert into staff_services (tenant_id, staff_id, service_id) values ($1, $2, $3)",
+    [tenantId, staffId, serviceId],
+  );
+  await db.query(
+    `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
+     values ($1, $2, 1, '09:00', '13:00')`,
+    [tenantId, staffId],
+  );
+  await db.query(
+    `insert into time_off (tenant_id, staff_id, start_at, end_at, reason)
+     values ($1, $2, '2026-09-01T08:00:00Z', '2026-09-01T12:00:00Z', 'lekar')`,
+    [tenantId, staffId],
+  );
+
+  const appointment = await insertAppointment(db, {
+    tenantId,
+    staffId,
+    serviceId,
+    clientId,
+    startAt: "2026-09-10T08:00:00Z",
+  });
+
+  await db.query(
+    `insert into appointment_events
+       (tenant_id, appointment_id, from_status, to_status, actor_type, actor_id)
+     values ($1, $2, null, 'confirmed', 'user', $3)`,
+    [tenantId, appointment.id, userId],
+  );
+
+  return { tenantId, userId, staffId, serviceId, clientId, appointmentId: appointment.id };
 }
