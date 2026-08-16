@@ -8,9 +8,24 @@
 
 create schema if not exists auth;
 
+-- Kolone koje seed stvarno popunjava, sa istim tipovima kao kod Supabase-a.
+-- Nema smisla imitirati celu tabelu, ali ono što upisujemo mora da postoji da
+-- bi seed mogao da se testira.
 create table if not exists auth.users (
+  instance_id uuid,
   id uuid primary key,
-  email text
+  aud text,
+  role text,
+  email text unique,
+  email_confirmed_at timestamptz,
+  created_at timestamptz,
+  updated_at timestamptz,
+  raw_app_meta_data jsonb,
+  raw_user_meta_data jsonb,
+  confirmation_token text,
+  recovery_token text,
+  email_change_token_new text,
+  email_change text
 );
 
 do $$
