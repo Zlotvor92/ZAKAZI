@@ -36,6 +36,12 @@ export async function requestMagicLink(
   });
 
   if (error) {
+    // Korisniku namerno ide ista poruka bez obzira na razlog — inače bi se
+    // sa forme moglo saznati koje adrese postoje u sistemu. Pravi razlog
+    // ide u log servera.
+    console.error(
+      `signInWithOtp nije uspeo: ${error.message} (status ${error.status ?? "?"})`,
+    );
     return { status: "error", message: sr.signIn.failed };
   }
 
