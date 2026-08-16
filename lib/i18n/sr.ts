@@ -22,4 +22,22 @@ export const sr = {
     signOut: "Odjava",
     noTenant: "Tvoj nalog nije povezan ni sa jednim salonom.",
   },
+  calendar: {
+    weekdaysShort: ["pon", "uto", "sre", "čet", "pet", "sub", "ned"],
+    months: [
+      "januar",
+      "februar",
+      "mart",
+      "april",
+      "maj",
+      "jun",
+      "jul",
+      "avgust",
+      "septembar",
+      "oktobar",
+      "novembar",
+      "decembar",
+    ],
+    noWorkingHours: "Radno vreme još nije uneto.",
+  },
 } as const;
