@@ -119,17 +119,40 @@ async function openSalon(
   };
 }
 
-/** Prvi ponedeljak koji je bar nedelju dana ispred današnjeg dana. */
-async function nextMonday(db: pg.PoolClient, atTime = "09:00"): Promise<string> {
+/**
+ * Ponedeljak bar dve nedelje ispred današnjeg dana, uz mogućnost da se pomeri
+ * za dati broj nedelja unapred.
+ */
+async function nextMonday(
+  db: pg.PoolClient,
+  atTime = "09:00",
+  weeksAhead = 0,
+): Promise<string> {
   const result = await db.query<{ at: string }>(
     `select to_char(
-              (date_trunc('week', (now() at time zone 'Europe/Belgrade')::date + 14)::date
-               + $1::time) at time zone 'Europe/Belgrade',
+              (date_trunc(
+                 'week',
+                 (now() at time zone 'Europe/Belgrade')::date + 14 + $2::int * 7
+               )::date + $1::time) at time zone 'Europe/Belgrade',
               'YYYY-MM-DD"T"HH24:MI:SSOF'
             ) as at`,
-    [atTime],
+    [atTime, weeksAhead],
   );
   return result.rows[0]!.at;
+}
+
+/** Termin upisan mimo javne funkcije, ali kao da je došao sa datog uređaja. */
+async function insertAsDevice(
+  db: pg.PoolClient,
+  deviceId: string,
+  input: Parameters<typeof insertAppointment>[1],
+): Promise<void> {
+  await db.query("select set_config('app.device_id', $1, true)", [deviceId]);
+  try {
+    await insertAppointment(db, input);
+  } finally {
+    await db.query("select set_config('app.device_id', '', true)");
+  }
 }
 
 /** Vreme po Beogradu, pomereno za dati broj dana od danas. */
@@ -766,36 +789,6 @@ describe("public_book odbija ono što ne sme", () => {
     });
   });
 
-  it("treći termin na isti broj telefona", async () => {
-    await withRollback(async (db) => {
-      const salon = await openSalon(db);
-      const phone = "+381645550005";
-
-      for (const time of ["09:00", "10:00"]) {
-        const result = await asAnon(db, async () =>
-          book(db, {
-            slug: salon.slug,
-            serviceId: salon.serviceId,
-            startAt: await nextMonday(db, time),
-            phone,
-          }),
-        );
-        expect(result.ok).toBe(true);
-      }
-
-      const third = await asAnon(db, async () =>
-        book(db, {
-          slug: salon.slug,
-          serviceId: salon.serviceId,
-          startAt: await nextMonday(db, "11:00"),
-          phone,
-        }),
-      );
-
-      expect(third).toEqual({ ok: false, reason: "too_many_bookings" });
-    });
-  });
-
   it("usluga iz tuđeg salona", async () => {
     await withRollback(async (db) => {
       const mine = await openSalon(db);
@@ -891,6 +884,350 @@ describe("public_book odbija ono što ne sme", () => {
 
       expect(clients.rowCount).toBe(0);
       expect(appointments.rowCount).toBe(0);
+    });
+  });
+});
+
+describe("zaštita od lažnih zakazivanja", () => {
+  it("treći termin u istoj nedelji na isti broj pada", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645550005";
+
+      for (const time of ["09:00", "10:00"]) {
+        const result = await asAnon(db, async () =>
+          book(db, {
+            slug: salon.slug,
+            serviceId: salon.serviceId,
+            startAt: await nextMonday(db, time),
+            phone,
+          }),
+        );
+        expect(result.ok).toBe(true);
+      }
+
+      const third = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "11:00"),
+          phone,
+        }),
+      );
+
+      expect(third).toEqual({ ok: false, reason: "too_many_this_week" });
+    });
+  });
+
+  it("ko dolazi svake nedelje ne udara u limit", async () => {
+    // Ovo je najskuplja moguća greška u ovom delu: stalna mušterija koja
+    // zakazuje mesec dana unapred ne sme da dobije odbijenicu.
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645550007";
+
+      for (const week of [0, 1, 2, 3]) {
+        const result = await asAnon(db, async () =>
+          book(db, {
+            slug: salon.slug,
+            serviceId: salon.serviceId,
+            startAt: await nextMonday(db, "10:00", week),
+            phone,
+          }),
+        );
+        expect(result.ok).toBe(true);
+      }
+    });
+  });
+
+  it("dva termina razmaknuta tačno sedam dana su dozvoljena", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645550008";
+
+      const first = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00", 0),
+          phone,
+        }),
+      );
+      const second = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00", 1),
+          phone,
+        }),
+      );
+
+      expect(first.ok).toBe(true);
+      expect(second.ok).toBe(true);
+    });
+  });
+
+  it("nepoznat broj ne može da razmaže više od četiri termina", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645550009";
+      const clientId = await createClient(db, salon.tenantId, phone);
+
+      // Četiri termina razmaknuta po dve nedelje: nedeljni limit ih pušta.
+      for (const week of [0, 2, 4, 6]) {
+        await insertAppointment(db, {
+          tenantId: salon.tenantId,
+          staffId: salon.staffId,
+          serviceId: salon.serviceId,
+          clientId,
+          startAt: await nextMonday(db, "10:00", week),
+        });
+      }
+
+      const fifth = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00", 8),
+          phone,
+        }),
+      );
+
+      expect(fifth).toEqual({ ok: false, reason: "too_many_upcoming" });
+    });
+  });
+
+  it("ko je već dolazio sme više od nepoznatog broja", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645550010";
+      const clientId = await createClient(db, salon.tenantId, phone);
+
+      // Jedan termin na kom je stvarno bila, u prošlosti.
+      await insertAppointment(db, {
+        tenantId: salon.tenantId,
+        staffId: salon.staffId,
+        serviceId: salon.serviceId,
+        clientId,
+        startAt: "2020-06-01T08:00:00Z",
+        status: "completed",
+      });
+
+      for (const week of [0, 2, 4, 6]) {
+        await insertAppointment(db, {
+          tenantId: salon.tenantId,
+          staffId: salon.staffId,
+          serviceId: salon.serviceId,
+          clientId,
+          startAt: await nextMonday(db, "10:00", week),
+        });
+      }
+
+      const fifth = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00", 8),
+          phone,
+        }),
+      );
+
+      expect(fifth.ok).toBe(true);
+    });
+  });
+
+  it("otkazan termin ne troši limit", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645550011";
+      const clientId = await createClient(db, salon.tenantId, phone);
+
+      for (const time of ["09:00", "10:00"]) {
+        await insertAppointment(db, {
+          tenantId: salon.tenantId,
+          staffId: salon.staffId,
+          serviceId: salon.serviceId,
+          clientId,
+          startAt: await nextMonday(db, time),
+          status: "cancelled_by_client",
+        });
+      }
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "11:00"),
+          phone,
+        }),
+      );
+
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  it("isti uređaj sa raznim brojevima udara u svoj limit", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const device = "isti-telefon";
+
+      // Šest termina sa šest različitih brojeva, svi sa istog uređaja.
+      for (const week of [0, 1, 2, 3, 4, 5]) {
+        const phone = `+38164777000${week}`;
+        const clientId = await createClient(db, salon.tenantId, phone);
+        await insertAsDevice(db, device, {
+          tenantId: salon.tenantId,
+          staffId: salon.staffId,
+          serviceId: salon.serviceId,
+          clientId,
+          startAt: await nextMonday(db, "10:00", week),
+        });
+      }
+
+      const seventh = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00", 6),
+          phone: "+381647770099",
+          deviceId: device,
+        }),
+      );
+
+      expect(seventh).toEqual({ ok: false, reason: "too_many_from_device" });
+    });
+  });
+
+  it("drugi uređaj ne nasleđuje tuđi limit", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+
+      for (const week of [0, 1, 2, 3, 4, 5]) {
+        const phone = `+38164888000${week}`;
+        const clientId = await createClient(db, salon.tenantId, phone);
+        await insertAsDevice(db, "prvi-telefon", {
+          tenantId: salon.tenantId,
+          staffId: salon.staffId,
+          serviceId: salon.serviceId,
+          clientId,
+          startAt: await nextMonday(db, "10:00", week),
+        });
+      }
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00", 6),
+          phone: "+381648880099",
+          deviceId: "drugi-telefon",
+        }),
+      );
+
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  it("dva zakazivanja sa istog uređaja u istom trenutku ne prolaze", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const device = "brzi-prsti";
+
+      const first = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "09:00"),
+          phone: "+381649990001",
+          deviceId: device,
+        }),
+      );
+      const second = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "11:00"),
+          phone: "+381649990002",
+          deviceId: device,
+        }),
+      );
+
+      expect(first.ok).toBe(true);
+      expect(second).toEqual({ ok: false, reason: "too_fast" });
+    });
+  });
+
+  it("zakazivanje bez uređaja preskače provere uređaja", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+
+      const first = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "09:00"),
+          phone: "+381649991001",
+        }),
+      );
+      const second = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "11:00"),
+          phone: "+381649991002",
+        }),
+      );
+
+      expect(first.ok).toBe(true);
+      expect(second.ok).toBe(true);
+    });
+  });
+
+  it("limit jednog salona ne prelazi u drugi", async () => {
+    await withRollback(async (db) => {
+      const mine = await openSalon(db);
+      const theirs = await openSalon(db);
+      const phone = "+381645550012";
+
+      for (const time of ["09:00", "10:00"]) {
+        const result = await asAnon(db, async () =>
+          book(db, {
+            slug: mine.slug,
+            serviceId: mine.serviceId,
+            startAt: await nextMonday(db, time),
+            phone,
+          }),
+        );
+        expect(result.ok).toBe(true);
+      }
+
+      const elsewhere = await asAnon(db, async () =>
+        book(db, {
+          slug: theirs.slug,
+          serviceId: theirs.serviceId,
+          startAt: await nextMonday(db, "11:00"),
+          phone,
+        }),
+      );
+
+      expect(elsewhere.ok).toBe(true);
+    });
+  });
+
+  it("pomoćna funkcija za limite nije dostupna spolja", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+
+      await asAnon(db, async () => {
+        await expect(
+          inSavepoint(db, () =>
+            db.query("select booking_limit_reason($1, $2, now(), null)", [
+              salon.tenantId,
+              "+381641234567",
+            ]),
+          ),
+        ).rejects.toThrow(/permission denied/i);
+      });
     });
   });
 });

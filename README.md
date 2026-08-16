@@ -8,9 +8,9 @@ Trenutno stanje: **Faza 2, blok 2A** — javno zakazivanje radi. Klijent otvori
 ijedne poruke. Plan cele faze je u [`docs/faza-2.md`](./docs/faza-2.md).
 
 Blok 2B još ne postoji, pa vlasnica za sada ne može sama da unese termin ni da
-promeni radno vreme kroz interfejs. Dok to ne legne, salon ne sme da pusti link
-u svet — termin dogovoren uživo aplikacija ne vidi i javna stranica bi ga
-prodala drugom.
+promeni radno vreme kroz interfejs. Dok to ne legne, link ne ide u svet —
+termin dogovoren uživo aplikacija ne vidi i javna stranica bi ga prodala
+drugom.
 
 ## Šta treba imati
 

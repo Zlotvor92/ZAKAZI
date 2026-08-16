@@ -78,7 +78,64 @@ Bez CAPTCHA, nevidljivo za normalne ljude:
 - **Najraniji termin** (`min_lead_minutes`, podrazumevano 120) — ne može neko da
   rezerviše za 10 minuta unapred dok je vlasnica na nogama
 - **Horizont** (`booking_horizon_days`, podrazumevano 14) — tvojih 7 / 14 / 21
-- **Najviše 2 aktivne buduće rezervacije po broju telefona** unutar salona
+- **Limiti po broju, uređaju i brzini** — razrađeno u odeljku ispod
+
+`pending` termini se u Fazi 2 ne prave, pa nema šta da im ističe.
+
+## Zaštita od lažnih zakazivanja
+
+**Limit po broju telefona je najslabija brana koju imamo.** Lažan broj je
+besplatan: ko hoće da smeta upiše drugi i nastavi. Zato se broji i uređaj i
+brzina, jer to je ono što napadaču stvarno diže cenu. Prava odbrana od lažnog
+broja je provera porukom i ona dolazi u Fazi 3 — ovo je pod ispod nje, ne
+zamena za nju.
+
+Sve provere žive u `booking_limit_reason`, na jednom mestu, da bi se granice
+kasnije menjale bez kopanja po `public_book`.
+
+| Provera | Granica | Šta hvata |
+|---|---|---|
+| Isti broj, nedelja oko traženog datuma | 2 | zauzimanje više termina u istoj nedelji |
+| Isti broj, svi budući termini | 4 nepoznat / 6 poznat | razmazivanje rezervacija po horizontu |
+| Isti uređaj, svi budući termini | 6 | jedan čovek, mnogo lažnih brojeva |
+| Isti uređaj, razmak između dva zakazivanja | 30 sekundi | skripta |
+
+**Nedeljni prozor je klizni, ne kalendarska nedelja.** Broje se termini u
+razmaku od sedam dana oko traženog datuma. Zato onaj ko dolazi svake nedelje ne
+oseti ništa: termin od pre sedam dana ulazi u prozor, onaj od pre četrnaest ne.
+Test koji to čuva je najvažniji u ovom delu — odbijenica stalnoj mušteriji je
+skuplja od deset lažnih termina.
+
+**Poznat broj sme više.** Ko ima bar jedan `completed` termin u tom salonu nije
+nepoznat, pa mu je granica viša. Broji se samo `completed`, ne `confirmed` — ko
+nije došao ne postaje poznat. To je pravilo iz specifikacije primenjeno sada i
+besplatno: trenje raste sa rizikom, a ne sa brojem termina.
+
+**Otkazan termin ne troši limit**, jer se svuda broje samo `pending` i
+`confirmed`.
+
+**Limiti ne prelaze granicu salona.** Svaki upit je vezan za `tenant_id`. Ono
+što neko radi u jednom salonu ne postoji u drugom; deljenje signala između
+salona je Faza 4 i tamo ide samo izvedeni rizik, nikad broj telefona.
+
+### Šta namerno nije urađeno
+
+- **CAPTCHA.** Ne dok postoji išta drugo, i nikad kao prva mera.
+- **Limit po IP adresi.** Ogromna većina zakazivanja doći će sa mobilne mreže,
+  gde stotine ljudi dele istu izlaznu adresu. Lažno pozitivnih bi bilo više
+  nego uhvaćenih.
+- **Odbijanje brojeva koji „izgledaju lažno".** `064 111 1111` je nekome
+  stvaran broj. Nagađanje po obliku hvata malo, a odbija prave ljude.
+- **Blocklist.** Tabela je u modelu i provera bi bila pet redova, ali dok
+  vlasnica nema ekran sa kog nekoga blokira, to je provera nad praznom tabelom.
+  Ide kao prva stvar u 2B — to je najjače oružje protiv stvarne pretnje, a
+  stvarna pretnja nije botnet nego jedna uporna osoba.
+
+### Granice koje treba prepraviti kad bude podataka
+
+Sve su konstante u `booking_limit_reason`. Prvi kandidat je granica od 4 buduća
+termina za nepoznat broj: mušterija koja hoće stalni termin dva meseca unapred
+udara u nju pre nego što je jednom došla.
 
 ## Arhitektura javnog pristupa
 

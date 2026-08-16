@@ -80,8 +80,13 @@ export const sr = {
       off_grid: "Taj termin nije u ponudi. Osveži stranicu i izaberi ponovo.",
       time_off: "Salon tada ne radi. Izaberi drugi dan.",
       slot_taken: "Neko je upravo uzeo taj termin. Izaberi drugi.",
-      too_many_bookings:
-        "Već imaš dva zakazana termina u ovom salonu. Otkaži jedan ili se javi salonu.",
+      too_many_this_week:
+        "Već imaš dva termina te nedelje. Izaberi drugi datum ili otkaži jedan.",
+      too_many_upcoming:
+        "Već imaš više zakazanih termina u ovom salonu. Otkaži neki ili se javi salonu.",
+      too_many_from_device:
+        "Sa ovog uređaja je zakazano previše termina. Ako zakazuješ za nekog drugog, javi se salonu.",
+      too_fast: "Sačekaj pola minuta pa pokušaj ponovo.",
     },
     /** Problemi koje vraća `normalizePhone`. */
     phoneProblem: {
