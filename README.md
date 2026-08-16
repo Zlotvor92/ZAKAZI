@@ -4,6 +4,7 @@ Sistem za zakazivanje termina za solo beauty profesionalce u Srbiji.
 Specifikacija proizvoda i pravila razvoja su u [`CLAUDE.md`](./CLAUDE.md).
 
 Trenutno stanje: **Faza 0** — prijava magic linkom i prazan nedeljni kalendar.
+Plan za sledeću fazu je u [`docs/faza-2.md`](./docs/faza-2.md).
 
 ## Šta treba imati
 
