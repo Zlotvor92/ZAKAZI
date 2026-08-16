@@ -1,6 +1,10 @@
 import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
+  bookingDataSchema,
+  bookResultSchema,
+} from "@/lib/db/public-booking";
+import {
   asAnon,
   closePool,
   createClient,
@@ -410,6 +414,49 @@ describe("public_booking_data", () => {
       const data = await asAnon(db, async () => bookingData(db, salon.slug));
 
       expect(data!.services).toEqual([]);
+    });
+  });
+});
+
+describe("oblik odgovora se poklapa sa onim što aplikacija očekuje", () => {
+  it("public_booking_data prolazi kroz Zod šemu netaknut", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const clientId = await createClient(db, salon.tenantId, "+381644444444");
+
+      await insertAppointment(db, {
+        tenantId: salon.tenantId,
+        staffId: salon.staffId,
+        serviceId: salon.serviceId,
+        clientId,
+        startAt: await nextMonday(db, "10:00"),
+      });
+
+      const data = await asAnon(db, async () => bookingData(db, salon.slug));
+
+      expect(() => bookingDataSchema.parse(data)).not.toThrow();
+    });
+  });
+
+  it("public_book prolazi kroz Zod šemu i kad uspe i kad odbije", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const startAt = await nextMonday(db, "10:00");
+
+      const accepted = await asAnon(db, async () =>
+        book(db, { slug: salon.slug, serviceId: salon.serviceId, startAt }),
+      );
+      const rejected = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt,
+          phone: "+381649990000",
+        }),
+      );
+
+      expect(() => bookResultSchema.parse(accepted)).not.toThrow();
+      expect(() => bookResultSchema.parse(rejected)).not.toThrow();
     });
   });
 });

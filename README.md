@@ -3,8 +3,14 @@
 Sistem za zakazivanje termina za solo beauty profesionalce u Srbiji.
 Specifikacija proizvoda i pravila razvoja su u [`CLAUDE.md`](./CLAUDE.md).
 
-Trenutno stanje: **Faza 0** — prijava magic linkom i prazan nedeljni kalendar.
-Plan za sledeću fazu je u [`docs/faza-2.md`](./docs/faza-2.md).
+Trenutno stanje: **Faza 2, blok 2A** — javno zakazivanje radi. Klijent otvori
+`/<slug-salona>`, izabere uslugu, dan i sat, i termin je odmah potvrđen, bez
+ijedne poruke. Plan cele faze je u [`docs/faza-2.md`](./docs/faza-2.md).
+
+Blok 2B još ne postoji, pa vlasnica za sada ne može sama da unese termin ni da
+promeni radno vreme kroz interfejs. Dok to ne legne, salon ne sme da pusti link
+u svet — termin dogovoren uživo aplikacija ne vidi i javna stranica bi ga
+prodala drugom.
 
 ## Šta treba imati
 
@@ -44,6 +50,10 @@ Otvori `http://localhost:3000`. Preusmerava na `/prijava`. Upiši mejl vlasnika;
 lokalno poruka ne odlazi na internet nego stiže u Supabase-ov sandučić na
 `http://127.0.0.1:54324`.
 
+Javna stranica salona iz seed-a je `http://localhost:3000/studio-milica`. Ona
+ne traži prijavu — otvori je u prozoru bez istorije da bi videla ono što vidi
+klijent.
+
 ## Komande
 
 | Komanda | Šta radi |
@@ -63,6 +73,7 @@ njom. Svaki test se vrti u transakciji koja se poništava.
 
 ```
 app/(auth)/prijava/       prijava magic linkom
+app/(public)/             javna stranica za zakazivanje
 app/(dashboard)/          interfejs za salon
 app/auth/callback/        razmena koda za sesiju
 components/calendar/      nedeljna mreža

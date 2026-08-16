@@ -193,6 +193,18 @@ statusa uvek ide kroz `change_appointment_status(...)`, nikad kroz direktan
 Blok 2A sam nije upotrebljiv u salonu — zbog razloga iz „Vlasnica mora sama da
 unosi termine". Pilot kreće tek kad oba bloka legnu.
 
+### Šta je odstupilo od plana dok se 2A pisao
+
+- **`change_appointment_status` je odloženo za 2B.** U 2A se status nigde ne
+  menja, samo se termin upisuje. Triger pokriva i upis i promenu, pa funkcija
+  koja prenosi aktera i uređaj ima smisla tek kad postoji ekran koji je zove.
+- **Raspon dana računa baza, ne aplikacija.** Da pozivalac šalje `od` i `do`,
+  neulogovan posetilac bi zatražio deset godina i pokupio ceo kalendar. Isti
+  poziv vraća i časovnik kojim je biran, pa motor meri najraniji termin od iste
+  vrednosti.
+- **Istek `pending` termina nije ni bio potreban.** Javna rezervacija ide pravo
+  u `confirmed`, pa u 2A nema nijednog `pending` reda koji bi trebalo gasiti.
+
 ## Izgled
 
 Javna stranica **nije tabela**. Na telefonu od 375px mreža od sedam kolona daje
