@@ -1,11 +1,17 @@
 import { fromZonedTime } from "date-fns-tz";
 import {
   addDays,
-  currentDateInTimeZone,
   isoWeekday,
   minutesToTime,
   type WorkingInterval,
 } from "./calendar";
+
+/**
+ * Na koliko se minuta nude vremena početka. Ista vrednost stoji u
+ * `public_book`, koja odbija termin van mreže — ako se menja, menja se na oba
+ * mesta.
+ */
+export const SLOT_STEP_MIN = 15;
 
 /**
  * Vreme u kom izvođač ne može da radi: tuđi termin zajedno sa svojim baferom,
@@ -136,18 +142,4 @@ export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
   }
 
   return days;
-}
-
-/**
- * Raspon dana koji javna stranica sme da nudi. Horizont od 14 znači današnji
- * dan i još četrnaest.
- */
-export function bookingWindow(input: {
-  now: Date;
-  timeZone: string;
-  horizonDays: number;
-}): { fromDate: string; toDate: string } {
-  const fromDate = currentDateInTimeZone(input.now, input.timeZone);
-
-  return { fromDate, toDate: addDays(fromDate, input.horizonDays) };
 }

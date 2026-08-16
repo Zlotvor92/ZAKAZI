@@ -1,7 +1,6 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { describe, expect, it } from "vitest";
 import {
-  bookingWindow,
   buildAvailability,
   type AvailabilityInput,
   type BusyRange,
@@ -369,27 +368,6 @@ describe("radno vreme do ponoći", () => {
 });
 
 describe("raspon dana koji se nudi", () => {
-  it("horizont od 14 dana znači danas i još četrnaest", () => {
-    const window = bookingWindow({
-      now: new Date("2026-08-10T12:00:00Z"),
-      timeZone: BELGRADE,
-      horizonDays: 14,
-    });
-
-    expect(window).toEqual({ fromDate: "2026-08-10", toDate: "2026-08-24" });
-  });
-
-  it("prvi dan je današnji po Beogradu, ne po UTC-u", () => {
-    // 22:30 UTC je već sutradan u Beogradu.
-    const window = bookingWindow({
-      now: new Date("2026-08-10T22:30:00Z"),
-      timeZone: BELGRADE,
-      horizonDays: 7,
-    });
-
-    expect(window.fromDate).toBe("2026-08-11");
-  });
-
   it("svaki dan iz raspona postoji u odgovoru", () => {
     const days = availability({
       fromDate: "2026-08-10",
