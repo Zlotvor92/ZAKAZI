@@ -1,13 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) {
-    throw new Error(`Nedostaje promenljiva okruženja ${name}`);
-  }
-  return value;
-}
+import { requireEnv } from "@/lib/env";
 
 export async function createClient() {
   const cookieStore = await cookies();
