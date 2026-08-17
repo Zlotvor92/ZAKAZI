@@ -338,9 +338,40 @@ moguća postavka: kroz API joj ne pristupa niko, menja se samo preko
 Postojeći saloni se ne dodaju unazad kad se neko upiše u `platform_owners` —
 inače bi upis jednog reda tiho otvorio sve što već postoji.
 
-Ostaje nenapravljeno: pozivanje druge osobe u postojeći salon. Salon trenutno
-može da otvori samo onaj ko će u njemu i raditi; predaja salona pravoj vlasnici
-ide kroz SQL.
+### Konzola i ko sme da otvori salon
+
+Salon više ne otvara ko hoće. `create_tenant` odbija svakog ko nije u
+`platform_owners`, i prima mejl vlasnice — salon nastane sa osobom koja će u
+njemu raditi, ona postaje izvođač, a ne onaj ko je pritisnuo dugme. Bez toga bi
+klijentkinje zakazivale kod vlasnika platforme.
+
+Nalog vlasnice pravi server preko admin API-ja pre poziva. Iz SQL-a se
+`auth.users` ne dira: takav nalog izgleda ispravno dok se ne pokuša prijava.
+
+Konzola (`/admin`) je spisak, ne druga aplikacija. „Uđi u salon" postavlja isti
+kolačić koji vlasnica koristi za prebacivanje, pa vlasnik platforme vidi tačno
+ono što vidi ona — podešavanja se popravljaju na ekranu na kom se i zovu. Cela
+zaštita spiska je `where is_platform_owner()`: ko to nije, dobija prazan spisak.
+Sama strana vraća 404, ne „zabranjeno" — nema šta da se sazna da postoji.
+
+### Prekidač
+
+`suspended_at` je odvojen od `public_booking_enabled`. Prvo je odluka platforme,
+drugo je njena kad ide na godišnji. Da je isto polje, skidanje suspenzije bi joj
+tiho upalilo nešto što je sama isključila, a ona bi mogla sebi da skine
+suspenziju. Kolonu ne sme da menja — privilegija nad kolonama nad `tenants` joj
+daje samo tri polja.
+
+Suspenzija gasi javno zakazivanje i **ne dira kalendar**. Oduzeti salonu
+sopstvene termine i klijente zbog neplaćenog računa znači oduzeti joj radni dan,
+a ne proizvod koji je kupila. Javna stranica ne razlikuje suspendovan salon od
+nepostojećeg — klijentkinja nema šta da sazna o tuđim računima.
+
+Naplata, planovi i datumi dospeća nisu napravljeni. Prekidač se za sada okreće
+rukom.
+
+Ostaje nenapravljeno: dodavanje druge osobe u **postojeći** salon. Vlasnica se
+bira pri otvaranju salona i posle se menja kroz SQL.
 
 ### Izgled po salonu
 
