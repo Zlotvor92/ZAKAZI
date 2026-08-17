@@ -8,7 +8,11 @@ import type { UpcomingAppointment } from "@/lib/db/public-cancel";
 import { sr } from "@/lib/i18n/sr";
 import { cancelAppointment, lookupAppointments, type LookupState } from "./actions";
 
-function formatPrice(rsd: number): string {
+/** `null` za besplatnu uslugu — „0 RSD" izgleda kao greška, ne kao poklon. */
+function formatPrice(rsd: number): string | null {
+  if (rsd === 0) {
+    return null;
+  }
   return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
 }
 
@@ -60,9 +64,11 @@ function AppointmentRow({
             {formatInTimeZone(new Date(appointment.start_at), timeZone, "HH:mm")}
           </div>
         </div>
-        <div className="text-brand shrink-0 text-sm font-semibold tabular-nums">
-          {formatPrice(appointment.price_rsd)}
-        </div>
+        {formatPrice(appointment.price_rsd) ? (
+          <div className="text-brand shrink-0 text-sm font-semibold tabular-nums">
+            {formatPrice(appointment.price_rsd)}
+          </div>
+        ) : null}
       </div>
 
       <Button

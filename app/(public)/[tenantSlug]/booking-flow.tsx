@@ -29,7 +29,11 @@ function formatDuration(minutes: number): string {
     : `${hours} ${sr.booking.hourShort} ${rest} ${sr.booking.minuteShort}`;
 }
 
-function formatPrice(rsd: number): string {
+/** `null` za besplatnu uslugu — „0 RSD" izgleda kao greška, ne kao poklon. */
+function formatPrice(rsd: number): string | null {
+  if (rsd === 0) {
+    return null;
+  }
   return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
 }
 
@@ -160,6 +164,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
   if (state.status === "booked") {
     const startAt = new Date(state.appointment.startAt);
     const endAt = new Date(state.appointment.endAt);
+    const priceLabel = formatPrice(state.appointment.priceRsd);
 
     return (
       <div className="space-y-6 py-6 text-center">
@@ -177,9 +182,9 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             {formatInTimeZone(startAt, timeZone, "HH:mm")}–
             {formatInTimeZone(endAt, timeZone, "HH:mm")}
           </div>
-          <div className="text-brand font-semibold">
-            {formatPrice(state.appointment.priceRsd)}
-          </div>
+          {priceLabel ? (
+            <div className="text-brand font-semibold">{priceLabel}</div>
+          ) : null}
         </dl>
 
         <div className="space-y-2">
@@ -220,34 +225,46 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
       <section className="space-y-3 py-4">
         <h2 className="text-base font-semibold">{sr.booking.chooseService}</h2>
         <ul className="space-y-2">
-          {data.services.map((option) => (
-            <li key={option.id}>
-              <button
-                type="button"
-                data-testid="service-option"
-                onClick={() => setService(option)}
-                className="border-border hover:border-primary hover:bg-accent flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium">
-                    {option.name}
+          {data.services.map((option) => {
+            const priceLabel = formatPrice(option.price_rsd);
+
+            return (
+              <li key={option.id}>
+                <button
+                  type="button"
+                  data-testid="service-option"
+                  onClick={() => setService(option)}
+                  className="border-border hover:border-primary hover:bg-accent flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
+                >
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium">
+                      {option.name}
+                    </span>
+                    <span className="text-muted-foreground block text-xs">
+                      {formatDuration(option.duration_min)}
+                    </span>
                   </span>
-                  <span className="text-muted-foreground block text-xs">
-                    {formatDuration(option.duration_min)}
-                  </span>
-                </span>
-                <span className="text-brand shrink-0 text-sm font-semibold tabular-nums">
-                  {formatPrice(option.price_rsd)}
-                </span>
-              </button>
-            </li>
-          ))}
+                  {priceLabel ? (
+                    <span className="text-brand shrink-0 text-sm font-semibold tabular-nums">
+                      {priceLabel}
+                    </span>
+                  ) : null}
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </section>
     );
   }
 
-  const serviceSummary = `${service.name} · ${formatDuration(service.duration_min)} · ${formatPrice(service.price_rsd)}`;
+  const serviceSummary = [
+    service.name,
+    formatDuration(service.duration_min),
+    formatPrice(service.price_rsd),
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" · ");
 
   return (
     <div className="divide-border divide-y py-2">
