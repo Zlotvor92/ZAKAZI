@@ -31,6 +31,7 @@ function availability(
     toDate: overrides.fromDate,
     blocks: MORNING,
     busy: [],
+    serviceMinutes: 90,
     now: LONG_AGO,
     minLeadMin: 0,
     ...overrides,
@@ -59,8 +60,8 @@ describe("koliko termina staje u blok", () => {
     ).toBe(2);
   });
 
-  it("ostatak koji ne puni ceo termin se ne broji", () => {
-    // Četiri sata na devedeset minuta: dva termina, pola sata ostane.
+  it("poslednji termin sme da pređe kraj bloka", () => {
+    // Četiri sata na devedeset minuta: tri dolaska, poslednji u 12:00.
     expect(
       slotsInBlock({
         weekday: 1,
@@ -68,10 +69,10 @@ describe("koliko termina staje u blok", () => {
         endMinute: 780,
         slotMinutes: 90,
       }),
-    ).toBe(2);
+    ).toBe(3);
   });
 
-  it("termin duži od bloka ne staje nijednom", () => {
+  it("razmak duži od bloka i dalje prima jednom", () => {
     expect(
       slotsInBlock({
         weekday: 1,
@@ -79,7 +80,7 @@ describe("koliko termina staje u blok", () => {
         endMinute: 600,
         slotMinutes: 90,
       }),
-    ).toBe(0);
+    ).toBe(1);
   });
 });
 
@@ -90,6 +91,17 @@ describe("iz broja termina u trajanje", () => {
 
   it("četiri sata na tri daju osamdeset minuta", () => {
     expect(slotMinutesForCount(9 * 60, 13 * 60, 3)).toBe(80);
+  });
+
+  it("razmak se zaokružuje naviše da bi broj dolazaka ispao tačan", () => {
+    const block = {
+      weekday: 1,
+      startMinute: 9 * 60,
+      endMinute: 12 * 60 + 30,
+      slotMinutes: slotMinutesForCount(9 * 60, 12 * 60 + 30, 2),
+    };
+
+    expect(slotsInBlock(block)).toBe(2);
   });
 
   it("nula termina ne deli sa nulom", () => {
@@ -117,7 +129,9 @@ describe("slobodni termini", () => {
     expect(monday!.slots.map((slot) => slot.minutes)).toEqual([90, 90]);
   });
 
-  it("ostatak bloka se ne nudi kao kraći termin", () => {
+  it("poslednji dolazak sme da se prelije preko kraja bloka", () => {
+    // 09–13 na razmak od 90: dolazi se u 9, 10:30 i 12, a poslednji se završi
+    // u 13:30. To je stvar salona, ne aplikacije.
     const [monday] = availability({
       fromDate: "2026-08-10",
       blocks: [
@@ -125,7 +139,7 @@ describe("slobodni termini", () => {
       ],
     });
 
-    expect(times(monday)).toEqual(["09:00", "10:30"]);
+    expect(times(monday)).toEqual(["09:00", "10:30", "12:00"]);
   });
 
   it("pauza između blokova se ne nudi", () => {
@@ -158,7 +172,7 @@ describe("slobodni termini", () => {
     expect(days[6]!.slots).toEqual([]);
   });
 
-  it("trajanje od nule ne pravi beskonačno termina", () => {
+  it("razmak od nule ne pravi beskonačno termina", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
       blocks: [
@@ -272,6 +286,7 @@ describe("prelazak na drugo računanje vremena", () => {
         { weekday: 1, startMinute: 10 * 60, endMinute: 13 * 60, slotMinutes: 90 },
       ],
       busy: [],
+      serviceMinutes: 90,
       now: new Date("2026-03-30T12:00:00Z"),
       minLeadMin: 0,
     });
@@ -329,5 +344,87 @@ describe("raspon dana", () => {
     const days = availability({ fromDate: "2026-08-10", toDate: "2026-08-09" });
 
     expect(days).toEqual([]);
+  });
+});
+
+describe("duga usluga gura ostatak dana", () => {
+  it("dvočasovna nadogradnja u 9 pomera sledeći dolazak sa 10:30 na 11", () => {
+    // Sestrin ponedeljak: 09–12 i 17–20, razmak sat i po.
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      serviceMinutes: 90,
+      // 09:00–11:00 po Beogradu je 07:00–09:00 UTC leti.
+      busy: [busy("2026-08-10T07:00:00Z", "2026-08-10T09:00:00Z")],
+    });
+
+    expect(times(monday)).toEqual(["11:00", "17:00", "18:30"]);
+  });
+
+  it("termin od sat i po u 9 ne pomera ništa", () => {
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      busy: [busy("2026-08-10T07:00:00Z", "2026-08-10T08:30:00Z")],
+    });
+
+    expect(times(monday)).toEqual(["10:30", "17:00", "18:30"]);
+  });
+
+  it("pomereni dolazak sme da se prelije preko kraja bloka", () => {
+    // Nadogradnja u 17 drži do 19; sledeći je u 19 i traje do 20:30.
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      serviceMinutes: 90,
+      busy: [busy("2026-08-10T15:00:00Z", "2026-08-10T17:00:00Z")],
+    });
+
+    expect(times(monday)).toContain("19:00");
+  });
+
+  it("duga usluga se ne nudi tamo gde bi ušla u tuđi termin", () => {
+    // Zauzeto 10:30–12:00. Nadogradnja od dva sata u 9 bi ušla u to, a u
+    // 12:00 se ne može jer je tu kraj bloka — pre podne tog dana otpada celo.
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      serviceMinutes: 120,
+      busy: [busy("2026-08-10T08:30:00Z", "2026-08-10T10:00:00Z")],
+    });
+
+    expect(times(monday)).toEqual(["17:00", "18:30"]);
+  });
+
+  it("isti dan nudi različita vremena za usluge različite dužine", () => {
+    const taken = [busy("2026-08-10T07:00:00Z", "2026-08-10T09:00:00Z")];
+
+    const short = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      serviceMinutes: 90,
+      busy: taken,
+    })[0]!;
+    const long = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      serviceMinutes: 120,
+      busy: taken,
+    })[0]!;
+
+    expect(times(short)).toContain("11:00");
+    expect(times(long)).toContain("11:00");
+    expect(long.slots.every((slot) => slot.minutes === 120)).toBe(true);
+  });
+
+  it("odsustvo takođe pomera sledeći dolazak", () => {
+    // Lekar 09:00–10:00; posle njega se može odmah, iako nije na rasporedu.
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      busy: [busy("2026-08-10T07:00:00Z", "2026-08-10T08:00:00Z")],
+    });
+
+    expect(times(monday)).toContain("10:00");
   });
 });

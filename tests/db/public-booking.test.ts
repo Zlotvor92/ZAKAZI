@@ -63,6 +63,7 @@ async function openSalon(
   db: pg.PoolClient,
   options: {
     slotMinutes?: number;
+    serviceMinutes?: number;
     horizonDays?: number;
     minLeadMinutes?: number;
     enabled?: boolean;
@@ -71,7 +72,7 @@ async function openSalon(
 ) {
   const tenantId = await createTenant(db);
   const staffId = await createStaff(db, tenantId);
-  const serviceId = await createService(db, tenantId);
+  const serviceId = await createService(db, tenantId, options.serviceMinutes ?? 90);
 
   if (options.linkService !== false) {
     await db.query(
@@ -531,9 +532,9 @@ describe("public_book upisuje termin", () => {
     });
   });
 
-  it("trajanje dolazi sa bloka, cena sa usluge", async () => {
+  it("trajanje dolazi sa usluge, ne sa razmaka u rasporedu", async () => {
     await withRollback(async (db) => {
-      const salon = await openSalon(db, { slotMinutes: 120 });
+      const salon = await openSalon(db, { serviceMinutes: 120 });
       const startAt = await nextMonday(db, "09:00");
 
       await asAnon(db, async () =>
@@ -711,21 +712,36 @@ describe("public_book odbija ono što ne sme", () => {
     });
   });
 
-  it("poslednji ostatak bloka se ne nudi kao kraći termin", async () => {
+  it("posle kraja bloka se ne može ni početi", async () => {
     await withRollback(async (db) => {
-      // 09–18 na termine od dva sata: staju četiri, poslednji u 15:00, a
-      // 17:00 bi izašlo iz bloka.
-      const salon = await openSalon(db, { slotMinutes: 120 });
+      const salon = await openSalon(db);
 
       const result = await asAnon(db, async () =>
         book(db, {
           slug: salon.slug,
           serviceId: salon.serviceId,
-          startAt: await nextMonday(db, "17:00"),
+          startAt: await nextMonday(db, "18:00"),
         }),
       );
 
       expect(result).toEqual({ ok: false, reason: "outside_working_hours" });
+    });
+  });
+
+  it("poslednji termin sme da se prelije preko kraja bloka", async () => {
+    await withRollback(async (db) => {
+      // Blok do 18:00, dolazak u 16:30, usluga od dva sata: završava u 18:30.
+      const salon = await openSalon(db, { serviceMinutes: 120 });
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "16:30"),
+        }),
+      );
+
+      expect(result.ok).toBe(true);
     });
   });
 
@@ -1356,6 +1372,88 @@ describe("blokirani broj", () => {
       });
 
       expect(seen).toEqual({ rows: 0, deleted: 0 });
+    });
+  });
+});
+
+describe("duga usluga pomera ostatak dana", () => {
+  it("posle dvočasovne nadogradnje u 9 se može u 11, iako nije na rasporedu", async () => {
+    await withRollback(async (db) => {
+      // Raspored kakav ima sestrin salon: dolazi se na sat i po.
+      const tenantId = await createTenant(db);
+      const staffId = await createStaff(db, tenantId);
+      const long = await createService(db, tenantId, 120);
+      const short = await createService(db, tenantId, 90);
+
+      for (const serviceId of [long, short]) {
+        await db.query(
+          "insert into staff_services (tenant_id, staff_id, service_id) values ($1, $2, $3)",
+          [tenantId, staffId, serviceId],
+        );
+      }
+      await db.query(
+        `insert into working_hours
+           (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+         values ($1, $2, 1, '09:00', '12:00', 90)`,
+        [tenantId, staffId],
+      );
+      await db.query(
+        "update tenants set min_lead_minutes = 0, booking_horizon_days = 90 where id = $1",
+        [tenantId],
+      );
+      const slug = (
+        await db.query<{ slug: string }>("select slug from tenants where id = $1", [
+          tenantId,
+        ])
+      ).rows[0]!.slug;
+
+      const taken = await asAnon(db, async () =>
+        book(db, {
+          slug,
+          serviceId: long,
+          startAt: await nextMonday(db, "09:00"),
+          phone: "+381645552001",
+        }),
+      );
+      expect(taken.ok).toBe(true);
+
+      // 10:30 je na rasporedu, ali pada usred nadogradnje.
+      const clash = await asAnon(db, async () =>
+        book(db, {
+          slug,
+          serviceId: short,
+          startAt: await nextMonday(db, "10:30"),
+          phone: "+381645552002",
+        }),
+      );
+      expect(clash).toEqual({ ok: false, reason: "slot_taken" });
+
+      // 11:00 nije na rasporedu, ali je tačno kraj prethodnog termina.
+      const shifted = await asAnon(db, async () =>
+        book(db, {
+          slug,
+          serviceId: short,
+          startAt: await nextMonday(db, "11:00"),
+          phone: "+381645552003",
+        }),
+      );
+      expect(shifted.ok).toBe(true);
+    });
+  });
+
+  it("nasumično vreme koje nije ni raspored ni kraj tuđeg termina pada", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "11:07"),
+        }),
+      );
+
+      expect(result).toEqual({ ok: false, reason: "outside_working_hours" });
     });
   });
 });

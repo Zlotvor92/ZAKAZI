@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { getActiveServices } from "@/lib/db/services";
-import { getWorkingBlocks } from "@/lib/db/working-hours";
 import { getCurrentTenant } from "@/lib/db/tenants";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
@@ -23,13 +22,10 @@ export default async function NewAppointmentPage({ searchParams }: PageProps) {
     );
   }
 
-  const [services, blocks] = await Promise.all([
-    getActiveServices(),
-    getWorkingBlocks(),
-  ]);
+  const services = await getActiveServices();
 
-  // Podrazumeva se koliko traje termin u salonu, da vlasnica ne bira svaki put.
-  const defaultDuration = blocks[0]?.slotMinutes ?? 60;
+  // Predlaže se trajanje prve usluge; vlasnica ga svejedno menja kako hoće.
+  const defaultDuration = services[0]?.duration_min ?? 60;
   const requested = (await searchParams).dan;
   const date =
     requested && DATE_PATTERN.test(requested)

@@ -145,7 +145,7 @@ describe("upis radnog vremena", () => {
     });
   });
 
-  it("termin duži od bloka se odbija", async () => {
+  it("razmak duži od bloka je dozvoljen: salon prima jednom", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
 
@@ -155,7 +155,7 @@ describe("upis radnog vremena", () => {
         ]),
       );
 
-      expect(result).toEqual({ ok: false, reason: "invalid" });
+      expect(result).toEqual({ ok: true });
     });
   });
 

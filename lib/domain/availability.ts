@@ -1,11 +1,12 @@
 import { addDays, instantInTimeZone, isoWeekday } from "./calendar";
 
 /**
- * Komad radnog vremena i koliko u njemu traje jedan termin. Blok 09:00–12:00
- * sa terminom od 90 minuta znači dva termina: u 9 i u 10:30.
+ * Komad radnog vremena i razmak na koji salon prima. Blok 09:00–12:00 sa
+ * razmakom od 90 minuta znači da se dolazi u 9 i u 10:30.
  *
- * Trajanje usluge namerno ne učestvuje. Salon je taj koji je napravio blok i
- * zna šta u njega staje; aplikacija ne pogađa umesto njega.
+ * Razmak nije isto što i trajanje usluge. Razmak je raspored koji salon drži;
+ * trajanje je koliko konkretan posao stvarno oduzme. Kad su različiti, trajanje
+ * gura ono što dolazi posle.
  */
 export type WorkingBlock = {
   weekday: number;
@@ -31,6 +32,8 @@ export type AvailabilityInput = {
   toDate: string;
   blocks: WorkingBlock[];
   busy: BusyRange[];
+  /** Koliko traje usluga koju klijent bira. */
+  serviceMinutes: number;
   now: Date;
   minLeadMin: number;
 };
@@ -42,18 +45,19 @@ function overlaps(startMs: number, endMs: number, range: BusyRange): boolean {
 }
 
 /**
- * Koliko termina staje u blok. Ostatak koji ne puni ceo termin se ne nudi —
- * bolje nego da poslednji klijent dobije kraće vreme nego što mu treba.
+ * Koliko se puta u bloku dolazi. Poslednji termin sme da pređe kraj bloka —
+ * salon koji radi do 12 i završi u 12:30 nije prekršio ništa, pa se mesto
+ * broji po tome kad se počinje, ne kad se završava.
  */
 export function slotsInBlock(block: WorkingBlock): number {
   if (block.slotMinutes <= 0) {
     return 0;
   }
 
-  return Math.floor((block.endMinute - block.startMinute) / block.slotMinutes);
+  return Math.ceil((block.endMinute - block.startMinute) / block.slotMinutes);
 }
 
-/** Trajanje termina kad salon kaže koliko ih hoće u bloku. */
+/** Razmak kad salon kaže koliko puta hoće da primi u bloku. */
 export function slotMinutesForCount(
   startMinute: number,
   endMinute: number,
@@ -63,17 +67,21 @@ export function slotMinutesForCount(
     return endMinute - startMinute;
   }
 
-  return Math.floor((endMinute - startMinute) / count);
+  return Math.ceil((endMinute - startMinute) / count);
 }
 
 /**
- * Slobodni termini, dan po dan.
+ * Slobodni termini za jednu uslugu, dan po dan.
  *
- * Termin zauzima ceo svoj deo bloka, pa se sledeći klijent zakazuje tačno kad
- * se prethodni završi. Rupa između termina nema jer ih nema odakle biti.
+ * Ponuđena vremena su raspored salona, plus trenutak u kom se završava svaki
+ * već zakazan termin. To drugo je ono što pomera dan: ako neko uzme dvočasovnu
+ * nadogradnju u 9, u 10:30 se više ne može, ali se može u 11.
+ *
+ * Termin sme da pređe kraj bloka. Ne sme da pređe u tuđi.
  */
 export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
   const earliestMs = input.now.getTime() + input.minLeadMin * MINUTE;
+  const serviceMs = input.serviceMinutes * MINUTE;
   const days: DayAvailability[] = [];
 
   for (
@@ -82,10 +90,14 @@ export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
     date = addDays(date, 1)
   ) {
     const weekday = isoWeekday(date);
-    const slots: Slot[] = [];
+    const starts = new Set<number>();
 
     for (const block of input.blocks) {
-      if (block.weekday !== weekday || block.slotMinutes <= 0) {
+      if (
+        block.weekday !== weekday ||
+        block.slotMinutes <= 0 ||
+        input.serviceMinutes <= 0
+      ) {
         continue;
       }
 
@@ -99,32 +111,48 @@ export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
         block.endMinute,
         input.timeZone,
       ).getTime();
-      const slotMs = block.slotMinutes * MINUTE;
 
-      for (
-        let startMs = opensMs;
-        startMs + slotMs <= closesMs;
-        startMs += slotMs
-      ) {
+      const candidates: number[] = [];
+
+      for (let index = 0; index < slotsInBlock(block); index += 1) {
+        candidates.push(opensMs + index * block.slotMinutes * MINUTE);
+      }
+
+      // Kraj svakog zauzetog komada je novi mogući početak: tako dvočasovni
+      // termin u 9 pomeri sledeći sa 10:30 na 11.
+      for (const range of input.busy) {
+        const endMs = range.endAt.getTime();
+        if (endMs > opensMs && endMs < closesMs) {
+          candidates.push(endMs);
+        }
+      }
+
+      for (const startMs of candidates) {
+        if (startMs < opensMs || startMs >= closesMs) {
+          continue;
+        }
         if (startMs < earliestMs) {
           continue;
         }
-
-        const taken = input.busy.some((range) =>
-          overlaps(startMs, startMs + slotMs, range),
-        );
-
-        if (!taken) {
-          slots.push({
-            startAt: new Date(startMs),
-            minutes: block.slotMinutes,
-          });
+        if (
+          input.busy.some((range) => overlaps(startMs, startMs + serviceMs, range))
+        ) {
+          continue;
         }
+
+        starts.add(startMs);
       }
     }
 
-    slots.sort((left, right) => left.startAt.getTime() - right.startAt.getTime());
-    days.push({ date, slots });
+    days.push({
+      date,
+      slots: [...starts]
+        .sort((left, right) => left - right)
+        .map((startMs) => ({
+          startAt: new Date(startMs),
+          minutes: input.serviceMinutes,
+        })),
+    });
   }
 
   return days;

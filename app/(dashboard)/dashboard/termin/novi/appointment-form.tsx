@@ -77,7 +77,7 @@ export function AppointmentForm({
         >
           {services.map((service) => (
             <option key={service.id} value={service.id}>
-              {service.name}
+              {service.name} · {service.duration_min} min
             </option>
           ))}
         </select>

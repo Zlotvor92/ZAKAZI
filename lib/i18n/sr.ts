@@ -106,7 +106,7 @@ export const sr = {
       end_before_start: "Kraj radnog vremena mora biti posle početka.",
       break_outside_day: "Pauza mora biti unutar radnog vremena.",
       break_end_before_start: "Pauza nije ispravno uneta.",
-      slot_too_long: "Termin je duži od radnog vremena u koje treba da stane.",
+      slot_invalid: "Upiši koliko traje termin.",
       overlapping: "Smene se preklapaju.",
       invalid: "Radno vreme nije ispravno.",
       no_staff: "Salon nema nijednog aktivnog izvođača.",

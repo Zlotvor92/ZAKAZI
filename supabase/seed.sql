@@ -39,12 +39,13 @@ begin
   values (v_tenant_id, v_owner_id, 'Milica')
   returning id into v_staff_id;
 
-  -- Usluga više ne nosi trajanje: koliko termin traje kaže radno vreme.
-  insert into services (tenant_id, name, price_rsd)
+  -- Razmak u rasporedu je sat i po; nadogradnja traje duže i time pomeri sve
+  -- što tog dana dolazi posle nje.
+  insert into services (tenant_id, name, duration_min, price_rsd)
   values
-    (v_tenant_id, 'Gel nokti', 3000),
-    (v_tenant_id, 'Korekcija gela', 2400),
-    (v_tenant_id, 'Manikir', 1500);
+    (v_tenant_id, 'Nadogradnja trepavica', 120, 3500),
+    (v_tenant_id, 'Korekcija trepavica', 90, 2200),
+    (v_tenant_id, 'Gel nokti', 90, 3000);
 
   insert into staff_services (tenant_id, staff_id, service_id)
   select v_tenant_id, v_staff_id, services.id

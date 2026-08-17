@@ -16,6 +16,19 @@ import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import { submitBooking, type BookingState } from "./actions";
 
+function formatDuration(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+
+  if (hours === 0) {
+    return `${rest} ${sr.booking.minuteShort}`;
+  }
+
+  return rest === 0
+    ? `${hours} ${sr.booking.hourShort}`
+    : `${hours} ${sr.booking.hourShort} ${rest} ${sr.booking.minuteShort}`;
+}
+
 function formatPrice(rsd: number): string {
   return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
 }
@@ -84,9 +97,12 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     });
   }
 
-  // Slobodni termini ne zavise od usluge — određuje ih radno vreme — pa se
-  // računaju jednom i ne menjaju kad klijent promeni uslugu.
+  // Termini zavise od usluge: duža usluga ne staje svuda gde staje kraća.
   const days: DayAvailability[] = useMemo(() => {
+    if (!service) {
+      return [];
+    }
+
     return buildAvailability({
       timeZone,
       fromDate: data.from_date,
@@ -101,10 +117,11 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
         startAt: new Date(range.start_at),
         endAt: new Date(range.end_at),
       })),
+      serviceMinutes: service.duration_min,
       now: new Date(data.now),
       minLeadMin: data.tenant.min_lead_minutes,
     });
-  }, [data, timeZone]);
+  }, [service, data, timeZone]);
 
   const openDays = useMemo(
     () => days.filter((day) => day.slots.length > 0),
@@ -159,8 +176,13 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                 onClick={() => setService(option)}
                 className="border-border hover:bg-accent flex min-h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left"
               >
-                <span className="min-w-0 truncate text-sm font-medium">
-                  {option.name}
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-medium">
+                    {option.name}
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    {formatDuration(option.duration_min)}
+                  </span>
                 </span>
                 <span className="shrink-0 text-sm tabular-nums">
                   {formatPrice(option.price_rsd)}
@@ -173,7 +195,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     );
   }
 
-  const serviceSummary = `${service.name} · ${formatPrice(service.price_rsd)}`;
+  const serviceSummary = `${service.name} · ${formatDuration(service.duration_min)} · ${formatPrice(service.price_rsd)}`;
 
   return (
     <div className="divide-border divide-y py-2">

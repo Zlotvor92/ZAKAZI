@@ -24,7 +24,7 @@ export type DayProblem =
   | "end_before_start"
   | "break_outside_day"
   | "break_end_before_start"
-  | "slot_too_long";
+  | "slot_invalid";
 
 const MINUTES_PER_DAY = 24 * 60;
 const DEFAULT_SLOT_MINUTES = 60;
@@ -99,12 +99,10 @@ export function validateDay(day: DayShape): DayProblem | null {
     }
   }
 
-  // Termin duži od najkraćeg komada rada znači da u taj komad ne staje niko.
-  if (
-    day.slotMinutes <= 0 ||
-    blocksOfDay(day).some((block) => slotsInBlock(block) < 1)
-  ) {
-    return "slot_too_long";
+  // Razmak duži od komada rada nije greška: to je salon koji tad primi jednom
+  // i završi kad završi. Greška je samo razmak koji ne postoji.
+  if (day.slotMinutes <= 0) {
+    return "slot_invalid";
   }
 
   return null;

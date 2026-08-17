@@ -57,16 +57,16 @@ describe("koliko termina ispadne", () => {
     expect(slotCounts(sisterDay())).toEqual([2, 2]);
   });
 
-  it("blokovi različite dužine daju različit broj uz isto trajanje", () => {
+  it("blokovi različite dužine daju različit broj uz isti razmak", () => {
     const uneven = day({
       endMinute: 20 * 60,
       breakStartMinute: 13 * 60,
       breakEndMinute: 17 * 60,
     });
 
-    // 09–13 su četiri sata pa staju dva termina i ostane pola sata; 17–20 tri
-    // sata pa staju dva.
-    expect(slotCounts(uneven)).toEqual([2, 2]);
+    // 09–13 su četiri sata: dolazi se u 9, 10:30 i 12. 17–20 su tri sata:
+    // dolazi se u 17 i 18:30.
+    expect(slotCounts(uneven)).toEqual([3, 2]);
   });
 });
 
@@ -132,21 +132,13 @@ describe("provera dana", () => {
     ).toBe("break_outside_day");
   });
 
-  it("termin duži od komada rada ne prolazi", () => {
-    expect(validateDay(day({ slotMinutes: 200 }))).toBe("slot_too_long");
-    expect(validateDay(day({ slotMinutes: 0 }))).toBe("slot_too_long");
+  it("razmak duži od komada rada je dozvoljen: prima se jednom", () => {
+    expect(validateDay(day({ slotMinutes: 200 }))).toBeNull();
+    expect(slotCounts(day({ slotMinutes: 200 }))).toEqual([1]);
   });
 
-  it("termin koji ne staje u drugi komad ruši dan", () => {
-    // 09–12 prima termin od 150 minuta, 17–19 ne prima.
-    const uneven = day({
-      endMinute: 19 * 60,
-      breakStartMinute: 12 * 60,
-      breakEndMinute: 17 * 60,
-      slotMinutes: 150,
-    });
-
-    expect(validateDay(uneven)).toBe("slot_too_long");
+  it("razmak koji ne postoji je greška", () => {
+    expect(validateDay(day({ slotMinutes: 0 }))).toBe("slot_invalid");
   });
 });
 
@@ -164,7 +156,7 @@ describe("dani u redove za bazu", () => {
 
   it("neispravan dan se preskače umesto da obori ceo upis", () => {
     expect(
-      toBlocks([day({ weekday: 1, slotMinutes: 500 }), day({ weekday: 2 })]),
+      toBlocks([day({ weekday: 1, slotMinutes: 0 }), day({ weekday: 2 })]),
     ).toEqual([
       { weekday: 2, startMinute: 540, endMinute: 720, slotMinutes: 90 },
     ]);

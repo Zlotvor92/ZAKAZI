@@ -130,11 +130,12 @@ export async function createStaff(
 export async function createService(
   db: pg.PoolClient,
   tenantId: string,
+  durationMin = 90,
 ): Promise<string> {
   const result = await db.query<{ id: string }>(
-    `insert into services (tenant_id, name, price_rsd)
-     values ($1, $2, $3) returning id`,
-    [tenantId, "Gel nokti", 2500],
+    `insert into services (tenant_id, name, duration_min, price_rsd)
+     values ($1, $2, $3, $4) returning id`,
+    [tenantId, "Gel nokti", durationMin, 2500],
   );
   return result.rows[0]!.id;
 }
