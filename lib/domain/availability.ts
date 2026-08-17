@@ -1,76 +1,79 @@
-import {
-  addDays,
-  instantInTimeZone,
-  isoWeekday,
-  type WorkingInterval,
-} from "./calendar";
+import { addDays, instantInTimeZone, isoWeekday } from "./calendar";
 
 /**
- * Na koliko se minuta nude vremena početka. Ista vrednost stoji u
- * `public_book`, koja odbija termin van mreže — ako se menja, menja se na oba
- * mesta.
+ * Komad radnog vremena i koliko u njemu traje jedan termin. Blok 09:00–12:00
+ * sa terminom od 90 minuta znači dva termina: u 9 i u 10:30.
+ *
+ * Trajanje usluge namerno ne učestvuje. Salon je taj koji je napravio blok i
+ * zna šta u njega staje; aplikacija ne pogađa umesto njega.
  */
-export const SLOT_STEP_MIN = 15;
+export type WorkingBlock = {
+  weekday: number;
+  startMinute: number;
+  endMinute: number;
+  slotMinutes: number;
+};
 
 /**
- * Vreme u kom izvođač ne može da radi: tuđi termin zajedno sa svojim baferom,
- * ili odsustvo. Za računanje slobodnih termina razlika između to dvoje ne
- * postoji, pa se spajaju pre nego što stignu ovde.
+ * Vreme u kom izvođač ne može da radi: tuđi termin ili odsustvo. Za računanje
+ * slobodnih termina razlika ne postoji, pa se spajaju pre nego što stignu ovde.
  */
 export type BusyRange = { startAt: Date; endAt: Date };
+
+export type Slot = { startAt: Date; minutes: number };
+
+export type DayAvailability = { date: string; slots: Slot[] };
 
 export type AvailabilityInput = {
   timeZone: string;
   /** Prvi i poslednji dan koji se nudi, oba uključena, u tajmzoni salona. */
   fromDate: string;
   toDate: string;
-  workingHours: WorkingInterval[];
+  blocks: WorkingBlock[];
   busy: BusyRange[];
-  durationMin: number;
-  bufferAfterMin: number;
-  slotStepMin: number;
   now: Date;
   minLeadMin: number;
 };
 
-export type DayAvailability = {
-  date: string;
-  slots: Date[];
-};
-
 const MINUTE = 60_000;
 
-function overlaps(
-  startMs: number,
-  endMs: number,
-  range: BusyRange,
-): boolean {
+function overlaps(startMs: number, endMs: number, range: BusyRange): boolean {
   return startMs < range.endAt.getTime() && range.startAt.getTime() < endMs;
 }
 
 /**
- * Slobodni termini za jednu uslugu, dan po dan.
- *
- * Dva pravila, i namerno samo dva:
- *
- * 1. Usluga mora cela da stane unutar radnog vremena.
- * 2. Usluga zajedno sa baferom ne sme da dodirne ništa zauzeto.
- *
- * Iz toga sledi da bafer sme da pređe kraj radnog vremena — salon radi do 20h,
- * a gel lak od sat vremena sa 15 minuta spremanja sme da počne u 19h. Ne sme
- * da pređe u tuđi termin ili u odsustvo, jer to drugo pravilo ne dozvoljava,
- * i tu se poklapa sa ograničenjem koje baza ionako nameće.
+ * Koliko termina staje u blok. Ostatak koji ne puni ceo termin se ne nudi —
+ * bolje nego da poslednji klijent dobije kraće vreme nego što mu treba.
  */
-export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
-  if (input.slotStepMin <= 0) {
-    throw new Error("Korak mreže termina mora biti veći od nule.");
+export function slotsInBlock(block: WorkingBlock): number {
+  if (block.slotMinutes <= 0) {
+    return 0;
   }
 
-  const earliestMs = input.now.getTime() + input.minLeadMin * MINUTE;
-  const serviceMs = input.durationMin * MINUTE;
-  const blockedMs = (input.durationMin + input.bufferAfterMin) * MINUTE;
-  const stepMs = input.slotStepMin * MINUTE;
+  return Math.floor((block.endMinute - block.startMinute) / block.slotMinutes);
+}
 
+/** Trajanje termina kad salon kaže koliko ih hoće u bloku. */
+export function slotMinutesForCount(
+  startMinute: number,
+  endMinute: number,
+  count: number,
+): number {
+  if (count <= 0) {
+    return endMinute - startMinute;
+  }
+
+  return Math.floor((endMinute - startMinute) / count);
+}
+
+/**
+ * Slobodni termini, dan po dan.
+ *
+ * Termin zauzima ceo svoj deo bloka, pa se sledeći klijent zakazuje tačno kad
+ * se prethodni završi. Rupa između termina nema jer ih nema odakle biti.
+ */
+export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
+  const earliestMs = input.now.getTime() + input.minLeadMin * MINUTE;
   const days: DayAvailability[] = [];
 
   for (
@@ -79,45 +82,48 @@ export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
     date = addDays(date, 1)
   ) {
     const weekday = isoWeekday(date);
-    const slots: Date[] = [];
+    const slots: Slot[] = [];
 
-    for (const interval of input.workingHours) {
-      if (interval.weekday !== weekday) {
+    for (const block of input.blocks) {
+      if (block.weekday !== weekday || block.slotMinutes <= 0) {
         continue;
       }
 
       const opensMs = instantInTimeZone(
         date,
-        interval.startMinute,
+        block.startMinute,
         input.timeZone,
       ).getTime();
       const closesMs = instantInTimeZone(
         date,
-        interval.endMinute,
+        block.endMinute,
         input.timeZone,
       ).getTime();
+      const slotMs = block.slotMinutes * MINUTE;
 
       for (
         let startMs = opensMs;
-        startMs + serviceMs <= closesMs;
-        startMs += stepMs
+        startMs + slotMs <= closesMs;
+        startMs += slotMs
       ) {
         if (startMs < earliestMs) {
           continue;
         }
 
-        const blockedEndMs = startMs + blockedMs;
         const taken = input.busy.some((range) =>
-          overlaps(startMs, blockedEndMs, range),
+          overlaps(startMs, startMs + slotMs, range),
         );
 
         if (!taken) {
-          slots.push(new Date(startMs));
+          slots.push({
+            startAt: new Date(startMs),
+            minutes: block.slotMinutes,
+          });
         }
       }
     }
 
-    slots.sort((left, right) => left.getTime() - right.getTime());
+    slots.sort((left, right) => left.startAt.getTime() - right.startAt.getTime());
     days.push({ date, slots });
   }
 

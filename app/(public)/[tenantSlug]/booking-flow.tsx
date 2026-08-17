@@ -8,26 +8,13 @@ import { Input } from "@/components/ui/input";
 import type { PublicBookingData, PublicService } from "@/lib/db/public-booking";
 import {
   buildAvailability,
-  SLOT_STEP_MIN,
   type DayAvailability,
+  type Slot,
 } from "@/lib/domain/availability";
 import { isoWeekday } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import { submitBooking, type BookingState } from "./actions";
-
-function formatDuration(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-
-  if (hours === 0) {
-    return `${rest} ${sr.booking.minuteShort}`;
-  }
-
-  return rest === 0
-    ? `${hours} ${sr.booking.hourShort}`
-    : `${hours} ${sr.booking.hourShort} ${rest} ${sr.booking.minuteShort}`;
-}
 
 function formatPrice(rsd: number): string {
   return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
@@ -97,31 +84,27 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     });
   }
 
+  // Slobodni termini ne zavise od usluge — određuje ih radno vreme — pa se
+  // računaju jednom i ne menjaju kad klijent promeni uslugu.
   const days: DayAvailability[] = useMemo(() => {
-    if (!service) {
-      return [];
-    }
-
     return buildAvailability({
       timeZone,
       fromDate: data.from_date,
       toDate: data.to_date,
-      workingHours: data.working_hours.map((interval) => ({
-        weekday: interval.weekday,
-        startMinute: interval.start_minute,
-        endMinute: interval.end_minute,
+      blocks: data.blocks.map((block) => ({
+        weekday: block.weekday,
+        startMinute: block.start_minute,
+        endMinute: block.end_minute,
+        slotMinutes: block.slot_minutes,
       })),
       busy: data.busy.map((range) => ({
         startAt: new Date(range.start_at),
         endAt: new Date(range.end_at),
       })),
-      durationMin: service.duration_min,
-      bufferAfterMin: service.buffer_after_min,
-      slotStepMin: SLOT_STEP_MIN,
       now: new Date(data.now),
       minLeadMin: data.tenant.min_lead_minutes,
     });
-  }, [service, data, timeZone]);
+  }, [data, timeZone]);
 
   const openDays = useMemo(
     () => days.filter((day) => day.slots.length > 0),
@@ -176,13 +159,8 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                 onClick={() => setService(option)}
                 className="border-border hover:bg-accent flex min-h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left"
               >
-                <span className="min-w-0">
-                  <span className="block truncate text-sm font-medium">
-                    {option.name}
-                  </span>
-                  <span className="text-muted-foreground block text-xs">
-                    {formatDuration(option.duration_min)}
-                  </span>
+                <span className="min-w-0 truncate text-sm font-medium">
+                  {option.name}
                 </span>
                 <span className="shrink-0 text-sm tabular-nums">
                   {formatPrice(option.price_rsd)}
@@ -195,7 +173,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     );
   }
 
-  const serviceSummary = `${service.name} · ${formatDuration(service.duration_min)} · ${formatPrice(service.price_rsd)}`;
+  const serviceSummary = `${service.name} · ${formatPrice(service.price_rsd)}`;
 
   return (
     <div className="divide-border divide-y py-2">
@@ -262,8 +240,8 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
         <section className="space-y-3 py-4">
           <h2 className="text-base font-semibold">{sr.booking.chooseTime}</h2>
           <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {chosenDay.slots.map((option) => {
-              const value = option.toISOString();
+            {chosenDay.slots.map((option: Slot) => {
+              const value = option.startAt.toISOString();
               return (
                 <li key={value}>
                   <button
@@ -272,7 +250,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                     onClick={() => setSlot(value)}
                     className="border-border hover:bg-accent min-h-12 w-full rounded-lg border text-sm tabular-nums"
                   >
-                    {formatInTimeZone(option, timeZone, "HH:mm")}
+                    {formatInTimeZone(option.startAt, timeZone, "HH:mm")}
                   </button>
                 </li>
               );

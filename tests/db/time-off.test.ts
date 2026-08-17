@@ -27,8 +27,9 @@ async function salon(db: pg.PoolClient) {
     [tenantId, staffId, serviceId],
   );
   await db.query(
-    `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-     values ($1, $2, 1, '09:00', '13:00')`,
+    `insert into working_hours
+           (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+     values ($1, $2, 1, '09:00', '13:00', 90)`,
     [tenantId, staffId],
   );
   await db.query(

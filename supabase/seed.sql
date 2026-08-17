@@ -39,27 +39,30 @@ begin
   values (v_tenant_id, v_owner_id, 'Milica')
   returning id into v_staff_id;
 
-  insert into services (tenant_id, name, duration_min, buffer_after_min, price_rsd)
+  -- Usluga više ne nosi trajanje: koliko termin traje kaže radno vreme.
+  insert into services (tenant_id, name, price_rsd)
   values
-    (v_tenant_id, 'Gel nokti', 90, 15, 3000),
-    (v_tenant_id, 'Korekcija gela', 75, 15, 2400),
-    (v_tenant_id, 'Manikir', 45, 10, 1500);
+    (v_tenant_id, 'Gel nokti', 3000),
+    (v_tenant_id, 'Korekcija gela', 2400),
+    (v_tenant_id, 'Manikir', 1500);
 
   insert into staff_services (tenant_id, staff_id, service_id)
   select v_tenant_id, v_staff_id, services.id
   from services
   where services.tenant_id = v_tenant_id;
 
-  -- Podeljena smena radnim danima, subota u jednom komadu.
+  -- Podeljena smena radnim danima, subota u jednom komadu. Termin traje sat i
+  -- po, pa pre podne staju dva i posle podne dva.
   -- ISO dani: 1 = ponedeljak.
-  insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-  select v_tenant_id, v_staff_id, weekday, '09:00'::time, '13:00'::time
+  insert into working_hours
+    (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+  select v_tenant_id, v_staff_id, weekday, '09:00'::time, '12:00'::time, 90
   from generate_series(1, 5) as weekday
   union all
-  select v_tenant_id, v_staff_id, weekday, '16:00'::time, '20:00'::time
+  select v_tenant_id, v_staff_id, weekday, '17:00'::time, '20:00'::time, 90
   from generate_series(1, 5) as weekday
   union all
-  select v_tenant_id, v_staff_id, 6, '09:00'::time, '14:00'::time;
+  select v_tenant_id, v_staff_id, 6, '09:00'::time, '14:00'::time, 90;
 
   raise notice 'Salon "Studio Milica" napravljen. Vlasnik: %', v_owner_email;
 end

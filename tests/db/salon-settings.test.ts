@@ -23,20 +23,37 @@ async function salon(db: pg.PoolClient) {
   return { tenantId, userId, staffId };
 }
 
+type BlockInput = {
+  weekday: number;
+  start_minute: number;
+  end_minute: number;
+  slot_minutes?: number;
+};
+
 async function setHours(
   db: pg.PoolClient,
-  intervals: { weekday: number; start_minute: number; end_minute: number }[],
+  blocks: BlockInput[],
 ): Promise<WriteResult> {
   const result = await db.query<{ result: WriteResult }>(
     "select set_working_hours($1::jsonb) as result",
-    [JSON.stringify(intervals)],
+    [
+      JSON.stringify(
+        blocks.map((block) => ({ slot_minutes: 90, ...block })),
+      ),
+    ],
   );
   return result.rows[0]!.result;
 }
 
 async function hoursOf(db: pg.PoolClient, staffId: string) {
-  const result = await db.query<{ weekday: number; start_time: string; end_time: string }>(
-    "select weekday, start_time, end_time from working_hours where staff_id = $1 order by weekday, start_time",
+  const result = await db.query<{
+    weekday: number;
+    start_time: string;
+    end_time: string;
+    slot_minutes: number;
+  }>(
+    `select weekday, start_time, end_time, slot_minutes
+     from working_hours where staff_id = $1 order by weekday, start_time`,
     [staffId],
   );
   return result.rows;
@@ -57,9 +74,9 @@ describe("upis radnog vremena", () => {
 
       expect(result).toEqual({ ok: true });
       expect(await hoursOf(db, base.staffId)).toEqual([
-        { weekday: 1, start_time: "09:00:00", end_time: "13:00:00" },
-        { weekday: 1, start_time: "14:00:00", end_time: "20:00:00" },
-        { weekday: 6, start_time: "09:00:00", end_time: "14:00:00" },
+        { weekday: 1, start_time: "09:00:00", end_time: "13:00:00", slot_minutes: 90 },
+        { weekday: 1, start_time: "14:00:00", end_time: "20:00:00", slot_minutes: 90 },
+        { weekday: 6, start_time: "09:00:00", end_time: "14:00:00", slot_minutes: 90 },
       ]);
     });
   });
@@ -74,7 +91,7 @@ describe("upis radnog vremena", () => {
       });
 
       expect(await hoursOf(db, base.staffId)).toEqual([
-        { weekday: 2, start_time: "10:00:00", end_time: "12:00:00" },
+        { weekday: 2, start_time: "10:00:00", end_time: "12:00:00", slot_minutes: 90 },
       ]);
     });
   });
@@ -88,7 +105,7 @@ describe("upis radnog vremena", () => {
       );
 
       expect(await hoursOf(db, base.staffId)).toEqual([
-        { weekday: 5, start_time: "20:00:00", end_time: "24:00:00" },
+        { weekday: 5, start_time: "20:00:00", end_time: "24:00:00", slot_minutes: 90 },
       ]);
     });
   });
@@ -123,8 +140,22 @@ describe("upis radnog vremena", () => {
 
       // Odbijeni upis se poništio zajedno sa brisanjem koje mu je prethodilo.
       expect(await hoursOf(db, base.staffId)).toEqual([
-        { weekday: 1, start_time: "09:00:00", end_time: "13:00:00" },
+        { weekday: 1, start_time: "09:00:00", end_time: "13:00:00", slot_minutes: 90 },
       ]);
+    });
+  });
+
+  it("termin duži od bloka se odbija", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      const result = await asUser(db, base.userId, () =>
+        setHours(db, [
+          { weekday: 1, start_minute: 540, end_minute: 660, slot_minutes: 180 },
+        ]),
+      );
+
+      expect(result).toEqual({ ok: false, reason: "invalid" });
     });
   });
 

@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  blocksOfDay,
   defaultWeek,
   emptyWeek,
+  slotCounts,
+  toBlocks,
   toDayShapes,
-  toIntervals,
   validateDay,
+  withSlotCount,
   type DayShape,
 } from "@/lib/domain/working-hours";
 
@@ -13,150 +16,207 @@ function day(overrides: Partial<DayShape> = {}): DayShape {
     weekday: 1,
     working: true,
     startMinute: 9 * 60,
-    endMinute: 17 * 60,
+    endMinute: 12 * 60,
     breakStartMinute: null,
     breakEndMinute: null,
+    slotMinutes: 90,
     ...overrides,
   };
 }
 
-describe("provera jednog dana", () => {
-  it("dan bez pauze je ispravan", () => {
+/** Dan kakav ima sestrin salon: 09–12 i 17–20, termin sat i po. */
+function sisterDay(): DayShape {
+  return day({
+    endMinute: 20 * 60,
+    breakStartMinute: 12 * 60,
+    breakEndMinute: 17 * 60,
+  });
+}
+
+describe("komadi rada u danu", () => {
+  it("dan bez pauze je jedan komad", () => {
+    expect(blocksOfDay(day())).toEqual([
+      { weekday: 1, startMinute: 540, endMinute: 720, slotMinutes: 90 },
+    ]);
+  });
+
+  it("dan sa pauzom je dva komada, oba sa istim trajanjem termina", () => {
+    expect(blocksOfDay(sisterDay())).toEqual([
+      { weekday: 1, startMinute: 540, endMinute: 720, slotMinutes: 90 },
+      { weekday: 1, startMinute: 1020, endMinute: 1200, slotMinutes: 90 },
+    ]);
+  });
+
+  it("neradni dan nema nijedan komad", () => {
+    expect(blocksOfDay(day({ working: false }))).toEqual([]);
+  });
+});
+
+describe("koliko termina ispadne", () => {
+  it("sestrin dan daje dva pre i dva posle podne", () => {
+    expect(slotCounts(sisterDay())).toEqual([2, 2]);
+  });
+
+  it("blokovi različite dužine daju različit broj uz isto trajanje", () => {
+    const uneven = day({
+      endMinute: 20 * 60,
+      breakStartMinute: 13 * 60,
+      breakEndMinute: 17 * 60,
+    });
+
+    // 09–13 su četiri sata pa staju dva termina i ostane pola sata; 17–20 tri
+    // sata pa staju dva.
+    expect(slotCounts(uneven)).toEqual([2, 2]);
+  });
+});
+
+describe("unos preko broja termina", () => {
+  it("dva termina u bloku od tri sata daju termin od sat i po", () => {
+    expect(withSlotCount(day(), 2).slotMinutes).toBe(90);
+  });
+
+  it("tri termina u bloku od tri sata daju termin od sat", () => {
+    expect(withSlotCount(day(), 3).slotMinutes).toBe(60);
+  });
+
+  it("broj se odnosi na prvi komad, ostali nasleđuju trajanje", () => {
+    const changed = withSlotCount(sisterDay(), 2);
+
+    expect(changed.slotMinutes).toBe(90);
+    expect(slotCounts(changed)).toEqual([2, 2]);
+  });
+
+  it("neradni dan se ne dira", () => {
+    const closed = day({ working: false });
+
+    expect(withSlotCount(closed, 3)).toEqual(closed);
+  });
+});
+
+describe("provera dana", () => {
+  it("ispravan dan prolazi", () => {
     expect(validateDay(day())).toBeNull();
+    expect(validateDay(sisterDay())).toBeNull();
   });
 
   it("neradni dan se ne proverava", () => {
-    expect(validateDay(day({ working: false, startMinute: 900, endMinute: 60 }))).toBeNull();
-  });
-
-  it("kraj pre početka ne prolazi", () => {
-    expect(validateDay(day({ startMinute: 17 * 60, endMinute: 9 * 60 }))).toBe(
-      "end_before_start",
-    );
-  });
-
-  it("isto vreme za početak i kraj ne prolazi", () => {
-    expect(validateDay(day({ startMinute: 600, endMinute: 600 }))).toBe(
-      "end_before_start",
-    );
-  });
-
-  it("pauza sa krajem pre početka ne prolazi", () => {
     expect(
-      validateDay(day({ breakStartMinute: 14 * 60, breakEndMinute: 13 * 60 })),
-    ).toBe("break_end_before_start");
-  });
-
-  it("polovična pauza ne prolazi", () => {
-    expect(validateDay(day({ breakStartMinute: 13 * 60 }))).toBe(
-      "break_end_before_start",
-    );
-    expect(validateDay(day({ breakEndMinute: 14 * 60 }))).toBe(
-      "break_end_before_start",
-    );
-  });
-
-  it("pauza koja dodiruje početak ili kraj dana nije pauza", () => {
-    expect(
-      validateDay(day({ breakStartMinute: 9 * 60, breakEndMinute: 11 * 60 })),
-    ).toBe("break_outside_day");
-    expect(
-      validateDay(day({ breakStartMinute: 15 * 60, breakEndMinute: 17 * 60 })),
-    ).toBe("break_outside_day");
-  });
-
-  it("ispravna pauza prolazi", () => {
-    expect(
-      validateDay(day({ breakStartMinute: 13 * 60, breakEndMinute: 14 * 60 })),
+      validateDay(day({ working: false, startMinute: 900, endMinute: 60 })),
     ).toBeNull();
   });
 
-  it("radno vreme do ponoći prolazi", () => {
-    expect(validateDay(day({ startMinute: 20 * 60, endMinute: 24 * 60 }))).toBeNull();
+  it("kraj pre početka ne prolazi", () => {
+    expect(validateDay(day({ startMinute: 720, endMinute: 540 }))).toBe(
+      "end_before_start",
+    );
+  });
+
+  it("polovična ili obrnuta pauza ne prolazi", () => {
+    expect(validateDay(day({ breakStartMinute: 600 }))).toBe(
+      "break_end_before_start",
+    );
+    expect(
+      validateDay(
+        day({
+          endMinute: 20 * 60,
+          breakStartMinute: 17 * 60,
+          breakEndMinute: 12 * 60,
+        }),
+      ),
+    ).toBe("break_end_before_start");
+  });
+
+  it("pauza koja dodiruje kraj dana nije pauza", () => {
+    expect(
+      validateDay(day({ breakStartMinute: 10 * 60, breakEndMinute: 12 * 60 })),
+    ).toBe("break_outside_day");
+  });
+
+  it("termin duži od komada rada ne prolazi", () => {
+    expect(validateDay(day({ slotMinutes: 200 }))).toBe("slot_too_long");
+    expect(validateDay(day({ slotMinutes: 0 }))).toBe("slot_too_long");
+  });
+
+  it("termin koji ne staje u drugi komad ruši dan", () => {
+    // 09–12 prima termin od 150 minuta, 17–19 ne prima.
+    const uneven = day({
+      endMinute: 19 * 60,
+      breakStartMinute: 12 * 60,
+      breakEndMinute: 17 * 60,
+      slotMinutes: 150,
+    });
+
+    expect(validateDay(uneven)).toBe("slot_too_long");
   });
 });
 
 describe("dani u redove za bazu", () => {
-  it("dan bez pauze daje jedan red", () => {
-    expect(toIntervals([day()])).toEqual([
-      { weekday: 1, startMinute: 540, endMinute: 1020 },
-    ]);
-  });
+  it("sestrina nedelja daje dva reda po radnom danu", () => {
+    const week = emptyWeek().map((shape) =>
+      shape.weekday <= 5 ? { ...sisterDay(), weekday: shape.weekday } : shape,
+    );
 
-  it("dan sa pauzom daje dva reda, a pauza je rupa između njih", () => {
-    expect(
-      toIntervals([day({ breakStartMinute: 13 * 60, breakEndMinute: 14 * 60 })]),
-    ).toEqual([
-      { weekday: 1, startMinute: 540, endMinute: 780 },
-      { weekday: 1, startMinute: 840, endMinute: 1020 },
-    ]);
-  });
+    const blocks = toBlocks(week);
 
-  it("neradni dan ne daje nijedan red", () => {
-    expect(toIntervals([day({ working: false })])).toEqual([]);
+    expect(blocks).toHaveLength(10);
+    expect(blocks.every((block) => block.slotMinutes === 90)).toBe(true);
   });
 
   it("neispravan dan se preskače umesto da obori ceo upis", () => {
     expect(
-      toIntervals([
-        day({ weekday: 1, startMinute: 1020, endMinute: 540 }),
-        day({ weekday: 2 }),
-      ]),
-    ).toEqual([{ weekday: 2, startMinute: 540, endMinute: 1020 }]);
+      toBlocks([day({ weekday: 1, slotMinutes: 500 }), day({ weekday: 2 })]),
+    ).toEqual([
+      { weekday: 2, startMinute: 540, endMinute: 720, slotMinutes: 90 },
+    ]);
   });
 
   it("prazna nedelja ne daje nijedan red", () => {
-    expect(toIntervals(emptyWeek())).toEqual([]);
+    expect(toBlocks(emptyWeek())).toEqual([]);
   });
 
-  it("šablon daje pet radnih dana i subotu", () => {
-    const intervals = toIntervals(defaultWeek());
+  it("šablon daje šest radnih dana", () => {
+    const weekdays = toBlocks(defaultWeek()).map((block) => block.weekday);
 
-    expect(intervals.map((interval) => interval.weekday)).toEqual([
-      1, 2, 3, 4, 5, 6,
-    ]);
-    expect(intervals.at(-1)).toEqual({
-      weekday: 6,
-      startMinute: 540,
-      endMinute: 840,
-    });
+    expect([...new Set(weekdays)]).toEqual([1, 2, 3, 4, 5, 6]);
   });
 });
 
 describe("redovi iz baze nazad u formu", () => {
   it("jedan red daje dan bez pauze", () => {
     const [monday] = toDayShapes([
-      { weekday: 1, startMinute: 540, endMinute: 1020 },
+      { weekday: 1, startMinute: 540, endMinute: 720, slotMinutes: 90 },
     ]);
 
     expect(monday).toEqual({
       weekday: 1,
       working: true,
       startMinute: 540,
-      endMinute: 1020,
+      endMinute: 720,
       breakStartMinute: null,
       breakEndMinute: null,
+      slotMinutes: 90,
     });
   });
 
   it("dva reda daju dan sa pauzom", () => {
     const [monday] = toDayShapes([
-      { weekday: 1, startMinute: 540, endMinute: 780 },
-      { weekday: 1, startMinute: 960, endMinute: 1200 },
+      { weekday: 1, startMinute: 540, endMinute: 720, slotMinutes: 90 },
+      { weekday: 1, startMinute: 1020, endMinute: 1200, slotMinutes: 90 },
     ]);
 
     expect(monday).toMatchObject({
       startMinute: 540,
       endMinute: 1200,
-      breakStartMinute: 780,
-      breakEndMinute: 960,
+      breakStartMinute: 720,
+      breakEndMinute: 1020,
+      slotMinutes: 90,
     });
   });
 
-  it("redovi u obrnutom redosledu daju isto", () => {
+  it("obrnut redosled redova daje isto", () => {
     const [monday] = toDayShapes([
-      { weekday: 1, startMinute: 960, endMinute: 1200 },
-      { weekday: 1, startMinute: 540, endMinute: 780 },
+      { weekday: 1, startMinute: 1020, endMinute: 1200, slotMinutes: 90 },
+      { weekday: 1, startMinute: 540, endMinute: 720, slotMinutes: 90 },
     ]);
 
     expect(monday).toMatchObject({ startMinute: 540, endMinute: 1200 });
@@ -168,33 +228,14 @@ describe("redovi iz baze nazad u formu", () => {
     expect(shapes).toHaveLength(7);
     expect(shapes.every((shape) => !shape.working)).toBe(true);
   });
-
-  it("tri komada u danu se svode na prvi i poslednji", () => {
-    // Forma zna za jednu pauzu; podatke koje ne ume da prikaže svede na
-    // najbliži oblik umesto da ostane prazna.
-    const [monday] = toDayShapes([
-      { weekday: 1, startMinute: 540, endMinute: 660 },
-      { weekday: 1, startMinute: 720, endMinute: 840 },
-      { weekday: 1, startMinute: 900, endMinute: 1020 },
-    ]);
-
-    expect(monday).toMatchObject({
-      startMinute: 540,
-      endMinute: 1020,
-      breakStartMinute: 660,
-      breakEndMinute: 900,
-    });
-  });
 });
 
 describe("put tamo i nazad", () => {
-  it("nedelja preživi pretvaranje u redove i nazad", () => {
-    const week = defaultWeek().map((shape) =>
-      shape.weekday === 1
-        ? { ...shape, breakStartMinute: 13 * 60, breakEndMinute: 14 * 60 }
-        : shape,
+  it("sestrina nedelja preživi pretvaranje u redove i nazad", () => {
+    const week = emptyWeek().map((shape) =>
+      shape.weekday <= 5 ? { ...sisterDay(), weekday: shape.weekday } : shape,
     );
 
-    expect(toDayShapes(toIntervals(week))).toEqual(week);
+    expect(toDayShapes(toBlocks(week))).toEqual(week);
   });
 });

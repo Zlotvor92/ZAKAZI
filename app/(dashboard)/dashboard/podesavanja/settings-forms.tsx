@@ -4,11 +4,13 @@ import { formatInTimeZone } from "date-fns-tz";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { TimeSelect } from "@/components/ui/time-select";
 import type { BlockedNumber } from "@/lib/db/blocklist";
 import type { TimeOff } from "@/lib/db/time-off";
-import { minutesToTime } from "@/lib/domain/calendar";
 import {
   defaultWeek,
+  slotCounts,
+  withSlotCount,
   type DayShape,
 } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
@@ -62,9 +64,33 @@ function useSettingsAction() {
   return { pending, state, submit, call };
 }
 
+type SlotMode = "count" | "minutes";
+
+function slotSummary(day: DayShape): string {
+  const counts = slotCounts(day);
+
+  if (counts.length === 0) {
+    return "";
+  }
+
+  const word = (count: number) =>
+    count === 1 ? sr.settings.slotSummaryOne : sr.settings.slotSummaryFew;
+
+  if (counts.length === 1) {
+    return `${counts[0]} ${word(counts[0]!)} · po ${day.slotMinutes} min`;
+  }
+
+  return (
+    `${counts[0]} ${word(counts[0]!)} ${sr.settings.beforeBreak}, ` +
+    `${counts[1]} ${word(counts[1]!)} ${sr.settings.afterBreak} · ` +
+    `po ${day.slotMinutes} min`
+  );
+}
+
 export function WorkingHoursForm({ week }: { week: DayShape[] }) {
   const { pending, state, submit } = useSettingsAction();
   const [days, setDays] = useState(week);
+  const [mode, setMode] = useState<SlotMode>("minutes");
 
   function update(weekday: number, patch: Partial<DayShape>) {
     setDays((current) =>
@@ -74,9 +100,37 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
     );
   }
 
+  function setCount(weekday: number, count: number) {
+    setDays((current) =>
+      current.map((day) =>
+        day.weekday === weekday ? withSlotCount(day, count) : day,
+      ),
+    );
+  }
+
   return (
     <form action={submit(saveWorkingHours)} className="space-y-3">
       <p className="text-muted-foreground text-xs">{sr.settings.hoursHint}</p>
+
+      {/* Oba načina upisuju isti podatak; prekidač menja samo šta se kuca. */}
+      <fieldset className="flex items-center gap-2">
+        <legend className="text-muted-foreground pb-1 text-xs">
+          {sr.settings.slotModeLabel}
+        </legend>
+        {(["minutes", "count"] as const).map((option) => (
+          <Button
+            key={option}
+            type="button"
+            size="sm"
+            variant={mode === option ? "default" : "outline"}
+            onClick={() => setMode(option)}
+          >
+            {option === "minutes"
+              ? sr.settings.slotModeMinutes
+              : sr.settings.slotModeCount}
+          </Button>
+        ))}
+      </fieldset>
 
       {days.map((day) => (
         <div key={day.weekday} className="border-border rounded-lg border p-3">
@@ -99,41 +153,92 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
           </label>
 
           {day.working ? (
-            <div className="grid grid-cols-2 gap-2">
-              <TimeField
-                label={sr.settings.from}
-                name={`start-${day.weekday}`}
-                value={day.startMinute}
-                onChange={(value) =>
-                  value !== null && update(day.weekday, { startMinute: value })
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-2">
+                <Field label={sr.settings.from}>
+                  <TimeSelect
+                    name={`start-${day.weekday}`}
+                    value={day.startMinute}
+                    onChange={(value) =>
+                      value !== null &&
+                      update(day.weekday, { startMinute: value })
+                    }
+                  />
+                </Field>
+                <Field label={sr.settings.to}>
+                  <TimeSelect
+                    name={`end-${day.weekday}`}
+                    value={day.endMinute}
+                    onChange={(value) =>
+                      value !== null && update(day.weekday, { endMinute: value })
+                    }
+                  />
+                </Field>
+                <Field label={sr.settings.breakFrom}>
+                  <TimeSelect
+                    name={`break-start-${day.weekday}`}
+                    value={day.breakStartMinute}
+                    placeholder="—"
+                    onChange={(value) =>
+                      update(day.weekday, { breakStartMinute: value })
+                    }
+                  />
+                </Field>
+                <Field label={sr.settings.breakTo}>
+                  <TimeSelect
+                    name={`break-end-${day.weekday}`}
+                    value={day.breakEndMinute}
+                    placeholder="—"
+                    onChange={(value) =>
+                      update(day.weekday, { breakEndMinute: value })
+                    }
+                  />
+                </Field>
+              </div>
+
+              <Field
+                label={
+                  mode === "count"
+                    ? sr.settings.slotCountLabel
+                    : sr.settings.slotMinutesLabel
                 }
+              >
+                {mode === "count" ? (
+                  <Input
+                    type="number"
+                    min={1}
+                    max={20}
+                    value={slotCounts(day)[0] ?? 1}
+                    onChange={(event) =>
+                      setCount(day.weekday, Number(event.target.value))
+                    }
+                  />
+                ) : (
+                  <Input
+                    type="number"
+                    min={5}
+                    max={600}
+                    step={5}
+                    value={day.slotMinutes}
+                    onChange={(event) =>
+                      update(day.weekday, {
+                        slotMinutes: Number(event.target.value),
+                      })
+                    }
+                  />
+                )}
+              </Field>
+
+              {/* Trajanje je ono što se čuva, i u oba načina putuje ovim poljem. */}
+              <input
+                type="hidden"
+                name={`slot-${day.weekday}`}
+                value={day.slotMinutes}
               />
-              <TimeField
-                label={sr.settings.to}
-                name={`end-${day.weekday}`}
-                value={day.endMinute}
-                onChange={(value) =>
-                  value !== null && update(day.weekday, { endMinute: value })
-                }
-              />
-              <TimeField
-                label={sr.settings.breakFrom}
-                name={`break-start-${day.weekday}`}
-                value={day.breakStartMinute}
-                optional
-                onChange={(value) =>
-                  update(day.weekday, { breakStartMinute: value })
-                }
-              />
-              <TimeField
-                label={sr.settings.breakTo}
-                name={`break-end-${day.weekday}`}
-                value={day.breakEndMinute}
-                optional
-                onChange={(value) =>
-                  update(day.weekday, { breakEndMinute: value })
-                }
-              />
+
+              <p className="text-muted-foreground text-xs">
+                {slotSummary(day)}
+              </p>
             </div>
           ) : null}
         </div>
@@ -157,38 +262,17 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
   );
 }
 
-function TimeField({
+function Field({
   label,
-  name,
-  value,
-  optional,
-  onChange,
+  children,
 }: {
   label: string;
-  name: string;
-  value: number | null;
-  optional?: boolean;
-  onChange: (value: number | null) => void;
+  children: React.ReactNode;
 }) {
   return (
-    <label className="space-y-1">
+    <label className="block space-y-1">
       <span className="text-muted-foreground block text-xs">{label}</span>
-      <Input
-        type="time"
-        name={name}
-        required={!optional}
-        step={900}
-        value={value === null ? "" : minutesToTime(value)}
-        onChange={(event) => {
-          const raw = event.target.value;
-          if (raw === "") {
-            onChange(null);
-            return;
-          }
-          const [hours, rest] = raw.split(":");
-          onChange(Number(hours) * 60 + Number(rest));
-        }}
-      />
+      {children}
     </label>
   );
 }

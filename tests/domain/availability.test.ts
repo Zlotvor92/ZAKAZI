@@ -2,27 +2,25 @@ import { formatInTimeZone } from "date-fns-tz";
 import { describe, expect, it } from "vitest";
 import {
   buildAvailability,
+  slotMinutesForCount,
+  slotsInBlock,
   type AvailabilityInput,
   type BusyRange,
+  type WorkingBlock,
 } from "@/lib/domain/availability";
-import type { WorkingInterval } from "@/lib/domain/calendar";
 
 const BELGRADE = "Europe/Belgrade";
 
-/** Podeljena smena pon–pet 09–13 i 16–20, subota 09–14, nedelja slobodno. */
-const SPLIT_SHIFT: WorkingInterval[] = [
-  ...[1, 2, 3, 4, 5].flatMap((weekday) => [
-    { weekday, startMinute: 9 * 60, endMinute: 13 * 60 },
-    { weekday, startMinute: 16 * 60, endMinute: 20 * 60 },
-  ]),
-  { weekday: 6, startMinute: 9 * 60, endMinute: 14 * 60 },
+/** Radno vreme kakvo ima sestrin salon: dva termina pre i dva posle podne. */
+const SISTER: WorkingBlock[] = [1, 2, 3, 4, 5].flatMap((weekday) => [
+  { weekday, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 90 },
+  { weekday, startMinute: 17 * 60, endMinute: 20 * 60, slotMinutes: 90 },
+]);
+
+const MORNING: WorkingBlock[] = [
+  { weekday: 1, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 90 },
 ];
 
-const MORNING_ONLY: WorkingInterval[] = [
-  { weekday: 1, startMinute: 9 * 60, endMinute: 13 * 60 },
-];
-
-/** `now` daleko u prošlosti da najraniji termin ne seče ništa slučajno. */
 const LONG_AGO = new Date("2026-01-01T00:00:00Z");
 
 function availability(
@@ -31,165 +29,172 @@ function availability(
   return buildAvailability({
     timeZone: BELGRADE,
     toDate: overrides.fromDate,
-    workingHours: MORNING_ONLY,
+    blocks: MORNING,
     busy: [],
-    durationMin: 60,
-    bufferAfterMin: 0,
-    slotStepMin: 15,
     now: LONG_AGO,
     minLeadMin: 0,
     ...overrides,
   });
 }
 
-/** Termini jednog dana kao `HH:MM` po Beogradu, radi čitljivosti očekivanja. */
-function localTimes(slots: Date[]): string[] {
-  return slots.map((slot) => formatInTimeZone(slot, BELGRADE, "HH:mm"));
+function times(day: { slots: { startAt: Date }[] } | undefined): string[] {
+  return (day?.slots ?? []).map((slot) =>
+    formatInTimeZone(slot.startAt, BELGRADE, "HH:mm"),
+  );
 }
 
 function busy(startAt: string, endAt: string): BusyRange {
   return { startAt: new Date(startAt), endAt: new Date(endAt) };
 }
 
-describe("mreža od 15 minuta", () => {
-  it("nudi termine od otvaranja dok usluga staje do zatvaranja", () => {
-    // 2026-08-10 je ponedeljak. Radno vreme 09–13, usluga 60 minuta.
+describe("koliko termina staje u blok", () => {
+  it("tri sata na devedeset minuta daju dva termina", () => {
+    expect(
+      slotsInBlock({
+        weekday: 1,
+        startMinute: 540,
+        endMinute: 720,
+        slotMinutes: 90,
+      }),
+    ).toBe(2);
+  });
+
+  it("ostatak koji ne puni ceo termin se ne broji", () => {
+    // Četiri sata na devedeset minuta: dva termina, pola sata ostane.
+    expect(
+      slotsInBlock({
+        weekday: 1,
+        startMinute: 540,
+        endMinute: 780,
+        slotMinutes: 90,
+      }),
+    ).toBe(2);
+  });
+
+  it("termin duži od bloka ne staje nijednom", () => {
+    expect(
+      slotsInBlock({
+        weekday: 1,
+        startMinute: 540,
+        endMinute: 600,
+        slotMinutes: 90,
+      }),
+    ).toBe(0);
+  });
+});
+
+describe("iz broja termina u trajanje", () => {
+  it("tri sata podeljena na dva daju devedeset minuta", () => {
+    expect(slotMinutesForCount(9 * 60, 12 * 60, 2)).toBe(90);
+  });
+
+  it("četiri sata na tri daju osamdeset minuta", () => {
+    expect(slotMinutesForCount(9 * 60, 13 * 60, 3)).toBe(80);
+  });
+
+  it("nula termina ne deli sa nulom", () => {
+    expect(slotMinutesForCount(9 * 60, 12 * 60, 0)).toBe(180);
+  });
+});
+
+describe("slobodni termini", () => {
+  it("sestrin ponedeljak ima tačno četiri termina", () => {
+    // 2026-08-10 je ponedeljak.
+    const [monday] = availability({ fromDate: "2026-08-10", blocks: SISTER });
+
+    expect(times(monday)).toEqual(["09:00", "10:30", "17:00", "18:30"]);
+  });
+
+  it("termin počinje tačno kad se prethodni završi", () => {
     const [monday] = availability({ fromDate: "2026-08-10" });
 
-    expect(localTimes(monday!.slots)).toEqual([
-      "09:00",
-      "09:15",
-      "09:30",
-      "09:45",
-      "10:00",
-      "10:15",
-      "10:30",
-      "10:45",
-      "11:00",
-      "11:15",
-      "11:30",
-      "11:45",
-      "12:00",
-    ]);
+    expect(times(monday)).toEqual(["09:00", "10:30"]);
   });
 
-  it("usluga koja ne staje do zatvaranja ne dobija termin", () => {
+  it("svaki termin nosi svoje trajanje", () => {
+    const [monday] = availability({ fromDate: "2026-08-10" });
+
+    expect(monday!.slots.map((slot) => slot.minutes)).toEqual([90, 90]);
+  });
+
+  it("ostatak bloka se ne nudi kao kraći termin", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
-      durationMin: 4 * 60,
+      blocks: [
+        { weekday: 1, startMinute: 9 * 60, endMinute: 13 * 60, slotMinutes: 90 },
+      ],
     });
 
-    expect(localTimes(monday!.slots)).toEqual(["09:00"]);
+    expect(times(monday)).toEqual(["09:00", "10:30"]);
   });
 
-  it("usluga duža od radnog vremena ne dobija nijedan termin", () => {
+  it("pauza između blokova se ne nudi", () => {
+    const [monday] = availability({ fromDate: "2026-08-10", blocks: SISTER });
+
+    expect(times(monday)).not.toContain("12:00");
+    expect(times(monday)).not.toContain("13:30");
+  });
+
+  it("termini su poređani bez obzira na redosled blokova", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
-      durationMin: 5 * 60,
+      blocks: [
+        { weekday: 1, startMinute: 17 * 60, endMinute: 20 * 60, slotMinutes: 90 },
+        { weekday: 1, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 90 },
+      ],
+    });
+
+    expect(times(monday)).toEqual(["09:00", "10:30", "17:00", "18:30"]);
+  });
+
+  it("dan bez radnog vremena postoji u odgovoru ali je prazan", () => {
+    const days = availability({
+      fromDate: "2026-08-10",
+      toDate: "2026-08-16",
+      blocks: SISTER,
+    });
+
+    expect(days).toHaveLength(7);
+    expect(days[6]!.slots).toEqual([]);
+  });
+
+  it("trajanje od nule ne pravi beskonačno termina", () => {
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: [
+        { weekday: 1, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 0 },
+      ],
     });
 
     expect(monday!.slots).toEqual([]);
   });
-
-  it("mreža je usidrena za otvaranje, ne za pun sat", () => {
-    const [monday] = availability({
-      fromDate: "2026-08-10",
-      workingHours: [{ weekday: 1, startMinute: 9 * 60 + 10, endMinute: 12 * 60 }],
-      durationMin: 45,
-    });
-
-    expect(localTimes(monday!.slots).slice(0, 3)).toEqual([
-      "09:10",
-      "09:25",
-      "09:40",
-    ]);
-  });
-
-  it("korak od nula minuta je greška, ne beskonačna petlja", () => {
-    expect(() =>
-      availability({ fromDate: "2026-08-10", slotStepMin: 0 }),
-    ).toThrow();
-  });
-});
-
-describe("trajanje dolazi sa usluge", () => {
-  it("isti dan daje različite termine za različite usluge", () => {
-    // Zauzeto 10–13, ostaje samo jedan sat ujutru.
-    const taken = [busy("2026-08-10T08:00:00Z", "2026-08-10T11:00:00Z")];
-
-    const manikir = availability({
-      fromDate: "2026-08-10",
-      busy: taken,
-      durationMin: 45,
-    })[0]!;
-    const trepavice = availability({
-      fromDate: "2026-08-10",
-      busy: taken,
-      durationMin: 180,
-    })[0]!;
-
-    expect(localTimes(manikir.slots)).toEqual(["09:00", "09:15"]);
-    expect(trepavice.slots).toEqual([]);
-  });
-});
-
-describe("bafer", () => {
-  it("sme da pređe kraj radnog vremena", () => {
-    // Salon radi do 13h. Usluga od sat vremena sa 15 minuta spremanja sme da
-    // počne u 12h — usluga se završi u 13h, spremanje ide do 13:15.
-    const [monday] = availability({
-      fromDate: "2026-08-10",
-      durationMin: 60,
-      bufferAfterMin: 15,
-    });
-
-    expect(localTimes(monday!.slots).at(-1)).toBe("12:00");
-  });
-
-  it("ne sme da pređe u tuđi termin", () => {
-    // Zauzeto od 12:00. Bez bafera bi 11:00 bilo slobodno; sa 15 minuta
-    // spremanja usluga od sat vremena mora da počne najkasnije u 10:45.
-    const [monday] = availability({
-      fromDate: "2026-08-10",
-      busy: [busy("2026-08-10T10:00:00Z", "2026-08-10T11:00:00Z")],
-      durationMin: 60,
-      bufferAfterMin: 15,
-    });
-
-    expect(localTimes(monday!.slots).at(-1)).toBe("10:45");
-  });
 });
 
 describe("zauzeto vreme", () => {
-  it("termin koji dodiruje zauzeto se ne nudi", () => {
+  it("zauzet termin nestaje, ostali ostaju", () => {
+    // 09:00 po Beogradu je 07:00 UTC leti.
     const [monday] = availability({
       fromDate: "2026-08-10",
-      busy: [busy("2026-08-10T08:00:00Z", "2026-08-10T09:00:00Z")],
+      blocks: SISTER,
+      busy: [busy("2026-08-10T07:00:00Z", "2026-08-10T08:30:00Z")],
     });
 
-    expect(localTimes(monday!.slots)).toEqual([
-      "09:00",
-      "11:00",
-      "11:15",
-      "11:30",
-      "11:45",
-      "12:00",
-    ]);
+    expect(times(monday)).toEqual(["10:30", "17:00", "18:30"]);
   });
 
-  it("termin koji se naslanja na zauzeto se nudi", () => {
-    // Zauzeto 10:00–11:00 po Beogradu. Usluga od sat vremena sme tačno u 11:00.
+  it("termin koji se naslanja na zauzeto se i dalje nudi", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
-      busy: [busy("2026-08-10T08:00:00Z", "2026-08-10T09:00:00Z")],
+      busy: [busy("2026-08-10T05:30:00Z", "2026-08-10T07:00:00Z")],
     });
 
-    expect(localTimes(monday!.slots)).toContain("11:00");
+    expect(times(monday)).toContain("09:00");
   });
 
   it("odsustvo pojede ceo dan", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
+      blocks: SISTER,
       busy: [busy("2026-08-10T00:00:00Z", "2026-08-11T00:00:00Z")],
     });
 
@@ -199,83 +204,31 @@ describe("zauzeto vreme", () => {
   it("zauzeto iz drugog dana ne dira ovaj", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
-      busy: [busy("2026-08-11T08:00:00Z", "2026-08-11T12:00:00Z")],
+      busy: [busy("2026-08-11T07:00:00Z", "2026-08-11T08:30:00Z")],
     });
 
-    expect(monday!.slots).toHaveLength(13);
-  });
-});
-
-describe("podeljena smena", () => {
-  it("pauza između dve smene se ne nudi", () => {
-    const [monday] = availability({
-      fromDate: "2026-08-10",
-      workingHours: SPLIT_SHIFT,
-    });
-
-    const times = localTimes(monday!.slots);
-
-    expect(times).toContain("12:00");
-    expect(times).not.toContain("13:00");
-    expect(times).not.toContain("14:00");
-    expect(times).not.toContain("15:00");
-    expect(times).toContain("16:00");
-  });
-
-  it("termini su poređani po vremenu bez obzira na redosled smena", () => {
-    const [monday] = availability({
-      fromDate: "2026-08-10",
-      workingHours: [
-        { weekday: 1, startMinute: 16 * 60, endMinute: 20 * 60 },
-        { weekday: 1, startMinute: 9 * 60, endMinute: 13 * 60 },
-      ],
-    });
-
-    const times = localTimes(monday!.slots);
-
-    expect(times[0]).toBe("09:00");
-    expect([...times].sort()).toEqual(times);
-  });
-
-  it("dan bez radnog vremena nema termine ali postoji u odgovoru", () => {
-    const days = availability({
-      fromDate: "2026-08-10",
-      toDate: "2026-08-16",
-      workingHours: SPLIT_SHIFT,
-    });
-
-    expect(days).toHaveLength(7);
-    expect(days[6]!.date).toBe("2026-08-16");
-    expect(days[6]!.slots).toEqual([]);
+    expect(times(monday)).toHaveLength(2);
   });
 });
 
 describe("najraniji termin", () => {
-  it("seče jutro koje je prekasno za zakazivanje", () => {
-    // Ponedeljak 09:30 po Beogradu, najranije za dva sata: prvi termin 11:30.
+  it("seče ono što je prekasno zakazati", () => {
+    // Ponedeljak 09:30 po Beogradu, najranije za dva sata.
     const [monday] = availability({
       fromDate: "2026-08-10",
+      blocks: SISTER,
       now: new Date("2026-08-10T07:30:00Z"),
       minLeadMin: 120,
     });
 
-    expect(localTimes(monday!.slots)[0]).toBe("11:30");
+    expect(times(monday)).toEqual(["17:00", "18:30"]);
   });
 
-  it("bez najranijeg termina prvi slot je otvaranje", () => {
+  it("dan koji je prošao nema termine", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
-      now: new Date("2026-08-10T05:00:00Z"),
-      minLeadMin: 0,
-    });
-
-    expect(localTimes(monday!.slots)[0]).toBe("09:00");
-  });
-
-  it("dan koji je već prošao nema termine", () => {
-    const [monday] = availability({
-      fromDate: "2026-08-10",
-      now: new Date("2026-08-10T18:00:00Z"),
+      blocks: SISTER,
+      now: new Date("2026-08-10T20:00:00Z"),
       minLeadMin: 0,
     });
 
@@ -284,72 +237,63 @@ describe("najraniji termin", () => {
 });
 
 describe("prelazak na drugo računanje vremena", () => {
-  it("dan pre prelaska na letnje vreme: 09:00 je 08:00 UTC", () => {
-    const [saturday] = availability({
-      fromDate: "2026-03-28",
-      workingHours: [{ weekday: 6, startMinute: 9 * 60, endMinute: 13 * 60 }],
-    });
-
-    expect(saturday!.slots[0]!.toISOString()).toBe("2026-03-28T08:00:00.000Z");
-  });
-
-  it("dan prelaska na letnje vreme: 09:00 je 07:00 UTC", () => {
-    // 29.03.2026. sat skače sa 02:00 na 03:00.
-    const [sunday] = availability({
-      fromDate: "2026-03-29",
-      workingHours: [{ weekday: 7, startMinute: 9 * 60, endMinute: 13 * 60 }],
-    });
-
-    expect(sunday!.slots[0]!.toISOString()).toBe("2026-03-29T07:00:00.000Z");
-  });
-
-  it("dan pre prelaska na zimsko vreme: 09:00 je 07:00 UTC", () => {
+  it("dan pre prelaska na zimsko: 09:00 je 07:00 UTC", () => {
     const [saturday] = availability({
       fromDate: "2026-10-24",
-      workingHours: [{ weekday: 6, startMinute: 9 * 60, endMinute: 13 * 60 }],
+      blocks: [
+        { weekday: 6, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 90 },
+      ],
     });
 
-    expect(saturday!.slots[0]!.toISOString()).toBe("2026-10-24T07:00:00.000Z");
+    expect(saturday!.slots[0]!.startAt.toISOString()).toBe(
+      "2026-10-24T07:00:00.000Z",
+    );
   });
 
-  it("dan prelaska na zimsko vreme: 09:00 je 08:00 UTC", () => {
-    // 25.10.2026. sat se vraća sa 03:00 na 02:00.
+  it("dan prelaska na zimsko: 09:00 je 08:00 UTC", () => {
     const [sunday] = availability({
       fromDate: "2026-10-25",
-      workingHours: [{ weekday: 7, startMinute: 9 * 60, endMinute: 13 * 60 }],
+      blocks: [
+        { weekday: 7, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 90 },
+      ],
     });
 
-    expect(sunday!.slots[0]!.toISOString()).toBe("2026-10-25T08:00:00.000Z");
+    expect(sunday!.slots[0]!.startAt.toISOString()).toBe(
+      "2026-10-25T08:00:00.000Z",
+    );
   });
 
   it("termin zakazan u martu za oktobar pada na tačan sat", () => {
-    // Ovo je pravilo iz specifikacije: gledano iz marta, kad je na snazi
-    // letnje vreme, oktobarski termin u 10:00 mora biti 09:00 UTC, ne 08:00.
     const days = buildAvailability({
       timeZone: BELGRADE,
       fromDate: "2026-10-26",
       toDate: "2026-10-26",
-      workingHours: [{ weekday: 1, startMinute: 10 * 60, endMinute: 12 * 60 }],
+      blocks: [
+        { weekday: 1, startMinute: 10 * 60, endMinute: 13 * 60, slotMinutes: 90 },
+      ],
       busy: [],
-      durationMin: 60,
-      bufferAfterMin: 0,
-      slotStepMin: 15,
       now: new Date("2026-03-30T12:00:00Z"),
       minLeadMin: 0,
     });
 
-    expect(days[0]!.slots[0]!.toISOString()).toBe("2026-10-26T09:00:00.000Z");
-    expect(localTimes(days[0]!.slots)[0]).toBe("10:00");
+    expect(days[0]!.slots[0]!.startAt.toISOString()).toBe(
+      "2026-10-26T09:00:00.000Z",
+    );
+    expect(times(days[0])[0]).toBe("10:00");
   });
 
   it("broj termina u danu ne zavisi od prelaska", () => {
     const before = availability({
       fromDate: "2026-10-24",
-      workingHours: [{ weekday: 6, startMinute: 9 * 60, endMinute: 13 * 60 }],
+      blocks: [
+        { weekday: 6, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 90 },
+      ],
     });
     const after = availability({
       fromDate: "2026-10-31",
-      workingHours: [{ weekday: 6, startMinute: 9 * 60, endMinute: 13 * 60 }],
+      blocks: [
+        { weekday: 6, startMinute: 9 * 60, endMinute: 12 * 60, slotMinutes: 90 },
+      ],
     });
 
     expect(before[0]!.slots).toHaveLength(after[0]!.slots.length);
@@ -360,19 +304,21 @@ describe("radno vreme do ponoći", () => {
   it("24:00 je kraj dana, ne njegov početak", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
-      workingHours: [{ weekday: 1, startMinute: 22 * 60, endMinute: 24 * 60 }],
+      blocks: [
+        { weekday: 1, startMinute: 21 * 60, endMinute: 24 * 60, slotMinutes: 90 },
+      ],
     });
 
-    expect(localTimes(monday!.slots)).toEqual(["22:00", "22:15", "22:30", "22:45", "23:00"]);
+    expect(times(monday)).toEqual(["21:00", "22:30"]);
   });
 });
 
-describe("raspon dana koji se nudi", () => {
+describe("raspon dana", () => {
   it("svaki dan iz raspona postoji u odgovoru", () => {
     const days = availability({
       fromDate: "2026-08-10",
       toDate: "2026-08-24",
-      workingHours: SPLIT_SHIFT,
+      blocks: SISTER,
     });
 
     expect(days).toHaveLength(15);

@@ -4,16 +4,20 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Service } from "@/lib/db/services";
-import { SLOT_STEP_MIN } from "@/lib/domain/availability";
 import { sr } from "@/lib/i18n/sr";
 import { saveAppointment, type NewAppointmentState } from "./actions";
+
+/** Trajanja koja solo majstor stvarno koristi; ostalo je kucanje bez potrebe. */
+const DURATIONS = [30, 45, 60, 90, 120, 150, 180, 240];
 
 export function AppointmentForm({
   services,
   date,
+  defaultDuration,
 }: {
   services: Service[];
   date: string;
+  defaultDuration: number;
 }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<NewAppointmentState>({ status: "idle" });
@@ -38,14 +42,27 @@ export function AppointmentForm({
           <label htmlFor="time" className="text-sm font-medium">
             {sr.newAppointment.timeLabel}
           </label>
-          <Input
-            id="time"
-            name="time"
-            type="time"
-            required
-            step={SLOT_STEP_MIN * 60}
-          />
+          <Input id="time" name="time" type="time" required step={300} />
         </div>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="durationMin" className="text-sm font-medium">
+          {sr.newAppointment.durationLabel}
+        </label>
+        <select
+          id="durationMin"
+          name="durationMin"
+          required
+          defaultValue={defaultDuration}
+          className="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
+        >
+          {DURATIONS.map((minutes) => (
+            <option key={minutes} value={minutes}>
+              {minutes} min
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-2">
@@ -60,7 +77,7 @@ export function AppointmentForm({
         >
           {services.map((service) => (
             <option key={service.id} value={service.id}>
-              {service.name} · {service.duration_min} min
+              {service.name}
             </option>
           ))}
         </select>

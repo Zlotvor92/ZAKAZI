@@ -5,10 +5,10 @@ import { z } from "zod";
 import { blockNumber, unblockNumber } from "@/lib/db/blocklist";
 import { getCurrentTenant, updateBookingSettings } from "@/lib/db/tenants";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
-import { setWorkingHours } from "@/lib/db/working-hours";
+import { setWorkingBlocks } from "@/lib/db/working-hours";
 import { addDays, instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar";
 import { normalizePhone } from "@/lib/domain/phone";
-import { toIntervals, validateDay, type DayShape } from "@/lib/domain/working-hours";
+import { toBlocks, validateDay, type DayShape } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
 
 export type SettingsState =
@@ -16,14 +16,16 @@ export type SettingsState =
   | { status: "saved" }
   | { status: "error"; message: string };
 
-const MINUTE_PATTERN = /^\d{2}:\d{2}$/;
-
+/** Biraju se iz spiska, pa polje već nosi minute od ponoći. */
 function minutes(value: FormDataEntryValue | null): number | null {
-  if (typeof value !== "string" || !MINUTE_PATTERN.test(value)) {
+  if (typeof value !== "string" || value === "") {
     return null;
   }
-  const [hours, rest] = value.split(":");
-  return Number(hours) * 60 + Number(rest);
+
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= 0 && parsed <= 24 * 60
+    ? parsed
+    : null;
 }
 
 function readWeek(formData: FormData): DayShape[] | null {
@@ -35,8 +37,9 @@ function readWeek(formData: FormData): DayShape[] | null {
     const end = minutes(formData.get(`end-${weekday}`));
     const breakStart = minutes(formData.get(`break-start-${weekday}`));
     const breakEnd = minutes(formData.get(`break-end-${weekday}`));
+    const slot = Number(formData.get(`slot-${weekday}`));
 
-    if (working && (start === null || end === null)) {
+    if (working && (start === null || end === null || !Number.isFinite(slot))) {
       return null;
     }
 
@@ -47,6 +50,7 @@ function readWeek(formData: FormData): DayShape[] | null {
       endMinute: end ?? 17 * 60,
       breakStartMinute: breakStart,
       breakEndMinute: breakEnd,
+      slotMinutes: Number.isFinite(slot) && slot > 0 ? slot : 60,
     });
   }
 
@@ -69,7 +73,7 @@ export async function saveWorkingHours(
     }
   }
 
-  const result = await setWorkingHours(toIntervals(week));
+  const result = await setWorkingBlocks(toBlocks(week));
 
   if (!result.ok) {
     const known = sr.settings.hoursProblem;

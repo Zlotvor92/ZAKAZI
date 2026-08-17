@@ -62,7 +62,7 @@ describe("seed", () => {
     });
   });
 
-  it("radno vreme je podeljena smena pon–pet i jedan komad subotom", async () => {
+  it("radno vreme je podeljena smena sa dva termina po komadu", async () => {
     const seed = await readFile(seedPath, "utf8");
 
     await withRollback(async (db) => {
@@ -80,11 +80,11 @@ describe("seed", () => {
       );
 
       expect(result.rows).toEqual([
-        { weekday: 1, intervals: "09:00-13:00, 16:00-20:00" },
-        { weekday: 2, intervals: "09:00-13:00, 16:00-20:00" },
-        { weekday: 3, intervals: "09:00-13:00, 16:00-20:00" },
-        { weekday: 4, intervals: "09:00-13:00, 16:00-20:00" },
-        { weekday: 5, intervals: "09:00-13:00, 16:00-20:00" },
+        { weekday: 1, intervals: "09:00-12:00, 17:00-20:00" },
+        { weekday: 2, intervals: "09:00-12:00, 17:00-20:00" },
+        { weekday: 3, intervals: "09:00-12:00, 17:00-20:00" },
+        { weekday: 4, intervals: "09:00-12:00, 17:00-20:00" },
+        { weekday: 5, intervals: "09:00-12:00, 17:00-20:00" },
         { weekday: 6, intervals: "09:00-14:00" },
       ]);
     });

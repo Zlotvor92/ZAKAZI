@@ -19,16 +19,15 @@ export const bookingDataSchema = z.object({
     z.object({
       id: z.uuid(),
       name: z.string(),
-      duration_min: z.number().int(),
-      buffer_after_min: z.number().int(),
       price_rsd: z.number().int(),
     }),
   ),
-  working_hours: z.array(
+  blocks: z.array(
     z.object({
       weekday: z.number().int(),
       start_minute: z.number().int(),
       end_minute: z.number().int(),
+      slot_minutes: z.number().int(),
     }),
   ),
   busy: z.array(

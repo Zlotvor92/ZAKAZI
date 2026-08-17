@@ -16,7 +16,6 @@ const appointmentSchema = z.object({
   source: z.enum(["salon", "public"]),
   price_rsd: z.number().int(),
   duration_min: z.number().int(),
-  buffer_after_min: z.number().int(),
   client_name: z.string(),
   client_phone: z.string(),
   service_name: z.string(),
@@ -47,11 +46,12 @@ const weekSchema = z.object({
   }),
   today: z.string(),
   week_start: z.string(),
-  working_hours: z.array(
+  blocks: z.array(
     z.object({
       weekday: z.number().int(),
       start_minute: z.number().int(),
       end_minute: z.number().int(),
+      slot_minutes: z.number().int(),
     }),
   ),
   appointments: appointmentListSchema,
@@ -89,6 +89,7 @@ export type AppointmentWriteResult = z.infer<typeof writeResultSchema>;
 export async function createAppointment(input: {
   serviceId: string;
   startAt: Date;
+  durationMin: number;
   clientName: string;
   phoneE164: string;
   deviceId: string;
@@ -98,6 +99,7 @@ export async function createAppointment(input: {
   const { data, error } = await supabase.rpc("create_appointment", {
     p_service_id: input.serviceId,
     p_start_at: input.startAt.toISOString(),
+    p_duration_min: input.durationMin,
     p_client_name: input.clientName,
     p_phone_e164: input.phoneE164,
     p_device_id: input.deviceId,

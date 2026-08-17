@@ -31,7 +31,7 @@ type Week = {
   tenant: { timezone: string; name: string };
   today: string;
   week_start: string;
-  working_hours: { weekday: number }[];
+  blocks: { weekday: number; slot_minutes: number }[];
   appointments: Record<string, unknown>[];
 };
 
@@ -165,7 +165,7 @@ describe("dashboard_week", () => {
     });
   });
 
-  it("salon i radno vreme stižu istim pozivom", async () => {
+  it("salon i blokovi stižu istim pozivom", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
       const staffId = await db.query<{ id: string }>(
@@ -173,15 +173,18 @@ describe("dashboard_week", () => {
         [base.tenantId],
       );
       await db.query(
-        `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-         values ($1, $2, 1, '09:00', '13:00')`,
+        `insert into working_hours
+           (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+         values ($1, $2, 1, '09:00', '12:00', 90)`,
         [base.tenantId, staffId.rows[0]!.id],
       );
 
       const data = await asUser(db, base.userId, () => week(db, SEPTEMBER));
 
       expect(data!.tenant.timezone).toBe("Europe/Belgrade");
-      expect(data!.working_hours).toHaveLength(1);
+      expect(data!.blocks).toEqual([
+        { weekday: 1, start_minute: 540, end_minute: 720, slot_minutes: 90 },
+      ]);
     });
   });
 

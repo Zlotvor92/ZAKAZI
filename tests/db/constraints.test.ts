@@ -53,9 +53,7 @@ describe("appointments_no_overlap", () => {
     await withRollback(async (db) => {
       const tenantId = await createTenant(db);
       const staffId = await createStaff(db, tenantId);
-      const serviceId = await createService(db, tenantId, {
-        bufferAfterMin: 15,
-      });
+      const serviceId = await createService(db, tenantId);
       const clientId = await createClient(db, tenantId);
       const base = { tenantId, staffId, serviceId, clientId, bufferAfterMin: 15 };
 
@@ -130,7 +128,7 @@ describe("appointments.end_at", () => {
     await withRollback(async (db) => {
       const tenantId = await createTenant(db);
       const staffId = await createStaff(db, tenantId);
-      const serviceId = await createService(db, tenantId, { durationMin: 45 });
+      const serviceId = await createService(db, tenantId);
       const clientId = await createClient(db, tenantId);
 
       const appointment = await insertAppointment(db, {
@@ -158,7 +156,7 @@ describe("appointments.end_at", () => {
     await withRollback(async (db) => {
       const tenantId = await createTenant(db);
       const staffId = await createStaff(db, tenantId);
-      const serviceId = await createService(db, tenantId, { durationMin: 90 });
+      const serviceId = await createService(db, tenantId);
       const clientId = await createClient(db, tenantId);
 
       // 29.03.2026. u 01:30 po beogradskom vremenu; sat 02–03 tog dana ne postoji.
@@ -190,8 +188,9 @@ describe("working_hours_no_overlap", () => {
       const staffId = await createStaff(db, tenantId);
 
       await db.query(
-        `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-         values ($1, $2, 1, '09:00', '13:00'), ($1, $2, 1, '16:00', '20:00')`,
+        `insert into working_hours
+           (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+         values ($1, $2, 1, '09:00', '13:00', 90), ($1, $2, 1, '16:00', '20:00', 90)`,
         [tenantId, staffId],
       );
 
@@ -209,16 +208,18 @@ describe("working_hours_no_overlap", () => {
       const staffId = await createStaff(db, tenantId);
 
       await db.query(
-        `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-         values ($1, $2, 1, '09:00', '13:00')`,
+        `insert into working_hours
+           (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+         values ($1, $2, 1, '09:00', '13:00', 90)`,
         [tenantId, staffId],
       );
 
       await expect(
         inSavepoint(db, () =>
           db.query(
-            `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-             values ($1, $2, 1, '12:00', '15:00')`,
+            `insert into working_hours
+           (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+             values ($1, $2, 1, '12:00', '15:00', 90)`,
             [tenantId, staffId],
           ),
         ),
@@ -232,8 +233,9 @@ describe("working_hours_no_overlap", () => {
       const staffId = await createStaff(db, tenantId);
 
       await db.query(
-        `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-         values ($1, $2, 1, '09:00', '13:00'), ($1, $2, 2, '09:00', '13:00')`,
+        `insert into working_hours
+           (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+         values ($1, $2, 1, '09:00', '13:00', 90), ($1, $2, 2, '09:00', '13:00', 90)`,
         [tenantId, staffId],
       );
 

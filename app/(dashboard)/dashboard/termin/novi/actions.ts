@@ -14,6 +14,7 @@ const formSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   time: z.string().regex(/^\d{2}:\d{2}$/),
   serviceId: z.uuid(),
+  durationMin: z.coerce.number().int().min(5).max(1440),
   name: z.string(),
   phone: z.string(),
 });
@@ -37,6 +38,7 @@ export async function saveAppointment(
     date: formData.get("date"),
     time: formData.get("time"),
     serviceId: formData.get("serviceId"),
+    durationMin: formData.get("durationMin"),
     name: formData.get("name"),
     phone: formData.get("phone"),
   });
@@ -65,6 +67,7 @@ export async function saveAppointment(
 
   const result = await createAppointment({
     serviceId: parsed.data.serviceId,
+    durationMin: parsed.data.durationMin,
     startAt: instantInTimeZone(
       parsed.data.date,
       timeToMinutes(parsed.data.time),

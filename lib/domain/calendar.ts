@@ -1,11 +1,5 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
-export type WorkingInterval = {
-  weekday: number;
-  startMinute: number;
-  endMinute: number;
-};
-
 const MINUTES_PER_DAY = 24 * 60;
 
 export function timeToMinutes(value: string): number {

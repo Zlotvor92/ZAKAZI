@@ -130,18 +130,11 @@ export async function createStaff(
 export async function createService(
   db: pg.PoolClient,
   tenantId: string,
-  options: { durationMin?: number; bufferAfterMin?: number } = {},
 ): Promise<string> {
   const result = await db.query<{ id: string }>(
-    `insert into services (tenant_id, name, duration_min, buffer_after_min, price_rsd)
-     values ($1, $2, $3, $4, $5) returning id`,
-    [
-      tenantId,
-      "Gel nokti",
-      options.durationMin ?? 60,
-      options.bufferAfterMin ?? 0,
-      2500,
-    ],
+    `insert into services (tenant_id, name, price_rsd)
+     values ($1, $2, $3) returning id`,
+    [tenantId, "Gel nokti", 2500],
   );
   return result.rows[0]!.id;
 }
@@ -218,8 +211,9 @@ export async function createPopulatedTenant(
     [tenantId, staffId, serviceId],
   );
   await db.query(
-    `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-     values ($1, $2, 1, '09:00', '13:00')`,
+    `insert into working_hours
+       (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+     values ($1, $2, 1, '09:00', '12:00', 90)`,
     [tenantId, staffId],
   );
   await db.query(

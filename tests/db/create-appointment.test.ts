@@ -24,11 +24,12 @@ async function salon(db: pg.PoolClient) {
   const tenantId = await createTenant(db);
   const userId = await createUser(db, tenantId);
   const staffId = await createStaff(db, tenantId);
-  const serviceId = await createService(db, tenantId, { bufferAfterMin: 15 });
+  const serviceId = await createService(db, tenantId);
 
   await db.query(
-    `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
-     values ($1, $2, 1, '09:00', '13:00')`,
+    `insert into working_hours
+       (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+     values ($1, $2, 1, '09:00', '12:00', 90)`,
     [tenantId, staffId],
   );
 
@@ -40,16 +41,18 @@ async function create(
   input: {
     serviceId: string;
     startAt: string;
+    durationMin?: number;
     name?: string;
     phone?: string;
     deviceId?: string;
   },
 ): Promise<WriteResult> {
   const result = await db.query<{ result: WriteResult }>(
-    "select create_appointment($1, $2, $3, $4, $5) as result",
+    "select create_appointment($1, $2, $3, $4, $5, $6) as result",
     [
       input.serviceId,
       input.startAt,
+      input.durationMin ?? 90,
       input.name ?? "Jelena",
       input.phone ?? "+381641234567",
       input.deviceId ?? null,
@@ -108,7 +111,7 @@ describe("vlasnica unosi termin", () => {
     });
   });
 
-  it("trajanje, bafer i cena se prepisuju sa usluge", async () => {
+  it("trajanje bira vlasnica, cena dolazi sa usluge", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
 
@@ -116,6 +119,7 @@ describe("vlasnica unosi termin", () => {
         create(db, {
           serviceId: base.serviceId,
           startAt: "2026-09-14T08:00:00Z",
+          durationMin: 45,
         }),
       );
 
@@ -128,8 +132,8 @@ describe("vlasnica unosi termin", () => {
         [base.tenantId],
       );
       expect(row.rows[0]).toEqual({
-        duration_min: 60,
-        buffer_after_min: 15,
+        duration_min: 45,
+        buffer_after_min: 0,
         price_rsd: 2500,
       });
     });
@@ -181,7 +185,7 @@ describe("vlasnica nije vezana pravilima javne stranice", () => {
     });
   });
 
-  it("sme van mreže od petnaest minuta", async () => {
+  it("sme na vreme koje nije početak nijednog termina", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
 
@@ -248,7 +252,7 @@ describe("granice koje i za vlasnicu važe", () => {
         serviceId: base.serviceId,
         clientId,
         startAt: "2026-09-14T08:00:00Z",
-        bufferAfterMin: 15,
+        durationMin: 90,
       });
 
       const result = await asUser(db, base.userId, () =>
@@ -263,7 +267,7 @@ describe("granice koje i za vlasnicu važe", () => {
     });
   });
 
-  it("bafer prethodnog termina i dalje blokira", async () => {
+  it("trajanje koje unese vlasnica zauzima vreme", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
 
@@ -271,9 +275,10 @@ describe("granice koje i za vlasnicu važe", () => {
         await create(db, {
           serviceId: base.serviceId,
           startAt: "2026-09-14T08:00:00Z",
+          durationMin: 90,
         });
 
-        // Prethodni drži 08:00–09:15 sa baferom.
+        // Prethodni drži 08:00–09:30.
         const result = await create(db, {
           serviceId: base.serviceId,
           startAt: "2026-09-14T09:00:00Z",
@@ -281,6 +286,24 @@ describe("granice koje i za vlasnicu važe", () => {
         });
 
         expect(result).toEqual({ ok: false, reason: "slot_taken" });
+      });
+    });
+  });
+
+  it("besmisleno trajanje se odbija", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      await asUser(db, base.userId, async () => {
+        for (const minutes of [0, -30, 2000]) {
+          expect(
+            await create(db, {
+              serviceId: base.serviceId,
+              startAt: "2026-09-14T08:00:00Z",
+              durationMin: minutes,
+            }),
+          ).toEqual({ ok: false, reason: "invalid_duration" });
+        }
       });
     });
   });

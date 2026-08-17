@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getBlockedNumbers } from "@/lib/db/blocklist";
 import { getCurrentTenant } from "@/lib/db/tenants";
 import { getUpcomingTimeOff } from "@/lib/db/time-off";
-import { getWorkingHours } from "@/lib/db/working-hours";
+import { getWorkingBlocks } from "@/lib/db/working-hours";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { toDayShapes } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
@@ -39,9 +39,9 @@ function Section({
 
 export default async function SettingsPage() {
   // Ništa od ovoga ne zavisi od salona, pa sve ide odjednom umesto u redu.
-  const [tenant, workingHours, timeOff, blocked] = await Promise.all([
+  const [tenant, blocks, timeOff, blocked] = await Promise.all([
     getCurrentTenant(),
-    getWorkingHours(),
+    getWorkingBlocks(),
     getUpcomingTimeOff(),
     getBlockedNumbers(),
   ]);
@@ -77,7 +77,7 @@ export default async function SettingsPage() {
       </Section>
 
       <Section title={sr.settings.hoursTitle}>
-        <WorkingHoursForm week={toDayShapes(workingHours)} />
+        <WorkingHoursForm week={toDayShapes(blocks)} />
       </Section>
 
       <Section title={sr.settings.rulesTitle}>

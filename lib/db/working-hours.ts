@@ -1,17 +1,25 @@
 import { z } from "zod";
-import { timeToMinutes, type WorkingInterval } from "@/lib/domain/calendar";
+import type { WorkingBlock } from "@/lib/domain/availability";
+import { timeToMinutes } from "@/lib/domain/calendar";
 import { createClient } from "@/lib/supabase/server";
+
+const rowSchema = z.object({
+  weekday: z.number().int(),
+  start_time: z.string(),
+  end_time: z.string(),
+  slot_minutes: z.number().int(),
+});
 
 /**
  * Radno vreme salona ulogovanog korisnika. Ne filtrira po tenantu — to radi
  * RLS politika, pa upit vidi samo redove salona u kojima korisnik ima članstvo.
  */
-export async function getWorkingHours(): Promise<WorkingInterval[]> {
+export async function getWorkingBlocks(): Promise<WorkingBlock[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("working_hours")
-    .select("weekday, start_time, end_time")
+    .select("weekday, start_time, end_time, slot_minutes")
     .order("weekday", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -19,11 +27,15 @@ export async function getWorkingHours(): Promise<WorkingInterval[]> {
     throw new Error(`Čitanje radnog vremena nije uspelo: ${error.message}`);
   }
 
-  return data.map((row) => ({
-    weekday: row.weekday,
-    startMinute: timeToMinutes(row.start_time),
-    endMinute: timeToMinutes(row.end_time),
-  }));
+  return z
+    .array(rowSchema)
+    .parse(data)
+    .map((row) => ({
+      weekday: row.weekday,
+      startMinute: timeToMinutes(row.start_time),
+      endMinute: timeToMinutes(row.end_time),
+      slotMinutes: row.slot_minutes,
+    }));
 }
 
 const writeResultSchema = z.discriminatedUnion("ok", [
@@ -34,16 +46,17 @@ const writeResultSchema = z.discriminatedUnion("ok", [
 export type WorkingHoursWriteResult = z.infer<typeof writeResultSchema>;
 
 /** Upisuje celu nedelju odjednom; stara se briše u istoj transakciji. */
-export async function setWorkingHours(
-  intervals: WorkingInterval[],
+export async function setWorkingBlocks(
+  blocks: WorkingBlock[],
 ): Promise<WorkingHoursWriteResult> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("set_working_hours", {
-    p_intervals: intervals.map((interval) => ({
-      weekday: interval.weekday,
-      start_minute: interval.startMinute,
-      end_minute: interval.endMinute,
+    p_blocks: blocks.map((block) => ({
+      weekday: block.weekday,
+      start_minute: block.startMinute,
+      end_minute: block.endMinute,
+      slot_minutes: block.slotMinutes,
     })),
   });
 

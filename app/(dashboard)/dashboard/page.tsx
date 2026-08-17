@@ -66,9 +66,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const days: StripDay[] = weekDates.map((date) => ({
     date,
     appointments: onDate(date).length,
-    working: week.working_hours.some(
-      (interval) => interval.weekday === isoWeekday(date),
-    ),
+    working: week.blocks.some((block) => block.weekday === isoWeekday(date)),
   }));
 
   const selectedDay = days.find((day) => day.date === selected);
