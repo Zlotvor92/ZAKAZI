@@ -1,0 +1,35 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { getAdminSalons, isPlatformOwner } from "@/lib/db/admin";
+import { sr } from "@/lib/i18n/sr";
+import { NewSalonForm } from "./new-salon-form";
+import { SalonList } from "./salon-list";
+
+export default async function AdminPage() {
+  // Konzola postoji samo za vlasnika platforme. Ko to nije, ne dobija poruku
+  // da mu je zabranjeno nego da stranice nema — nema šta da sazna da postoji.
+  if (!(await isPlatformOwner())) {
+    notFound();
+  }
+
+  const salons = await getAdminSalons();
+
+  return (
+    <main className="mx-auto min-h-dvh w-full max-w-2xl p-4">
+      <header className="flex items-center justify-between gap-4 pb-4">
+        <h1 className="text-lg font-semibold tracking-tight">
+          {sr.admin.title}
+        </h1>
+        <Link href="/dashboard" className="text-muted-foreground text-sm">
+          {sr.admin.back} ›
+        </Link>
+      </header>
+
+      <div className="pb-5">
+        <NewSalonForm />
+      </div>
+
+      <SalonList salons={salons} />
+    </main>
+  );
+}

@@ -8,6 +8,7 @@ import {
   LIVE_STATUSES,
   type DashboardAppointment,
 } from "@/lib/db/appointments";
+import { isPlatformOwner } from "@/lib/db/admin";
 import { getMyTenants } from "@/lib/db/tenants";
 import {
   addDays,
@@ -35,7 +36,10 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const asked = requested && DATE_PATTERN.test(requested) ? requested : null;
 
   // Jedan poziv umesto tri u nizu: salon, spisak salona, radno vreme i termini.
-  const week = await getDashboardWeek(asked, await selectedTenantId());
+  const [week, platformOwner] = await Promise.all([
+    getDashboardWeek(asked, await selectedTenantId()),
+    isPlatformOwner(),
+  ]);
 
   if (!week) {
     // Ovde se stiže sa praznim nalogom ili sa izborom koji više ne važi, pa
@@ -54,14 +58,6 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             onSwitch={switchTenant}
           />
         ) : null}
-        <div>
-          <Link
-            href="/dashboard/salon/novi"
-            className={buttonVariants({ variant: "outline" })}
-          >
-            {sr.tenants.create}
-          </Link>
-        </div>
       </main>
     );
   }
@@ -111,6 +107,14 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           </h1>
         )}
         <div className="flex shrink-0 items-center gap-1">
+          {platformOwner ? (
+            <Link
+              href="/admin"
+              className={buttonVariants({ variant: "ghost", size: "sm" })}
+            >
+              {sr.admin.open}
+            </Link>
+          ) : null}
           <Link
             href="/dashboard/podesavanja"
             className={buttonVariants({ variant: "ghost", size: "sm" })}
@@ -124,6 +128,20 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           </form>
         </div>
       </header>
+
+      {tenant.suspended ? (
+        <div
+          role="status"
+          className="border-destructive/40 bg-destructive/10 mb-2 rounded-xl border p-3"
+        >
+          <p className="text-destructive text-sm font-semibold">
+            {sr.dashboard.suspendedTitle}
+          </p>
+          <p className="text-muted-foreground pt-1 text-xs">
+            {sr.dashboard.suspendedBody}
+          </p>
+        </div>
+      ) : null}
 
       <nav className="flex items-center justify-between gap-2 pb-2">
         <Link

@@ -4,9 +4,9 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sr } from "@/lib/i18n/sr";
-import { createSalon, type NewTenantState } from "./actions";
+import { addSalon, type AdminState } from "./actions";
 
-/** „Studio Milica" → „studio-milica". Adresa se kuca samo ako je predlog loš. */
+/** „Salon Smiley" → „salon-smiley". Adresa se kuca samo ako je predlog loš. */
 function toSlug(name: string): string {
   const map: Record<string, string> = {
     č: "c",
@@ -24,24 +24,39 @@ function toSlug(name: string): string {
     .slice(0, 40);
 }
 
-export function NewTenantForm() {
+export function NewSalonForm() {
   const [pending, startTransition] = useTransition();
-  const [state, setState] = useState<NewTenantState>({ status: "idle" });
+  const [state, setState] = useState<AdminState>({ status: "idle" });
+  const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
 
-  function onSubmit(formData: FormData) {
-    startTransition(async () => {
-      setState(await createSalon(formData));
-    });
+  if (!open) {
+    return (
+      <Button type="button" variant="outline" onClick={() => setOpen(true)}>
+        {sr.admin.newTitle}
+      </Button>
+    );
   }
 
   return (
-    <form action={onSubmit} className="space-y-4">
+    <form
+      action={(formData) => {
+        startTransition(async () => {
+          setState(await addSalon(formData));
+        });
+      }}
+      className="border-border space-y-4 rounded-xl border p-4"
+    >
+      <div>
+        <h2 className="font-semibold">{sr.admin.newTitle}</h2>
+        <p className="text-muted-foreground pt-1 text-sm">{sr.admin.newHint}</p>
+      </div>
+
       <div className="space-y-2">
         <label htmlFor="name" className="text-sm font-medium">
-          {sr.tenants.nameLabel}
+          {sr.admin.nameLabel}
         </label>
         <Input
           id="name"
@@ -49,7 +64,7 @@ export function NewTenantForm() {
           required
           maxLength={60}
           value={name}
-          placeholder={sr.tenants.namePlaceholder}
+          placeholder={sr.admin.namePlaceholder}
           onChange={(event) => {
             setName(event.target.value);
             if (!slugTouched) {
@@ -61,7 +76,7 @@ export function NewTenantForm() {
 
       <div className="space-y-2">
         <label htmlFor="slug" className="text-sm font-medium">
-          {sr.tenants.slugLabel}
+          {sr.admin.slugLabel}
         </label>
         <Input
           id="slug"
@@ -80,7 +95,27 @@ export function NewTenantForm() {
           }}
         />
         <p id="slug-hint" className="text-muted-foreground text-xs">
-          {sr.tenants.slugHint}
+          {sr.admin.slugHint}
+        </p>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="ownerEmail" className="text-sm font-medium">
+          {sr.admin.ownerEmailLabel}
+        </label>
+        <Input
+          id="ownerEmail"
+          name="ownerEmail"
+          type="email"
+          required
+          maxLength={200}
+          autoCapitalize="none"
+          autoCorrect="off"
+          placeholder={sr.admin.ownerEmailPlaceholder}
+          aria-describedby="owner-hint"
+        />
+        <p id="owner-hint" className="text-muted-foreground text-xs">
+          {sr.admin.ownerEmailHint}
         </p>
       </div>
 
@@ -91,7 +126,7 @@ export function NewTenantForm() {
       ) : null}
 
       <Button type="submit" className="h-12 w-full" disabled={pending}>
-        {pending ? sr.tenants.submitting : sr.tenants.submit}
+        {pending ? sr.admin.submitting : sr.admin.submit}
       </Button>
     </form>
   );

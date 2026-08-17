@@ -1,7 +1,6 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { PushToggle } from "@/components/dashboard/push-toggle";
-import { buttonVariants } from "@/components/ui/button";
 import { getBlockedNumbers } from "@/lib/db/blocklist";
 import { getActiveServices } from "@/lib/db/services";
 import { getCurrentTenant } from "@/lib/db/tenants";
@@ -52,12 +51,6 @@ export default async function SettingsPage() {
         <p className="text-muted-foreground py-8 text-sm">
           {sr.dashboard.noTenant}
         </p>
-        <Link
-          href="/dashboard/salon/novi"
-          className={buttonVariants({ variant: "outline" })}
-        >
-          {sr.tenants.create}
-        </Link>
       </main>
     );
   }
@@ -136,16 +129,6 @@ export default async function SettingsPage() {
 
       <Section title={sr.settings.blockedTitle}>
         <BlockedNumbers numbers={blocked} />
-      </Section>
-
-      <Section title={sr.tenants.title}>
-        <Link
-          href="/dashboard/salon/novi"
-          className={buttonVariants({ variant: "outline" })}
-        >
-          {sr.tenants.create}
-        </Link>
-        <p className="text-muted-foreground pt-2 text-xs">{sr.tenants.hint}</p>
       </Section>
     </main>
   );

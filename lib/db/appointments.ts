@@ -43,6 +43,7 @@ export const dashboardWeekSchema = z.object({
     booking_horizon_days: z.number().int(),
     min_lead_minutes: z.number().int(),
     public_booking_enabled: z.boolean(),
+    suspended: z.boolean(),
   }),
   tenants: z.array(
     z.object({ id: z.uuid(), slug: z.string(), name: z.string() }),

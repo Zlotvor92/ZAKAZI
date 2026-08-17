@@ -3,36 +3,19 @@ import { afterAll, describe, expect, it } from "vitest";
 import { dashboardWeekSchema } from "@/lib/db/appointments";
 import { tenantSummaryListSchema } from "@/lib/db/tenants";
 import {
-  asAnon,
   asUser,
   closePool,
   createStaff,
   createTenant,
   createUser,
-  inSavepoint,
   withRollback,
 } from "./helpers";
 
 afterAll(closePool);
 
-type CreateResult =
-  | { ok: true; id: string; slug: string }
+type WriteResult =
+  | { ok: true; id?: string }
   | { ok: false; reason: string };
-
-type WriteResult = { ok: true; id?: string } | { ok: false; reason: string };
-
-async function createTenantRpc(
-  db: pg.PoolClient,
-  name: string,
-  slug: string,
-  timezone = "Europe/Belgrade",
-): Promise<CreateResult> {
-  const result = await db.query<{ result: CreateResult }>(
-    "select create_tenant($1, $2, $3) as result",
-    [name, slug, timezone],
-  );
-  return result.rows[0]!.result;
-}
 
 /**
  * Dva salona istog vlasnika. `created_at` se postavlja ručno jer sve u
@@ -63,89 +46,6 @@ async function twoSalons(db: pg.PoolClient) {
 
   return { firstId, secondId, userId, firstStaffId, secondStaffId };
 }
-
-describe("otvaranje salona", () => {
-  it("napravi salon, članstvo vlasnika i njega kao izvođača", async () => {
-    await withRollback(async (db) => {
-      const userId = await db
-        .query<{ id: string }>(
-          "insert into auth.users (id, email) values (gen_random_uuid(), 'nova@primer.rs') returning id",
-        )
-        .then((result) => result.rows[0]!.id);
-
-      const created = await asUser(db, userId, () =>
-        createTenantRpc(db, "Studio Ana", "studio-ana"),
-      );
-
-      expect(created).toMatchObject({ ok: true, slug: "studio-ana" });
-      if (!created.ok) return;
-
-      const membership = await db.query(
-        "select role from memberships where user_id = $1 and tenant_id = $2",
-        [userId, created.id],
-      );
-      expect(membership.rows).toEqual([{ role: "owner" }]);
-
-      const staff = await db.query<{ name: string; user_id: string }>(
-        "select name, user_id from staff where tenant_id = $1",
-        [created.id],
-      );
-      expect(staff.rows).toEqual([{ name: "Studio Ana", user_id: userId }]);
-    });
-  });
-
-  it("veliko slovo i razmak u adresi se ne primaju", async () => {
-    await withRollback(async (db) => {
-      const tenantId = await createTenant(db);
-      const userId = await createUser(db, tenantId);
-
-      await asUser(db, userId, async () => {
-        expect(await createTenantRpc(db, "Studio", "Studio Ana")).toEqual({
-          ok: false,
-          reason: "invalid_slug",
-        });
-        expect(await createTenantRpc(db, "Studio", "ab")).toEqual({
-          ok: false,
-          reason: "invalid_slug",
-        });
-        expect(await createTenantRpc(db, "  ", "studio-ana")).toEqual({
-          ok: false,
-          reason: "invalid_name",
-        });
-        expect(
-          await createTenantRpc(db, "Studio", "studio-ana", "Mars/Olympus"),
-        ).toEqual({ ok: false, reason: "invalid_timezone" });
-      });
-    });
-  });
-
-  it("zauzeta adresa se odbija umesto da padne na jedinstvenom ključu", async () => {
-    await withRollback(async (db) => {
-      const tenantId = await createTenant(db);
-      const userId = await createUser(db, tenantId);
-      const taken = await db.query<{ slug: string }>(
-        "select slug from tenants where id = $1",
-        [tenantId],
-      );
-
-      const result = await asUser(db, userId, () =>
-        createTenantRpc(db, "Drugi", taken.rows[0]!.slug),
-      );
-
-      expect(result).toEqual({ ok: false, reason: "slug_taken" });
-    });
-  });
-
-  it("neulogovan posetilac ne sme ni da je pozove", async () => {
-    await withRollback(async (db) => {
-      await asAnon(db, async () => {
-        await expect(
-          inSavepoint(db, () => createTenantRpc(db, "Studio", "studio-ana")),
-        ).rejects.toThrow(/permission denied/i);
-      });
-    });
-  });
-});
 
 describe("oblik odgovora", () => {
   it("spisak salona je onakav kakav ga aplikacija čita", async () => {
@@ -319,7 +219,7 @@ describe("upis ide u izabrani salon", () => {
       const { firstId, secondId, userId } = await twoSalons(db);
 
       const result = await asUser(db, userId, async () => {
-        const created = await db.query<{ result: CreateResult }>(
+        const created = await db.query<{ result: WriteResult }>(
           "select upsert_service(null, $1, 120, 3000, $2) as result",
           ["Nadogradnja trepavica", secondId],
         );

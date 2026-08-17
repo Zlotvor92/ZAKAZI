@@ -18,3 +18,26 @@ export function createAdminClient() {
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
 }
+
+/**
+ * Pravi nalog za vlasnicu salona, ili vraća postojeći.
+ *
+ * Nalozi se ne prave iz SQL-a: upis u `auth.users` zaobilazi Supabase-ove
+ * tokove za potvrdu mejla i prijavu, pa nalog izgleda ispravno dok se ne
+ * pokuša prijava. Registracija je zatvorena, pa je ovo jedini put unutra.
+ */
+export async function ensureUser(email: string): Promise<boolean> {
+  const supabase = createAdminClient();
+
+  const { error } = await supabase.auth.admin.createUser({
+    email,
+    email_confirm: true,
+  });
+
+  if (!error) {
+    return true;
+  }
+
+  // Nalog koji već postoji nije greška — vlasnica može da vodi dva salona.
+  return error.code === "email_exists";
+}
