@@ -1,4 +1,4 @@
-# Majstorica
+# Doteraj Me
 
 Sistem za zakazivanje termina za solo beauty profesionalce u Srbiji.
 Specifikacija proizvoda i pravila razvoja su u [`CLAUDE.md`](./CLAUDE.md).

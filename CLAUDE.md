@@ -1,4 +1,4 @@
-# Majstorica — sistem za zakazivanje termina
+# Doteraj Me — sistem za zakazivanje termina
 
 ## Šta gradimo
 

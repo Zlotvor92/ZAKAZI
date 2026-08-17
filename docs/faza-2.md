@@ -319,7 +319,7 @@ značilo migraciju puta broj salona pri svakoj izmeni.
 Šta Faza 2 radi za ekspanziju, i to je namerno malo:
 
 1. Tenant se nikad ne hardkoduje — razrešava se iz slug-a, na jednom mestu. Kad
-   kasnije dođe `milica.majstorica.rs`, menja se ta jedna funkcija.
+   kasnije dođe `milica.doterajme.rs`, menja se ta jedna funkcija.
 2. Javna stranica ide preko `[tenantSlug]` od prvog dana, iako imamo jedan salon.
 
 Boja, logo, pozivnice za nove vlasnike, custom domeni i super-admin ne ulaze
