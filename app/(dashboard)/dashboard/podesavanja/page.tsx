@@ -2,12 +2,15 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { getBlockedNumbers } from "@/lib/db/blocklist";
 import { getCurrentTenant } from "@/lib/db/tenants";
+import { getUpcomingTimeOff } from "@/lib/db/time-off";
 import { getWorkingHours } from "@/lib/db/working-hours";
+import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { toDayShapes } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
 import {
   BlockedNumbers,
   BookingRulesForm,
+  TimeOffSection,
   WorkingHoursForm,
 } from "./settings-forms";
 
@@ -47,8 +50,9 @@ export default async function SettingsPage() {
     );
   }
 
-  const [workingHours, blocked, link] = await Promise.all([
+  const [workingHours, timeOff, blocked, link] = await Promise.all([
     getWorkingHours(),
+    getUpcomingTimeOff(),
     getBlockedNumbers(),
     publicUrl(tenant.slug),
   ]);
@@ -80,6 +84,14 @@ export default async function SettingsPage() {
           horizonDays={tenant.booking_horizon_days}
           leadHours={Math.round(tenant.min_lead_minutes / 60)}
           publicEnabled={tenant.public_booking_enabled}
+        />
+      </Section>
+
+      <Section title={sr.settings.timeOffTitle}>
+        <TimeOffSection
+          entries={timeOff}
+          timeZone={tenant.timezone}
+          today={currentDateInTimeZone(new Date(), tenant.timezone)}
         />
       </Section>
 

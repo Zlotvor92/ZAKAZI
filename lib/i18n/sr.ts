@@ -74,6 +74,24 @@ export const sr = {
     addBlocked: "Blokiraj broj",
     unblock: "Odblokiraj",
 
+    timeOffTitle: "Kad ne radiš",
+    timeOffHint:
+      "Godišnji, lekar, sve što ti pojede dan ili deo dana. Ostavi vreme prazno za ceo dan.",
+    timeOffEmpty: "Nema unetih odsustava.",
+    timeOffFrom: "Od datuma",
+    timeOffTo: "Do datuma",
+    timeOffFromTime: "Od (opciono)",
+    timeOffToTime: "Do (opciono)",
+    timeOffReason: "Razlog (opciono)",
+    timeOffReasonPlaceholder: "lekar",
+    addTimeOff: "Dodaj odsustvo",
+    removeTimeOff: "Obriši",
+    wholeDay: "ceo dan",
+    timeOffProblem: {
+      end_before_start: "Kraj mora biti posle početka.",
+      no_staff: "Salon nema nijednog aktivnog izvođača.",
+    },
+
     hoursProblem: {
       end_before_start: "Kraj radnog vremena mora biti posle početka.",
       break_outside_day: "Pauza mora biti unutar radnog vremena.",

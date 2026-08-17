@@ -1,10 +1,12 @@
 "use client";
 
+import { formatInTimeZone } from "date-fns-tz";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { BlockedNumber } from "@/lib/db/blocklist";
+import type { TimeOff } from "@/lib/db/time-off";
 import { minutesToTime } from "@/lib/domain/calendar";
 import {
   defaultWeek,
@@ -13,8 +15,10 @@ import {
 import { sr } from "@/lib/i18n/sr";
 import {
   addBlockedNumber,
+  deleteTimeOff,
   removeBlockedNumber,
   saveBookingRules,
+  saveTimeOff,
   saveWorkingHours,
   type SettingsState,
 } from "./actions";
@@ -303,4 +307,136 @@ export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
       <Feedback state={state} />
     </div>
   );
+}
+
+export function TimeOffSection({
+  entries,
+  timeZone,
+  today,
+}: {
+  entries: TimeOff[];
+  timeZone: string;
+  today: string;
+}) {
+  const { pending, state, submit, setState, router, startTransition } =
+    useSettingsAction();
+
+  function remove(id: string) {
+    startTransition(async () => {
+      setState(await deleteTimeOff(id));
+      router.refresh();
+    });
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-xs">{sr.settings.timeOffHint}</p>
+
+      {entries.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          {sr.settings.timeOffEmpty}
+        </p>
+      ) : (
+        <ul className="divide-border divide-y">
+          {entries.map((entry) => (
+            <li
+              key={entry.id}
+              className="flex items-center justify-between gap-3 py-2"
+            >
+              <div className="min-w-0">
+                <div className="text-sm tabular-nums">
+                  {describeTimeOff(entry, timeZone)}
+                </div>
+                {entry.reason ? (
+                  <div className="text-muted-foreground truncate text-xs">
+                    {entry.reason}
+                  </div>
+                ) : null}
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                onClick={() => remove(entry.id)}
+              >
+                {sr.settings.removeTimeOff}
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form action={submit(saveTimeOff)} className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <label className="space-y-1">
+            <span className="text-muted-foreground block text-xs">
+              {sr.settings.timeOffFrom}
+            </span>
+            <Input type="date" name="fromDate" required defaultValue={today} />
+          </label>
+          <label className="space-y-1">
+            <span className="text-muted-foreground block text-xs">
+              {sr.settings.timeOffTo}
+            </span>
+            <Input type="date" name="toDate" required defaultValue={today} />
+          </label>
+          <label className="space-y-1">
+            <span className="text-muted-foreground block text-xs">
+              {sr.settings.timeOffFromTime}
+            </span>
+            <Input type="time" name="fromTime" step={900} />
+          </label>
+          <label className="space-y-1">
+            <span className="text-muted-foreground block text-xs">
+              {sr.settings.timeOffToTime}
+            </span>
+            <Input type="time" name="toTime" step={900} />
+          </label>
+        </div>
+
+        <Input
+          name="reason"
+          maxLength={80}
+          placeholder={sr.settings.timeOffReasonPlaceholder}
+        />
+
+        <Button type="submit" variant="outline" disabled={pending}>
+          {sr.settings.addTimeOff}
+        </Button>
+      </form>
+
+      <Feedback state={state} />
+    </div>
+  );
+}
+
+/** Ceo dan se prepoznaje po tome što traje od ponoći do ponoći. */
+function describeTimeOff(entry: TimeOff, timeZone: string): string {
+  const from = new Date(entry.start_at);
+  const to = new Date(entry.end_at);
+
+  const fromDay = formatInTimeZone(from, timeZone, "dd.MM.");
+  const wholeDays =
+    formatInTimeZone(from, timeZone, "HH:mm") === "00:00" &&
+    formatInTimeZone(to, timeZone, "HH:mm") === "00:00";
+
+  if (wholeDays) {
+    const lastDay = formatInTimeZone(
+      new Date(to.getTime() - 1),
+      timeZone,
+      "dd.MM.",
+    );
+    return fromDay === lastDay
+      ? `${fromDay} (${sr.settings.wholeDay})`
+      : `${fromDay} – ${lastDay}`;
+  }
+
+  const toDay = formatInTimeZone(to, timeZone, "dd.MM.");
+  const fromTime = formatInTimeZone(from, timeZone, "HH:mm");
+  const toTime = formatInTimeZone(to, timeZone, "HH:mm");
+
+  return fromDay === toDay
+    ? `${fromDay} ${fromTime}–${toTime}`
+    : `${fromDay} ${fromTime} – ${toDay} ${toTime}`;
 }
