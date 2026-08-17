@@ -1,4 +1,4 @@
-# ZAKAZI — sistem za zakazivanje termina
+# Zakazi.rs — sistem za zakazivanje termina
 
 ## Šta gradimo
 

@@ -74,7 +74,7 @@ export function buildCalendarEvent(event: CalendarEvent): string {
   const lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
-    "PRODID:-//ZAKAZI//sr",
+    "PRODID:-//Zakazi.rs//sr",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
     "BEGIN:VEVENT",

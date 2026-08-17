@@ -1,4 +1,4 @@
-# ZAKAZI
+# Zakazi.rs
 
 Sistem za zakazivanje termina za solo beauty profesionalce u Srbiji.
 Specifikacija proizvoda i pravila razvoja su u [`CLAUDE.md`](./CLAUDE.md).
