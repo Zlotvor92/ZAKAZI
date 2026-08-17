@@ -33,6 +33,11 @@ function formatPrice(rsd: number): string {
   return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
 }
 
+/** „2026-08-17" → „17.08". Datum se u Srbiji čita danom pa mesecom. */
+function dayAndMonth(date: string): string {
+  return `${date.slice(8, 10)}.${date.slice(5, 7)}`;
+}
+
 function dayLabel(date: string, today: string, tomorrow: string): string {
   if (date === today) {
     return sr.booking.today;
@@ -257,7 +262,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                   onClick={() => setDate(day.date)}
                   aria-pressed={day.date === date}
                   className={cn(
-                    "border-border flex min-h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border transition-colors",
+                    "border-border flex min-h-16 w-[4.5rem] shrink-0 flex-col items-center justify-center rounded-xl border transition-colors",
                     day.date === date
                       ? "bg-primary text-primary-foreground border-primary"
                       : "hover:bg-accent",
@@ -266,8 +271,10 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                   <span className="text-[0.6875rem] leading-tight">
                     {dayLabel(day.date, data.from_date, tomorrow)}
                   </span>
-                  <span className="text-lg leading-tight font-semibold tabular-nums">
-                    {Number(day.date.slice(8, 10))}
+                  {/* Sa mesecom, jer spisak ume da pređe iz jednog u drugi i
+                      goli broj tada ne kaže dovoljno. */}
+                  <span className="text-base leading-tight font-semibold tabular-nums">
+                    {dayAndMonth(day.date)}
                   </span>
                 </button>
               </li>
