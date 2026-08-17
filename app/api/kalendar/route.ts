@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     .slice(0, 32);
 
   const body = buildCalendarEvent({
-    uid: `${uid}@zakazi`,
+    uid: `${uid}@doterajme`,
     startAt,
     endAt,
     createdAt: new Date(),

@@ -33,6 +33,27 @@ function formatPrice(rsd: number): string {
   return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
 }
 
+/**
+ * iPhone otvori ponudu „Dodaj u kalendar" sam čim se `.ics` fajl otvori;
+ * Android ga samo preuzme i tu stane dok korisnica sama ne otvori preuzeto.
+ * Uputstvo mora da zna razliku, ili je pola vremena pogrešno.
+ *
+ * Poziva se samo unutar potvrde zakazivanja, koja nikad ne postoji na
+ * serveru — do tog ekrana se stiže isključivo posle uspešne akcije u
+ * pregledaču, pa `navigator` ovde sigurno postoji.
+ */
+function addToCalendarSteps(): string {
+  const ua = navigator.userAgent;
+
+  if (/iPhone|iPad|iPod/.test(ua)) {
+    return sr.booking.addToCalendarStepsIos;
+  }
+  if (/Android/.test(ua)) {
+    return sr.booking.addToCalendarStepsAndroid;
+  }
+  return sr.booking.addToCalendarStepsGeneric;
+}
+
 /** „2026-08-17" → „17.08". Datum se u Srbiji čita danom pa mesecom. */
 function dayAndMonth(date: string): string {
   return `${date.slice(8, 10)}.${date.slice(5, 7)}`;
@@ -177,20 +198,19 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           <p className="text-muted-foreground text-xs">
             {sr.booking.addToCalendarHint}
           </p>
+          <p className="text-muted-foreground text-xs">
+            <span className="font-medium">
+              {sr.booking.addToCalendarStepsTitle}
+            </span>{" "}
+            {addToCalendarSteps()}
+          </p>
         </div>
 
+        {/* Link ka otkazivanju je već u podnožju strane, ispod ovog toka —
+            nema potrebe da stoji dvaput na istom ekranu. */}
         <Button type="button" variant="outline" onClick={restart}>
           {sr.booking.bookAnother}
         </Button>
-
-        <p className="text-muted-foreground pt-2 text-xs">
-          <a
-            href={`/${data.tenant.slug}/otkazi`}
-            className="text-brand underline"
-          >
-            {sr.booking.manageLink}
-          </a>
-        </p>
       </div>
     );
   }
