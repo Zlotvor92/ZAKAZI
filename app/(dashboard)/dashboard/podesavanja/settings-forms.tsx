@@ -204,26 +204,22 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
                 }
               >
                 {mode === "count" ? (
-                  <Input
-                    type="number"
+                  <NumberField
+                    name={`count-${day.weekday}`}
+                    value={slotCounts(day)[0] ?? 1}
                     min={1}
                     max={20}
-                    value={slotCounts(day)[0] ?? 1}
-                    onChange={(event) =>
-                      setCount(day.weekday, Number(event.target.value))
-                    }
+                    onCommit={(count) => setCount(day.weekday, count)}
                   />
                 ) : (
-                  <Input
-                    type="number"
+                  <NumberField
+                    name={`minutes-${day.weekday}`}
+                    value={day.slotMinutes}
                     min={5}
                     max={600}
                     step={5}
-                    value={day.slotMinutes}
-                    onChange={(event) =>
-                      update(day.weekday, {
-                        slotMinutes: Number(event.target.value),
-                      })
+                    onCommit={(minutes) =>
+                      update(day.weekday, { slotMinutes: minutes })
                     }
                   />
                 )}
@@ -259,6 +255,52 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
 
       <Feedback state={state} />
     </form>
+  );
+}
+
+/**
+ * Broj koji sme da bude prazan dok se kuca. Bez ovoga brisanje jedine cifre
+ * daje nulu, nula se odmah pretvori nazad u ispravnu vrednost, i polje ne
+ * može da se isprazni da bi se ukucalo nešto drugo.
+ */
+function NumberField({
+  name,
+  value,
+  min,
+  max,
+  step,
+  onCommit,
+}: {
+  name: string;
+  value: number;
+  min: number;
+  max: number;
+  step?: number;
+  onCommit: (value: number) => void;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+
+  return (
+    <Input
+      name={name}
+      type="text"
+      inputMode="numeric"
+      value={draft ?? String(value)}
+      onChange={(event) => {
+        const raw = event.target.value.replace(/[^0-9]/g, "");
+        setDraft(raw);
+
+        const parsed = Number(raw);
+        if (raw !== "" && parsed >= min && parsed <= max) {
+          onCommit(parsed);
+        }
+      }}
+      // Prazno polje se pri izlasku vraća na poslednju ispravnu vrednost.
+      onBlur={() => setDraft(null)}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      step={step}
+    />
   );
 }
 
