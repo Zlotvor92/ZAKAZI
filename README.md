@@ -105,6 +105,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 Obe se ugrađuju u toku build-a, pa posle izmene treba napraviti novu verziju.
 Ključ koji zaobilazi RLS nigde nije potreban i ne sme se dodavati.
 
+`vercel.json` drži funkcije u Frankfurtu, jer je tamo i baza. Bez toga Vercel
+ih pusti u Americi i svaki upit dva puta pređe Atlantik — na stranici koja ih
+napravi tri do četiri, to je sekunda i po samo na putovanje. Ako baza ikad
+promeni regiju, ovo se menja sa njom.
+
 U Supabase projektu, pod **Authentication → URL Configuration**, adresa sajta i
 dozvoljene adrese za povratak moraju pokazivati na objavljeni domen, inače
 Supabase odbija da pošalje link za prijavu.
