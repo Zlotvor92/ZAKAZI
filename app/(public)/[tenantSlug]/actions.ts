@@ -1,10 +1,13 @@
 "use server";
 
+import { formatInTimeZone } from "date-fns-tz";
+import { after } from "next/server";
 import { z } from "zod";
 import { bookPublicAppointment } from "@/lib/db/public-booking";
 import { deviceId } from "@/lib/device";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sr } from "@/lib/i18n/sr";
+import { notifyTenant } from "@/lib/messaging/push";
 
 const bookingSchema = z.object({
   slug: z.string().min(1),
@@ -72,6 +75,33 @@ export async function submitBooking(
   if (!result.ok) {
     return { status: "error", message: rejectionMessage(result.reason) };
   }
+
+  // Posle odgovora, ne pre njega: klijentkinja ne treba da čeka na tuđi
+  // telefon, a termin je već u bazi pa slanje ništa ne može da pokvari.
+  const booked = result.appointment;
+  const timeZone = booked.timezone;
+  after(async () => {
+    await notifyTenant({
+      tenantId: booked.tenant_id,
+      appointmentId: booked.id,
+      template: "new_booking",
+      payload: {
+        title: sr.push.newBookingTitle,
+        body: sr.push.newBookingBody
+          .replace("{klijent}", name)
+          .replace("{usluga}", booked.service_name)
+          .replace(
+            "{vreme}",
+            formatInTimeZone(
+              new Date(booked.start_at),
+              timeZone,
+              "dd.MM. 'u' HH:mm",
+            ),
+          ),
+        url: `/dashboard?dan=${formatInTimeZone(new Date(booked.start_at), timeZone, "yyyy-MM-dd")}`,
+      },
+    });
+  });
 
   return {
     status: "booked",

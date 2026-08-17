@@ -3,6 +3,11 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { blockNumber, unblockNumber } from "@/lib/db/blocklist";
+import {
+  pushSubscriptionSchema,
+  removePushSubscription,
+  savePushSubscription,
+} from "@/lib/db/push";
 import { getCurrentTenant, updateBookingSettings } from "@/lib/db/tenants";
 import { removeService, saveService } from "@/lib/db/services";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
@@ -12,6 +17,7 @@ import { addDays, instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar
 import { normalizePhone } from "@/lib/domain/phone";
 import { toBlocks, validateDay, type DayShape } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
+import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState =
   | { status: "idle" }
@@ -126,6 +132,52 @@ export async function saveBookingRules(
 
   revalidatePath("/dashboard/podesavanja");
   return { status: "saved" };
+}
+
+/**
+ * Uređaj počinje da prima obaveštenja o zakazivanju.
+ *
+ * Pretplata dolazi iz pregledača, pa prolazi kroz Zod pre nego što išta dodirne
+ * bazu. Vraća `false` umesto poruke, jer korisniku ovde ne treba objašnjenje
+ * nego dugme koje se ili prevrne ili ne.
+ */
+export async function enableNotifications(
+  subscription: unknown,
+): Promise<boolean> {
+  const parsed = pushSubscriptionSchema.safeParse(subscription);
+  if (!parsed.success) {
+    return false;
+  }
+
+  const tenant = await getCurrentTenant(await selectedTenantId());
+  if (!tenant) {
+    return false;
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) {
+    return false;
+  }
+
+  await savePushSubscription({
+    tenantId: tenant.id,
+    userId: data.user.id,
+    subscription: parsed.data,
+  });
+
+  revalidatePath("/dashboard/podesavanja");
+  return true;
+}
+
+export async function disableNotifications(endpoint: string): Promise<void> {
+  const parsed = z.url().max(1000).safeParse(endpoint);
+  if (!parsed.success) {
+    return;
+  }
+
+  await removePushSubscription(parsed.data);
+  revalidatePath("/dashboard/podesavanja");
 }
 
 export async function addBlockedNumber(

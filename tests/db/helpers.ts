@@ -229,6 +229,18 @@ export async function createPopulatedTenant(
     [tenantId, userId],
   );
 
+  await db.query(
+    `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
+     values ($1, $2, $3, 'kljuc', 'tajna')`,
+    [tenantId, userId, `https://push.primer.rs/${unique()}`],
+  );
+
+  await db.query(
+    `insert into messages (tenant_id, channel, template, status, cost_estimate)
+     values ($1, 'push', 'new_booking', 'sent', 0)`,
+    [tenantId],
+  );
+
   // Red u `appointment_events` se ne upisuje ovde — triger nad `appointments`
   // ga napravi sam, i to je upravo ono što treba da važi i u testovima.
   const appointment = await insertAppointment(db, {

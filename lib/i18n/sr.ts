@@ -116,6 +116,21 @@ export const sr = {
       not_found: "Ta usluga više ne postoji.",
     },
 
+    pushTitle: "Obaveštenja o zakazivanju",
+    pushHint:
+      "Kad neko zakaže preko interneta, telefon ti odmah javi. Ne košta ništa.",
+    pushEnable: "Uključi obaveštenja",
+    pushEnabling: "Uključujem…",
+    pushDisable: "Isključi",
+    pushOn: "Uključeno na ovom telefonu.",
+    pushOff: "Nije uključeno na ovom telefonu.",
+    pushIosHint:
+      "Na iPhone-u prvo dodaj stranicu na početni ekran (Podeli → Dodaj na početni ekran), pa se vrati ovde.",
+    pushBlocked:
+      "Obaveštenja su zabranjena u podešavanjima pregledača. Dozvoli ih pa pokušaj ponovo.",
+    pushUnsupported: "Ovaj pregledač ne podržava obaveštenja.",
+    pushFailed: "Uključivanje nije uspelo. Pokušaj ponovo.",
+
     blockedTitle: "Blokirani brojevi",
     blockedEmpty: "Nijedan broj nije blokiran.",
     blockedHint:
@@ -175,6 +190,11 @@ export const sr = {
       slot_taken: "To vreme je već zauzeto. Izaberi drugo.",
       invalid_duration: "Trajanje termina nije ispravno.",
     },
+  },
+  push: {
+    newBookingTitle: "Novo zakazivanje",
+    /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
+    newBookingBody: "{klijent} — {usluga}, {vreme}",
   },
   appointmentStatus: {
     pending: "Čeka",

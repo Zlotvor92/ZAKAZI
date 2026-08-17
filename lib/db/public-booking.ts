@@ -47,6 +47,8 @@ export const bookResultSchema = z.discriminatedUnion("ok", [
     ok: z.literal(true),
     appointment: z.object({
       id: z.uuid(),
+      tenant_id: z.uuid(),
+      timezone: z.string(),
       start_at: z.string(),
       end_at: z.string(),
       service_name: z.string(),

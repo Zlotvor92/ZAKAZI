@@ -45,6 +45,8 @@ type BookResult =
       ok: true;
       appointment: {
         id: string;
+        tenant_id: string;
+        timezone: string;
         start_at: string;
         end_at: string;
         service_name: string;

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { PushToggle } from "@/components/dashboard/push-toggle";
 import { buttonVariants } from "@/components/ui/button";
 import { getBlockedNumbers } from "@/lib/db/blocklist";
 import { getActiveServices } from "@/lib/db/services";
@@ -17,6 +18,7 @@ import {
   TimeOffSection,
   WorkingHoursForm,
 } from "./settings-forms";
+import { disableNotifications, enableNotifications } from "./actions";
 
 async function publicUrl(slug: string): Promise<string> {
   const incoming = await headers();
@@ -69,6 +71,9 @@ export default async function SettingsPage() {
   ]);
 
   const link = await publicUrl(tenant.slug);
+  // Javni deo VAPID para; bez njega pregledač ne ume da se pretplati, a strana
+  // ne sme da padne samo zato što obaveštenja još nisu podešena.
+  const vapidPublicKey = process.env["NEXT_PUBLIC_VAPID_PUBLIC_KEY"] ?? "";
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-md p-4">
@@ -110,6 +115,23 @@ export default async function SettingsPage() {
           timeZone={tenant.timezone}
           today={currentDateInTimeZone(new Date(), tenant.timezone)}
         />
+      </Section>
+
+      <Section title={sr.settings.pushTitle}>
+        <p className="text-muted-foreground pb-3 text-sm">
+          {sr.settings.pushHint}
+        </p>
+        {vapidPublicKey === "" ? (
+          <p className="text-muted-foreground text-sm">
+            {sr.settings.pushUnsupported}
+          </p>
+        ) : (
+          <PushToggle
+            publicKey={vapidPublicKey}
+            onEnable={enableNotifications}
+            onDisable={disableNotifications}
+          />
+        )}
       </Section>
 
       <Section title={sr.settings.blockedTitle}>

@@ -23,6 +23,8 @@ const TENANT_SCOPED_TABLES = [
   "appointments",
   "appointment_events",
   "blocklist",
+  "push_subscriptions",
+  "messages",
 ] as const;
 
 async function countIn(
@@ -58,7 +60,7 @@ describe("pokrivenost", () => {
 
       // Broj je namerno zakucan: nova tabela obara ovaj test i tera da se
       // politika napiše sada, a ne kad se primeti da nešto curi.
-      expect(result.rows.length).toBe(12);
+      expect(result.rows.length).toBe(14);
 
       // `platform_owners` je jedina tabela bez ijedne politike, i to je
       // najstroža moguća postavka: uz uključen RLS bez politike joj kroz API
