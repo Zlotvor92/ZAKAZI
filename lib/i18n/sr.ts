@@ -202,6 +202,9 @@ export const sr = {
     submit: "Zakaži termin",
     submitting: "Zakazujem…",
     confirmedTitle: "Termin je zakazan",
+    addToCalendar: "Dodaj u kalendar",
+    addToCalendarHint:
+      "Telefon će te sam podsetiti dan ranije i dva sata pre termina.",
     confirmedBody: "Vidimo se! Ako ne možeš da dođeš, javi salonu na vreme.",
     bookAnother: "Zakaži još jedan termin",
     minuteShort: "min",

@@ -156,6 +156,24 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           </div>
         </dl>
 
+        <div className="space-y-2">
+          {/* Jedini podsetnik koji ne košta ništa: telefon sam javi. */}
+          <a
+            href={`/api/kalendar?${new URLSearchParams({
+              pocetak: state.appointment.startAt,
+              kraj: state.appointment.endAt,
+              usluga: state.appointment.serviceName,
+              salon: data.tenant.name,
+            }).toString()}`}
+            className="border-border hover:bg-accent inline-flex h-12 w-full items-center justify-center rounded-md border text-sm font-medium"
+          >
+            {sr.booking.addToCalendar}
+          </a>
+          <p className="text-muted-foreground text-xs">
+            {sr.booking.addToCalendarHint}
+          </p>
+        </div>
+
         <Button type="button" variant="outline" onClick={restart}>
           {sr.booking.bookAnother}
         </Button>
