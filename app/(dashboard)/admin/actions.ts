@@ -3,7 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { createSalon, setSalonSuspended } from "@/lib/db/admin";
+import {
+  createSalon,
+  isPlatformOwner,
+  setSalonLogo,
+  setSalonSuspended,
+} from "@/lib/db/admin";
+import { uploadLogo } from "@/lib/db/logo";
 import { sr } from "@/lib/i18n/sr";
 import { ensureUser } from "@/lib/supabase/admin";
 import { switchTenant } from "../dashboard/actions";
@@ -63,6 +69,73 @@ export async function addSalon(formData: FormData): Promise<AdminState> {
 
   revalidatePath("/admin");
   redirect("/admin");
+}
+
+/**
+ * Logo salona.
+ *
+ * Fajl ide u skladište preko `service_role` klijenta, jer skladište ne zna za
+ * prijavljenog korisnika. Zato se pravo proverava dva puta u bazi: pre slanja
+ * fajla i još jednom u `set_tenant_logo`, koja upisuje adresu.
+ */
+export async function saveLogo(formData: FormData): Promise<AdminState> {
+  const tenantId = z.uuid().safeParse(formData.get("tenantId"));
+
+  if (!tenantId.success) {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
+  if (!(await isPlatformOwner())) {
+    return { status: "error", message: sr.admin.logoProblem.not_allowed };
+  }
+
+  const file = formData.get("logo");
+
+  if (!(file instanceof File) || file.size === 0) {
+    return { status: "error", message: sr.admin.logoProblem.failed };
+  }
+
+  const sent = await uploadLogo({ tenantId: tenantId.data, file });
+
+  if (!sent.ok) {
+    return { status: "error", message: sr.admin.logoProblem[sent.reason] };
+  }
+
+  const saved = await setSalonLogo({
+    tenantId: tenantId.data,
+    logoUrl: sent.url,
+  });
+
+  if (!saved.ok) {
+    const known = sr.admin.logoProblem;
+    return {
+      status: "error",
+      message:
+        saved.reason in known
+          ? known[saved.reason as keyof typeof known]
+          : sr.admin.actionFailed,
+    };
+  }
+
+  revalidatePath("/admin");
+  return { status: "idle" };
+}
+
+export async function removeLogo(tenantId: string): Promise<AdminState> {
+  const parsed = z.uuid().safeParse(tenantId);
+
+  if (!parsed.success) {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
+  const removed = await setSalonLogo({ tenantId: parsed.data, logoUrl: null });
+
+  if (!removed.ok) {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
+  revalidatePath("/admin");
+  return { status: "idle" };
 }
 
 export async function toggleSalon(

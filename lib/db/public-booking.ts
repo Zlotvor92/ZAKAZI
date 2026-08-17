@@ -14,6 +14,7 @@ export const bookingDataSchema = z.object({
     brand_background: z.string().nullable(),
     brand_primary: z.string().nullable(),
     brand_accent: z.string().nullable(),
+    logo_url: z.url().nullable(),
   }),
   now: z.string(),
   from_date: z.string(),

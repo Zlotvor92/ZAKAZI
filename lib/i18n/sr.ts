@@ -39,6 +39,20 @@ export const sr = {
     lastBooking: "poslednje zakazivanje",
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
 
+    logoLabel: "Logo",
+    logoChoose: "Postavi logo",
+    logoReplace: "Promeni logo",
+    logoRemove: "Ukloni logo",
+    logoUploading: "Šaljem…",
+    logoProblem: {
+      wrong_type: "Logo mora biti PNG, JPG ili WEBP.",
+      too_big: "Slika je prevelika. Najviše 2 MB.",
+      failed: "Slanje nije uspelo. Pokušaj ponovo.",
+      not_allowed: "Nemaš pravo da menjaš logo.",
+      invalid_url: "Adresa slike nije ispravna.",
+      not_found: "Taj salon više ne postoji.",
+    },
+
     newTitle: "Novi salon",
     newHint:
       "Napravi salon i nalog vlasnice. Ona se prijavljuje svojim mejlom i vidi samo svoj salon.",

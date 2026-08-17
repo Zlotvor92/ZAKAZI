@@ -89,10 +89,24 @@ export default async function PublicBookingPage({ params }: PageProps) {
       <Brand tenant={data.tenant} />
       <main className="mx-auto min-h-dvh w-full max-w-md px-4 pb-10">
         <header className="flex flex-col items-center gap-3 pt-8 pb-2 text-center">
-          {/* Prsten oko imena je isti potez kao prsten oko logoa. */}
-          <span className="border-primary text-brand flex size-16 items-center justify-center rounded-full border-2 text-2xl font-bold">
-            {data.tenant.name.trim().slice(0, 1).toUpperCase()}
-          </span>
+          {data.tenant.logo_url ? (
+            // Obična slika, ne `next/image`: logo je jedna mala datoteka fiksne
+            // veličine, pa optimizacija ne bi uštedela ništa a tražila bi
+            // podešavanje spoljnog domena.
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={data.tenant.logo_url}
+              alt={data.tenant.name}
+              width={112}
+              height={112}
+              className="border-primary size-28 rounded-full border-2 object-cover"
+            />
+          ) : (
+            /* Bez logoa: prsten oko slova je isti potez kao prsten oko logoa. */
+            <span className="border-primary text-brand flex size-16 items-center justify-center rounded-full border-2 text-2xl font-bold">
+              {data.tenant.name.trim().slice(0, 1).toUpperCase()}
+            </span>
+          )}
           <h1 className="text-2xl font-bold tracking-tight text-balance">
             {data.tenant.name}
           </h1>

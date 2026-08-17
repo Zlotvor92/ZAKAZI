@@ -5,7 +5,13 @@ import { Button } from "@/components/ui/button";
 import type { AdminSalon } from "@/lib/db/admin";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
-import { enterSalon, toggleSalon, type AdminState } from "./actions";
+import {
+  enterSalon,
+  removeLogo,
+  saveLogo,
+  toggleSalon,
+  type AdminState,
+} from "./actions";
 
 function formatDate(value: string): string {
   const date = new Date(value);
@@ -17,11 +23,25 @@ function formatDate(value: string): string {
 function Row({ salon }: { salon: AdminSalon }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<AdminState>({ status: "idle" });
+  const logoLabel = salon.logo_url ? sr.admin.logoReplace : sr.admin.logoChoose;
 
   return (
     <li className="border-border rounded-xl border p-4">
       <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
+        {salon.logo_url ? (
+          // Obična slika, ne `next/image`: logo je jedna mala datoteka fiksne
+          // veličine, pa optimizacija ne bi uštedela ništa a tražila bi
+          // podešavanje spoljnog domena.
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={salon.logo_url}
+            alt=""
+            width={48}
+            height={48}
+            className="size-12 shrink-0 rounded-full object-cover"
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <span
               aria-hidden
@@ -101,6 +121,51 @@ function Row({ salon }: { salon: AdminSalon }) {
         >
           {salon.suspended ? sr.admin.resume : sr.admin.suspend}
         </Button>
+
+        {/* Slanje kreće čim se slika izabere; jedno dugme manje. */}
+        <label
+          className={cn(
+            "border-border hover:bg-accent inline-flex h-8 cursor-pointer items-center rounded-md border px-3 text-sm font-medium",
+            pending && "pointer-events-none opacity-50",
+          )}
+        >
+          {pending ? sr.admin.logoUploading : logoLabel}
+          <input
+            type="file"
+            name="logo"
+            accept="image/png,image/jpeg,image/webp"
+            className="sr-only"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (!file) {
+                return;
+              }
+              const data = new FormData();
+              data.set("tenantId", salon.id);
+              data.set("logo", file);
+              startTransition(async () => {
+                setState(await saveLogo(data));
+              });
+            }}
+          />
+        </label>
+
+        {salon.logo_url ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            disabled={pending}
+            onClick={() => {
+              startTransition(async () => {
+                setState(await removeLogo(salon.id));
+              });
+            }}
+          >
+            {sr.admin.logoRemove}
+          </Button>
+        ) : null}
       </div>
 
       {state.status === "error" ? (

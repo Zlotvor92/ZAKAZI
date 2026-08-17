@@ -7,6 +7,7 @@ const salonSchema = z.object({
   name: z.string(),
   suspended: z.boolean(),
   owner_email: z.string().nullable(),
+  logo_url: z.url().nullable(),
   created_at: z.string(),
   services_count: z.number().int(),
   upcoming_count: z.number().int(),
@@ -96,4 +97,27 @@ export async function createSalon(input: {
   }
 
   return createResultSchema.parse(data);
+}
+
+const logoResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+export async function setSalonLogo(input: {
+  tenantId: string;
+  logoUrl: string | null;
+}): Promise<z.infer<typeof logoResultSchema>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("set_tenant_logo", {
+    p_tenant_id: input.tenantId,
+    p_logo_url: input.logoUrl,
+  });
+
+  if (error) {
+    throw new Error(`Upis logoa nije uspeo: ${error.message}`);
+  }
+
+  return logoResultSchema.parse(data);
 }
