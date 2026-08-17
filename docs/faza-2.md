@@ -294,6 +294,38 @@ Boja, logo, pozivnice za nove vlasnike, custom domeni i super-admin ne ulaze
 sada. Arhitektura ih ne blokira i to je dovoljno — ostalo je pisanje koda za
 budućnost.
 
+### Šta je urađeno kad je došao drugi salon
+
+Ispostavilo se da tačka 1 nije važila za vlasničku stranu. Svaka funkcija za
+vlasnicu je uzimala „prvi salon po datumu nastanka" (`order by created_at
+limit 1`), a `getBlockedNumbers` i `getUpcomingTimeOff` uopšte nisu filtrirali
+po salonu. Sa jednim salonom to je tačno; sa dva se piše u pogrešan, tiho.
+
+Sada:
+
+- Izabrani salon stoji u `httpOnly` kolačiću `zakazi_salon`. Kolačić dolazi sa
+  uređaja, pa mu se ne veruje — baza za svaki prosleđeni salon proverava
+  članstvo kroz RLS i nečlanu vraća isto što i za nepostojeći salon.
+- `dashboard_week`, `tenant_services`, `set_working_hours`, `add_time_off` i
+  `upsert_service` primaju `p_tenant_id`. Bez njega rade kao ranije, pa nalog
+  sa jednim salonom ne mora ništa da bira.
+- `create_appointment`, `change_appointment_status`, `block_appointment_client`
+  i `remove_service` salon izvode iz prosleđenog reda, pa nisu dirani.
+- `resolve_tenant(uuid)` je jedino mesto gde se salon bira. Nije `security
+  definer` — RLS radi izbor umesto nje.
+- `create_tenant` jeste `security definer`, jer `tenants` i `memberships` nemaju
+  politiku za upis: takva politika bi značila da neko sme sebe da doda u tuđi
+  salon. Funkcija upisuje isključivo članstvo onoga ko je zove.
+- Spisak salona putuje unutar odgovora `dashboard_week`, da prebacivanje u
+  zaglavlju ne bi koštalo još jedan odlazak do baze na svakom otvaranju.
+
+Zbog `create_tenant` je registracija u Supabase Auth zatvorena
+(`disable_signup: true`). Bez toga bi svako ko ima mejl mogao da se prijavi i
+otvori salon. Nove vlasnice se od sada dodaju kao korisnici iz Supabase panela.
+
+Ostaje nenapravljeno: pozivanje druge osobe u postojeći salon. Trenutno salon
+može da otvori samo onaj ko će u njemu i raditi.
+
 ## Otvorena pitanja za kasnije
 
 - **Fragmentacija.** Manikir od 45 minuta sa 10 minuta buffera završava u 09:55,
