@@ -1,5 +1,6 @@
 import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
+import { serviceListSchema } from "@/lib/db/services";
 import {
   asAnon,
   asUser,
@@ -241,6 +242,25 @@ describe("granica salona", () => {
           /permission denied/i,
         );
       });
+    });
+  });
+});
+
+describe("oblik odgovora se poklapa sa onim što aplikacija očekuje", () => {
+  it("tenant_services prolazi kroz Zod šemu netaknut", async () => {
+    // Bez ove provere promena kolone u bazi obara ekran podešavanja tek u
+    // pregledaču, a TypeScript je ne vidi jer je Zod provera u toku rada.
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      await createService(db, base.tenantId, 120);
+
+      const rows = await asUser(db, base.userId, async () => {
+        const result = await db.query("select * from tenant_services()");
+        return result.rows;
+      });
+
+      expect(rows).toHaveLength(1);
+      expect(() => serviceListSchema.parse(rows)).not.toThrow();
     });
   });
 });
