@@ -169,6 +169,23 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     return (
       <div className="space-y-6 py-6 text-center">
         <div className="space-y-1">
+          {/* Jednokratan „uspelo je" trenutak — čisto CSS/SVG, bez biblioteke. */}
+          <div className="flex justify-center pb-1">
+            <span className="bg-primary text-primary-foreground animate-in zoom-in-50 fade-in flex size-16 items-center justify-center rounded-full duration-500">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="size-8"
+                aria-hidden="true"
+              >
+                <path d="M5 12l5 5L19 8" />
+              </svg>
+            </span>
+          </div>
           <h2 className="text-xl font-semibold">{sr.booking.confirmedTitle}</h2>
           <p className="text-muted-foreground text-sm">
             {sr.booking.confirmedBody}
@@ -188,18 +205,26 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
         </dl>
 
         <div className="space-y-2">
-          {/* Jedini podsetnik koji ne košta ništa: telefon sam javi. */}
-          <a
-            href={`/api/kalendar?${new URLSearchParams({
-              pocetak: state.appointment.startAt,
-              kraj: state.appointment.endAt,
-              usluga: state.appointment.serviceName,
-              salon: data.tenant.name,
-            }).toString()}`}
-            className="border-border hover:border-primary hover:bg-accent inline-flex h-12 w-full items-center justify-center rounded-xl border text-sm font-medium transition-colors"
-          >
-            {sr.booking.addToCalendar}
-          </a>
+          {/* Jedini podsetnik koji ne košta ništa: telefon sam javi. Zato ovo
+              dugme sme da bude nametljivo — jedini put na strani gde je to
+              namerno. */}
+          <div className="relative">
+            <span
+              aria-hidden="true"
+              className="bg-primary/50 pointer-events-none absolute inset-0 animate-ping rounded-xl"
+            />
+            <a
+              href={`/api/kalendar?${new URLSearchParams({
+                pocetak: state.appointment.startAt,
+                kraj: state.appointment.endAt,
+                usluga: state.appointment.serviceName,
+                salon: data.tenant.name,
+              }).toString()}`}
+              className="border-primary bg-primary text-primary-foreground hover:bg-primary/90 relative inline-flex h-12 w-full items-center justify-center rounded-xl border text-sm font-medium transition-colors"
+            >
+              {sr.booking.addToCalendar}
+            </a>
+          </div>
           <p className="text-muted-foreground text-xs">
             {sr.booking.addToCalendarHint}
           </p>
