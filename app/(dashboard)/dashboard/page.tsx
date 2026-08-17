@@ -33,7 +33,12 @@ function dayHeading(date: string): string {
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
-  const tenant = await getCurrentTenant();
+  // Radno vreme ne zavisi od salona — RLS ga ionako sužava — pa ga nema
+  // razloga čekati u redu iza njega. Svaki obilazak manje se vidi na telefonu.
+  const [tenant, workingHours] = await Promise.all([
+    getCurrentTenant(),
+    getWorkingHours(),
+  ]);
 
   if (!tenant) {
     return (
@@ -55,10 +60,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     to: dayBoundsInTimeZone(weekDates[6]!, tenant.timezone).to,
   };
 
-  const [workingHours, appointments] = await Promise.all([
-    getWorkingHours(),
-    getAppointmentsInRange(week),
-  ]);
+  const appointments = await getAppointmentsInRange(week);
 
   const live = appointments.filter((appointment) =>
     LIVE_STATUSES.includes(appointment.status),

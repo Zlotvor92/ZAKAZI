@@ -1,7 +1,6 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -55,7 +54,6 @@ function Row({
   appointment: DashboardAppointment;
   timeZone: string;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [armed, setArmed] = useState(false);
@@ -63,10 +61,11 @@ function Row({
 
   function run(action: () => Promise<ActionState>) {
     startTransition(async () => {
+      // Bez `router.refresh()`: akcija je pozvala `revalidatePath`, pa svež
+      // sadržaj stiže uz njen odgovor. Osvežavanje bi bio pun zahtev više.
       const result = await action();
       setError(result.ok ? null : result.message);
       setArmed(false);
-      router.refresh();
     });
   }
 

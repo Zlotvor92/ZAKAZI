@@ -1,7 +1,6 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,9 +36,12 @@ function Feedback({ state }: { state: SettingsState }) {
   return null;
 }
 
-/** Zajednički oblik: pošalji formu, upamti ishod, osveži stranicu. */
+/**
+ * Zajednički oblik: pošalji formu, upamti ishod. Svež sadržaj stiže uz odgovor
+ * akcije, jer svaka od njih zove `revalidatePath` — dodatno osvežavanje bi bio
+ * pun zahtev više za podatke koji su već stigli.
+ */
 function useSettingsAction() {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<SettingsState>({ status: "idle" });
 
@@ -47,12 +49,17 @@ function useSettingsAction() {
     return (formData: FormData) => {
       startTransition(async () => {
         setState(await action(formData));
-        router.refresh();
       });
     };
   }
 
-  return { pending, state, submit, setState, router, startTransition };
+  function call(action: () => Promise<SettingsState>) {
+    startTransition(async () => {
+      setState(await action());
+    });
+  }
+
+  return { pending, state, submit, call };
 }
 
 export function WorkingHoursForm({ week }: { week: DayShape[] }) {
@@ -243,14 +250,10 @@ export function BookingRulesForm({
 }
 
 export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
-  const { pending, state, submit, setState, router, startTransition } =
-    useSettingsAction();
+  const { pending, state, submit, call } = useSettingsAction();
 
   function unblock(id: string) {
-    startTransition(async () => {
-      setState(await removeBlockedNumber(id));
-      router.refresh();
-    });
+    call(() => removeBlockedNumber(id));
   }
 
   return (
@@ -318,14 +321,10 @@ export function TimeOffSection({
   timeZone: string;
   today: string;
 }) {
-  const { pending, state, submit, setState, router, startTransition } =
-    useSettingsAction();
+  const { pending, state, submit, call } = useSettingsAction();
 
   function remove(id: string) {
-    startTransition(async () => {
-      setState(await deleteTimeOff(id));
-      router.refresh();
-    });
+    call(() => deleteTimeOff(id));
   }
 
   return (

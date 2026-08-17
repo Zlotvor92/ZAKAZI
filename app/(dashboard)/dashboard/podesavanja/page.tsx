@@ -38,7 +38,13 @@ function Section({
 }
 
 export default async function SettingsPage() {
-  const tenant = await getCurrentTenant();
+  // Ništa od ovoga ne zavisi od salona, pa sve ide odjednom umesto u redu.
+  const [tenant, workingHours, timeOff, blocked] = await Promise.all([
+    getCurrentTenant(),
+    getWorkingHours(),
+    getUpcomingTimeOff(),
+    getBlockedNumbers(),
+  ]);
 
   if (!tenant) {
     return (
@@ -50,12 +56,7 @@ export default async function SettingsPage() {
     );
   }
 
-  const [workingHours, timeOff, blocked, link] = await Promise.all([
-    getWorkingHours(),
-    getUpcomingTimeOff(),
-    getBlockedNumbers(),
-    publicUrl(tenant.slug),
-  ]);
+  const link = await publicUrl(tenant.slug);
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-md p-4">
