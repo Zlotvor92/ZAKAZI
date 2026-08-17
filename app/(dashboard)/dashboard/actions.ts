@@ -7,14 +7,37 @@ import {
   blockClientOfAppointment,
   setAppointmentStatus,
 } from "@/lib/db/appointments";
+import { getMyTenants } from "@/lib/db/tenants";
 import { deviceId } from "@/lib/device";
 import { sr } from "@/lib/i18n/sr";
 import { createClient } from "@/lib/supabase/server";
+import { selectTenant } from "@/lib/tenant";
 
 export async function signOut(): Promise<never> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect("/prijava");
+}
+
+/**
+ * Prebacivanje u drugi salon. Članstvo se proverava pre upisa u kolačić, da
+ * pogrešna vrednost ne bi ostala da stoji i zaključala ekran na praznom.
+ */
+export async function switchTenant(tenantId: string): Promise<void> {
+  const parsed = z.uuid().safeParse(tenantId);
+
+  if (!parsed.success) {
+    return;
+  }
+
+  const mine = await getMyTenants();
+
+  if (!mine.some((tenant) => tenant.id === parsed.data)) {
+    return;
+  }
+
+  await selectTenant(parsed.data);
+  revalidatePath("/dashboard", "layout");
 }
 
 export type ActionState = { ok: true } | { ok: false; message: string };

@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
 import { getBlockedNumbers } from "@/lib/db/blocklist";
 import { getActiveServices } from "@/lib/db/services";
 import { getCurrentTenant } from "@/lib/db/tenants";
@@ -8,6 +9,7 @@ import { getWorkingBlocks } from "@/lib/db/working-hours";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { toDayShapes } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
+import { selectedTenantId } from "@/lib/tenant";
 import {
   BlockedNumbers,
   BookingRulesForm,
@@ -40,14 +42,7 @@ function Section({
 }
 
 export default async function SettingsPage() {
-  // Ništa od ovoga ne zavisi od salona, pa sve ide odjednom umesto u redu.
-  const [tenant, blocks, services, timeOff, blocked] = await Promise.all([
-    getCurrentTenant(),
-    getWorkingBlocks(),
-    getActiveServices(),
-    getUpcomingTimeOff(),
-    getBlockedNumbers(),
-  ]);
+  const tenant = await getCurrentTenant(await selectedTenantId());
 
   if (!tenant) {
     return (
@@ -55,9 +50,23 @@ export default async function SettingsPage() {
         <p className="text-muted-foreground py-8 text-sm">
           {sr.dashboard.noTenant}
         </p>
+        <Link
+          href="/dashboard/salon/novi"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          {sr.tenants.create}
+        </Link>
       </main>
     );
   }
+
+  // Ostalo zavisi samo od salona, pa ide odjednom umesto u redu.
+  const [blocks, services, timeOff, blocked] = await Promise.all([
+    getWorkingBlocks(tenant.id),
+    getActiveServices(tenant.id),
+    getUpcomingTimeOff(tenant.id),
+    getBlockedNumbers(tenant.id),
+  ]);
 
   const link = await publicUrl(tenant.slug);
 
@@ -105,6 +114,16 @@ export default async function SettingsPage() {
 
       <Section title={sr.settings.blockedTitle}>
         <BlockedNumbers numbers={blocked} />
+      </Section>
+
+      <Section title={sr.tenants.title}>
+        <Link
+          href="/dashboard/salon/novi"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          {sr.tenants.create}
+        </Link>
+        <p className="text-muted-foreground pt-2 text-xs">{sr.tenants.hint}</p>
       </Section>
     </main>
   );

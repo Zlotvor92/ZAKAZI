@@ -18,12 +18,15 @@ const writeResultSchema = z.discriminatedUnion("ok", [
 export type TimeOffWriteResult = z.infer<typeof writeResultSchema>;
 
 /** Odsustva koja tek dolaze. Prošla se ne prikazuju jer se ne mogu promeniti. */
-export async function getUpcomingTimeOff(): Promise<TimeOff[]> {
+export async function getUpcomingTimeOff(
+  tenantId: string,
+): Promise<TimeOff[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("time_off")
     .select("id, start_at, end_at, reason")
+    .eq("tenant_id", tenantId)
     .gte("end_at", new Date().toISOString())
     .order("start_at", { ascending: true });
 
@@ -38,6 +41,7 @@ export async function addTimeOff(input: {
   startAt: Date;
   endAt: Date;
   reason: string | null;
+  tenantId: string | null;
 }): Promise<TimeOffWriteResult> {
   const supabase = await createClient();
 
@@ -45,6 +49,7 @@ export async function addTimeOff(input: {
     p_start_at: input.startAt.toISOString(),
     p_end_at: input.endAt.toISOString(),
     p_reason: input.reason,
+    p_tenant_id: input.tenantId,
   });
 
   if (error) {

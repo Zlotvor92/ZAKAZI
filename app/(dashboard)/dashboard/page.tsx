@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { DayList } from "@/components/calendar/day-list";
 import { WeekStrip, type StripDay } from "@/components/calendar/week-strip";
+import { TenantSwitcher } from "@/components/dashboard/tenant-switcher";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   getDashboardWeek,
   LIVE_STATUSES,
   type DashboardAppointment,
 } from "@/lib/db/appointments";
+import { getMyTenants } from "@/lib/db/tenants";
 import {
   addDays,
   dayBoundsInTimeZone,
@@ -14,7 +16,8 @@ import {
   isoWeekday,
 } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
-import { signOut } from "./actions";
+import { selectedTenantId } from "@/lib/tenant";
+import { signOut, switchTenant } from "./actions";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -31,15 +34,34 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const requested = (await searchParams).dan;
   const asked = requested && DATE_PATTERN.test(requested) ? requested : null;
 
-  // Jedan poziv umesto tri u nizu: salon, radno vreme i termini cele nedelje.
-  const week = await getDashboardWeek(asked);
+  // Jedan poziv umesto tri u nizu: salon, spisak salona, radno vreme i termini.
+  const week = await getDashboardWeek(asked, await selectedTenantId());
 
   if (!week) {
+    // Ovde se stiže sa praznim nalogom ili sa izborom koji više ne važi, pa
+    // spisak salona mora da stigne posebno — kalendara nema da ga ponese.
+    const mine = await getMyTenants();
+
     return (
-      <main className="mx-auto min-h-dvh w-full max-w-3xl p-4">
-        <p className="text-muted-foreground py-8 text-sm">
+      <main className="mx-auto min-h-dvh w-full max-w-3xl space-y-4 p-4">
+        <p className="text-muted-foreground pt-8 text-sm">
           {sr.dashboard.noTenant}
         </p>
+        {mine.length > 0 ? (
+          <TenantSwitcher
+            tenants={mine}
+            selected={mine[0]!.id}
+            onSwitch={switchTenant}
+          />
+        ) : null}
+        <div>
+          <Link
+            href="/dashboard/salon/novi"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            {sr.tenants.create}
+          </Link>
+        </div>
       </main>
     );
   }
@@ -77,9 +99,17 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-3xl p-4">
       <header className="flex items-center justify-between gap-4 pb-3">
-        <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight">
-          {tenant.name}
-        </h1>
+        {week.tenants.length > 1 ? (
+          <TenantSwitcher
+            tenants={week.tenants}
+            selected={tenant.id}
+            onSwitch={switchTenant}
+          />
+        ) : (
+          <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight">
+            {tenant.name}
+          </h1>
+        )}
         <div className="flex shrink-0 items-center gap-1">
           <Link
             href="/dashboard/podesavanja"

@@ -12,11 +12,15 @@ export const serviceListSchema = z.array(serviceSchema);
 
 export type Service = z.infer<typeof serviceSchema>;
 
-/** Aktivne usluge salona ulogovanog korisnika. Domet bira RLS. */
-export async function getActiveServices(): Promise<Service[]> {
+/** Aktivne usluge izabranog salona. Bez izabranog — prvog po redu. */
+export async function getActiveServices(
+  tenantId: string | null,
+): Promise<Service[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("tenant_services");
+  const { data, error } = await supabase.rpc("tenant_services", {
+    p_tenant_id: tenantId,
+  });
 
   if (error) {
     throw new Error(`Čitanje usluga nije uspelo: ${error.message}`);
@@ -37,6 +41,7 @@ export async function saveService(input: {
   name: string;
   durationMin: number;
   priceRsd: number;
+  tenantId: string | null;
 }): Promise<ServiceWriteResult> {
   const supabase = await createClient();
 
@@ -45,6 +50,7 @@ export async function saveService(input: {
     p_name: input.name,
     p_duration_min: input.durationMin,
     p_price_rsd: input.priceRsd,
+    p_tenant_id: input.tenantId,
   });
 
   if (error) {

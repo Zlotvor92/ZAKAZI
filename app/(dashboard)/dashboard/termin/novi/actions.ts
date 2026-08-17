@@ -9,6 +9,7 @@ import { deviceId } from "@/lib/device";
 import { instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sr } from "@/lib/i18n/sr";
+import { selectedTenantId } from "@/lib/tenant";
 
 const formSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
@@ -60,7 +61,7 @@ export async function saveAppointment(
     return { status: "error", message: sr.booking.phoneProblem[phone.reason] };
   }
 
-  const tenant = await getCurrentTenant();
+  const tenant = await getCurrentTenant(await selectedTenantId());
   if (!tenant) {
     return { status: "error", message: sr.dashboard.noTenant };
   }

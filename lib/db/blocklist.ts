@@ -10,13 +10,16 @@ const blockedSchema = z.object({
 
 export type BlockedNumber = z.infer<typeof blockedSchema>;
 
-/** Blokirani brojevi salona ulogovanog korisnika. Domet bira RLS. */
-export async function getBlockedNumbers(): Promise<BlockedNumber[]> {
+/** Blokirani brojevi izabranog salona. Blokada važi po salonu, ne po nalogu. */
+export async function getBlockedNumbers(
+  tenantId: string,
+): Promise<BlockedNumber[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("blocklist")
     .select("id, phone_e164, reason, created_at")
+    .eq("tenant_id", tenantId)
     .order("created_at", { ascending: false });
 
   if (error) {

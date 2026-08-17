@@ -11,15 +11,18 @@ const rowSchema = z.object({
 });
 
 /**
- * Radno vreme salona ulogovanog korisnika. Ne filtrira po tenantu — to radi
- * RLS politika, pa upit vidi samo redove salona u kojima korisnik ima članstvo.
+ * Radno vreme izabranog salona. RLS odseca tuđe salone; `tenant_id` odseca
+ * druge salone iste vlasnice, koje RLS s pravom pušta.
  */
-export async function getWorkingBlocks(): Promise<WorkingBlock[]> {
+export async function getWorkingBlocks(
+  tenantId: string,
+): Promise<WorkingBlock[]> {
   const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("working_hours")
     .select("weekday, start_time, end_time, slot_minutes")
+    .eq("tenant_id", tenantId)
     .order("weekday", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -48,6 +51,7 @@ export type WorkingHoursWriteResult = z.infer<typeof writeResultSchema>;
 /** Upisuje celu nedelju odjednom; stara se briše u istoj transakciji. */
 export async function setWorkingBlocks(
   blocks: WorkingBlock[],
+  tenantId: string | null,
 ): Promise<WorkingHoursWriteResult> {
   const supabase = await createClient();
 
@@ -58,6 +62,7 @@ export async function setWorkingBlocks(
       end_minute: block.endMinute,
       slot_minutes: block.slotMinutes,
     })),
+    p_tenant_id: tenantId,
   });
 
   if (error) {

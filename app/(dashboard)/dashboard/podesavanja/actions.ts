@@ -7,6 +7,7 @@ import { getCurrentTenant, updateBookingSettings } from "@/lib/db/tenants";
 import { removeService, saveService } from "@/lib/db/services";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
 import { setWorkingBlocks } from "@/lib/db/working-hours";
+import { selectedTenantId } from "@/lib/tenant";
 import { addDays, instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar";
 import { normalizePhone } from "@/lib/domain/phone";
 import { toBlocks, validateDay, type DayShape } from "@/lib/domain/working-hours";
@@ -74,7 +75,7 @@ export async function saveWorkingHours(
     }
   }
 
-  const result = await setWorkingBlocks(toBlocks(week));
+  const result = await setWorkingBlocks(toBlocks(week), await selectedTenantId());
 
   if (!result.ok) {
     const known = sr.settings.hoursProblem;
@@ -111,7 +112,7 @@ export async function saveBookingRules(
     return { status: "error", message: sr.settings.failed };
   }
 
-  const tenant = await getCurrentTenant();
+  const tenant = await getCurrentTenant(await selectedTenantId());
   if (!tenant) {
     return { status: "error", message: sr.dashboard.noTenant };
   }
@@ -136,7 +137,7 @@ export async function addBlockedNumber(
     return { status: "error", message: sr.booking.phoneProblem[phone.reason] };
   }
 
-  const tenant = await getCurrentTenant();
+  const tenant = await getCurrentTenant(await selectedTenantId());
   if (!tenant) {
     return { status: "error", message: sr.dashboard.noTenant };
   }
@@ -178,7 +179,7 @@ export async function saveTimeOff(formData: FormData): Promise<SettingsState> {
     return { status: "error", message: sr.settings.failed };
   }
 
-  const tenant = await getCurrentTenant();
+  const tenant = await getCurrentTenant(await selectedTenantId());
   if (!tenant) {
     return { status: "error", message: sr.dashboard.noTenant };
   }
@@ -204,6 +205,7 @@ export async function saveTimeOff(formData: FormData): Promise<SettingsState> {
     startAt,
     endAt,
     reason: reason === "" ? null : reason,
+    tenantId: tenant.id,
   });
 
   if (!result.ok) {
@@ -273,6 +275,7 @@ export async function saveServiceEntry(
     name: parsed.data.name,
     durationMin: parsed.data.durationMin,
     priceRsd: parsed.data.priceRsd,
+    tenantId: await selectedTenantId(),
   });
 
   if (!result.ok) {

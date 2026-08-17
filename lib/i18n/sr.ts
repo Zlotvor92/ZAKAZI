@@ -18,6 +18,27 @@ export const sr = {
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
   },
+  tenants: {
+    title: "Saloni",
+    switchLabel: "Salon",
+    create: "Otvori novi salon",
+    hint: "Svaki salon ima svoj kalendar, svoje usluge i svoj link za zakazivanje.",
+    nameLabel: "Ime salona",
+    namePlaceholder: "Studio Milica",
+    slugLabel: "Adresa za zakazivanje",
+    slugHint: "Ovo ide u Instagram bio. Samo mala slova, brojevi i crtica.",
+    submit: "Otvori salon",
+    submitting: "Otvaram…",
+    failed: "Otvaranje nije uspelo. Pokušaj ponovo.",
+    problem: {
+      not_signed_in: "Prvo se prijavi.",
+      invalid_name: "Upiši ime salona.",
+      invalid_slug:
+        "Adresa sme da ima samo mala slova, brojeve i crticu, najmanje tri znaka.",
+      invalid_timezone: "Tajmzona nije ispravna.",
+      slug_taken: "Ta adresa je zauzeta. Izaberi drugu.",
+    },
+  },
   dashboard: {
     signOut: "Odjava",
     noTenant: "Tvoj nalog nije povezan ni sa jednim salonom.",

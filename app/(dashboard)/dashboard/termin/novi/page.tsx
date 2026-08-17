@@ -3,6 +3,7 @@ import { getActiveServices } from "@/lib/db/services";
 import { getCurrentTenant } from "@/lib/db/tenants";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
+import { selectedTenantId } from "@/lib/tenant";
 import { AppointmentForm } from "./appointment-form";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -10,7 +11,7 @@ const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 type PageProps = { searchParams: Promise<{ dan?: string }> };
 
 export default async function NewAppointmentPage({ searchParams }: PageProps) {
-  const tenant = await getCurrentTenant();
+  const tenant = await getCurrentTenant(await selectedTenantId());
 
   if (!tenant) {
     return (
@@ -22,7 +23,7 @@ export default async function NewAppointmentPage({ searchParams }: PageProps) {
     );
   }
 
-  const services = await getActiveServices();
+  const services = await getActiveServices(tenant.id);
 
   // Predlaže se trajanje prve usluge; vlasnica ga svejedno menja kako hoće.
   const defaultDuration = services[0]?.duration_min ?? 60;

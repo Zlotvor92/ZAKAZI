@@ -34,7 +34,7 @@ export const LIVE_STATUSES: AppointmentStatus[] = [
   "no_show",
 ];
 
-const weekSchema = z.object({
+export const dashboardWeekSchema = z.object({
   tenant: z.object({
     id: z.uuid(),
     slug: z.string(),
@@ -44,6 +44,9 @@ const weekSchema = z.object({
     min_lead_minutes: z.number().int(),
     public_booking_enabled: z.boolean(),
   }),
+  tenants: z.array(
+    z.object({ id: z.uuid(), slug: z.string(), name: z.string() }),
+  ),
   today: z.string(),
   week_start: z.string(),
   blocks: z.array(
@@ -57,7 +60,7 @@ const weekSchema = z.object({
   appointments: appointmentListSchema,
 });
 
-export type DashboardWeek = z.infer<typeof weekSchema>;
+export type DashboardWeek = z.infer<typeof dashboardWeekSchema>;
 
 /**
  * Salon, radno vreme i termini jedne nedelje u jednom pozivu. Domet bira RLS.
@@ -65,18 +68,20 @@ export type DashboardWeek = z.infer<typeof weekSchema>;
  */
 export async function getDashboardWeek(
   date: string | null,
+  tenantId: string | null,
 ): Promise<DashboardWeek | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("dashboard_week", {
     p_date: date,
+    p_tenant_id: tenantId,
   });
 
   if (error) {
     throw new Error(`Čitanje kalendara nije uspelo: ${error.message}`);
   }
 
-  return data === null ? null : weekSchema.parse(data);
+  return data === null ? null : dashboardWeekSchema.parse(data);
 }
 
 const writeResultSchema = z.discriminatedUnion("ok", [
