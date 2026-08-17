@@ -105,6 +105,12 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 Obe se ugrađuju u toku build-a, pa posle izmene treba napraviti novu verziju.
 Ključ koji zaobilazi RLS nigde nije potreban i ne sme se dodavati.
 
+Sesija se u middleware-u proverava lokalno, `getClaims()` umesto `getUser()`,
+pa svaki zahtev ka `/dashboard` više ne ide na Supabase Auth. To traži da
+projekat potpisuje tokene asimetrično (ES256, „JWT Signing Keys" u konzoli).
+Ako se ikad vrati na simetričan ključ, biblioteka sama pada nazad na `getUser`
+i sve i dalje radi, samo sporije.
+
 `vercel.json` drži funkcije u Frankfurtu, jer je tamo i baza. Bez toga Vercel
 ih pusti u Americi i svaki upit dva puta pređe Atlantik — na stranici koja ih
 napravi tri do četiri, to je sekunda i po samo na putovanje. Ako baza ikad

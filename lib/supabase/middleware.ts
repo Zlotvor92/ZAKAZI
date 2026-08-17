@@ -28,21 +28,26 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  // getUser, ne getSession — jedino ono proverava token kod Supabase-a
-  // umesto da veruje kolačiću koji je stigao sa zahtevom.
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Potpis tokena se proverava ovde, javnim ključem projekta, umesto da se za
+  // svaki zahtev pita Supabase da li token važi. Provera je jednako stroga —
+  // isti ES256 potpis, samo bez odlaska na mrežu, a ključ se dovlači jednom pa
+  // stoji u kešu. Kolačiću se i dalje ne veruje na reč.
+  //
+  // Cena je što opozvana sesija ostaje važeća do isteka tokena, najviše sat
+  // vremena. Ako projekat ikad pređe na simetričan ključ, biblioteka sama pada
+  // nazad na `getUser`, pa ova zamena ne može tiho da propusti nevažeći token.
+  const { data } = await supabase.auth.getClaims();
+  const signedIn = data?.claims != null;
 
   const path = request.nextUrl.pathname;
 
-  if (!user && path.startsWith("/dashboard")) {
+  if (!signedIn && path.startsWith("/dashboard")) {
     const url = request.nextUrl.clone();
     url.pathname = SIGN_IN_PATH;
     return NextResponse.redirect(url);
   }
 
-  if (user && path === SIGN_IN_PATH) {
+  if (signedIn && path === SIGN_IN_PATH) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
