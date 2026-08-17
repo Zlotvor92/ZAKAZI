@@ -323,8 +323,58 @@ Zbog `create_tenant` je registracija u Supabase Auth zatvorena
 (`disable_signup: true`). Bez toga bi svako ko ima mejl mogao da se prijavi i
 otvori salon. Nove vlasnice se od sada dodaju kao korisnici iz Supabase panela.
 
-Ostaje nenapravljeno: pozivanje druge osobe u postojeći salon. Trenutno salon
-može da otvori samo onaj ko će u njemu i raditi.
+### Vlasnik platforme
+
+Nalog u `platform_owners` vidi svaki salon, radi kontrole. Ne kroz zaobilaženje
+politika nego kroz članstvo: `create_tenant` ga ubaci u svaki novi salon, pa mu
+iste politike koje čuvaju tuđe podatke pokazuju njegove. Alternativa je bila
+`or is_platform_owner()` u tridesetak politika — trideset prilika da nešto
+procuri, za istu funkcionalnost.
+
+Tabela `platform_owners` ima uključen RLS i **nijednu politiku**. To je najstroža
+moguća postavka: kroz API joj ne pristupa niko, menja se samo preko
+`service_role`. Test to čuva.
+
+Postojeći saloni se ne dodaju unazad kad se neko upiše u `platform_owners` —
+inače bi upis jednog reda tiho otvorio sve što već postoji.
+
+Ostaje nenapravljeno: pozivanje druge osobe u postojeći salon. Salon trenutno
+može da otvori samo onaj ko će u njemu i raditi; predaja salona pravoj vlasnici
+ide kroz SQL.
+
+### Izgled po salonu
+
+Tri heks boje na `tenants`: pozadina, primarna, akcenat. Ne šablon po imenu —
+novi salon dobija svoj izgled unosom tri vrednosti, bez izmene koda. Boje se
+pretvaraju u CSS promenljive koje Tailwind tema već čita, pa nijedna komponenta
+ne zna da salon postoji.
+
+Kontrast se ne pogađa: `isDark` meri luminansu po WCAG-u i bira svetlo ili tamno
+pismo. Salon bira boju, ne kontrast — bez ovoga bi prvi salon koji izabere
+svetlu pozadinu dobio belo na belom.
+
+Vrednosti završavaju u `<style>` tagu, pa prolaze kroz proveru i u kodu, ne samo
+kroz `check` u bazi.
+
+## Obaveštenja o zakazivanju
+
+Kanal je Web Push. Odluka je pre svega o marži: pri dvesta zakazivanja mesečno
+SMS košta 500–800 RSD, a pretplata je 990. Push ne košta ništa po poruci.
+
+- Slanje ide u `after()`, pošto je odgovor već otišao. Termin je u bazi pre nego
+  što slanje počne, pa telefon koji se ne javi ne može da postane greška za
+  klijentkinju koja je upravo zakazala.
+- `push_subscriptions` je zaštićen po korisniku, ne po članstvu. Endpoint je
+  tajna — ko ga ima, uz ključeve, šalje joj obaveštenja. Vlasnik platforme je
+  član svakog salona i svejedno ne sme da čita njene uređaje.
+- `messages` nema politiku za upis. Dnevnik piše isključivo server preko
+  `service_role`; da ga piše pregledač, „poslato joj je" ne bi bio dokaz nego
+  tvrdnja.
+- Mrtva pretplata (404/410) se briše pri prvom slanju, inače spisak raste a
+  svako slanje čeka na uređaj koji više ne postoji.
+
+Na iPhone-u obaveštenja rade tek kad se stranica doda na početni ekran (iOS
+16.4+), zato postoji `manifest.ts` i zato to piše u samom podešavanju.
 
 ## Otvorena pitanja za kasnije
 
