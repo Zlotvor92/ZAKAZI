@@ -1,6 +1,7 @@
 "use server";
 
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { sr } from "@/lib/i18n/sr";
 import { createClient } from "@/lib/supabase/server";
@@ -36,6 +37,37 @@ async function siteOrigin(): Promise<string> {
   throw new Error(
     "Ne mogu da odredim adresu sajta — nema ni host ni origin zaglavlja.",
   );
+}
+
+/**
+ * Prijava preko Google naloga.
+ *
+ * Ne pravi nalog: registracija je isključena, pa Google prolazi samo onome
+ * koga je vlasnik platforme već uneo. Google adresa mora da se poklopi sa
+ * adresom naloga.
+ *
+ * `skipBrowserRedirect` je nužan jer poziv ide sa servera — PKCE verifikator
+ * mora da završi u kolačiću koji piše ova akcija, a ne u pregledaču.
+ */
+export async function signInWithGoogle(): Promise<SignInState> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      redirectTo: `${await siteOrigin()}/auth/callback`,
+      skipBrowserRedirect: true,
+    },
+  });
+
+  if (error || !data.url) {
+    console.error(
+      `signInWithOAuth nije uspeo: ${error?.message ?? "nema adrese"}`,
+    );
+    return { status: "error", message: sr.signIn.failed };
+  }
+
+  redirect(data.url);
 }
 
 export async function requestMagicLink(

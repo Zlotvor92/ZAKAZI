@@ -14,6 +14,11 @@ export const sr = {
     sentBody: "Poslali smo ti link za prijavu. Važi 60 minuta.",
     invalidEmail: "Unesi ispravnu mejl adresu.",
     failed: "Slanje nije uspelo. Pokušaj ponovo za koji trenutak.",
+    google: "Nastavi preko Google naloga",
+    googleGoing: "Otvaram Google…",
+    or: "ili",
+    googleHint:
+      "Koristi isti mejl koji ti je upisan u aplikaciju. Nalog se ovim ne pravi.",
   },
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
