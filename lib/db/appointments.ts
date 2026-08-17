@@ -87,3 +87,56 @@ export async function createAppointment(input: {
 
   return writeResultSchema.parse(data);
 }
+
+const statusResultSchema = z.discriminatedUnion("ok", [
+  z.object({
+    ok: z.literal(true),
+    from_status: z.string(),
+    to_status: z.string(),
+  }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+export type StatusChangeResult = z.infer<typeof statusResultSchema>;
+
+export async function setAppointmentStatus(input: {
+  appointmentId: string;
+  status: AppointmentStatus;
+  deviceId: string;
+}): Promise<StatusChangeResult> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("change_appointment_status", {
+    p_appointment_id: input.appointmentId,
+    p_status: input.status,
+    p_device_id: input.deviceId,
+  });
+
+  if (error) {
+    throw new Error(`Promena statusa nije uspela: ${error.message}`);
+  }
+
+  return statusResultSchema.parse(data);
+}
+
+const blockResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), phone_e164: z.string() }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+export async function blockClientOfAppointment(
+  appointmentId: string,
+): Promise<z.infer<typeof blockResultSchema>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("block_appointment_client", {
+    p_appointment_id: appointmentId,
+    p_reason: null,
+  });
+
+  if (error) {
+    throw new Error(`Blokiranje broja nije uspelo: ${error.message}`);
+  }
+
+  return blockResultSchema.parse(data);
+}
