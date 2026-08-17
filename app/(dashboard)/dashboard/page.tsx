@@ -125,7 +125,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
       <WeekStrip days={days} selected={selected} today={today} />
 
       <section className="pt-4">
-        <h2 className="pb-1 text-sm font-semibold">{dayHeading(selected)}</h2>
+        <div className="flex items-center justify-between gap-3 pb-1">
+          <h2 className="text-sm font-semibold">{dayHeading(selected)}</h2>
+          <Link
+            href={`/dashboard/termin/novi?dan=${selected}`}
+            className={buttonVariants({ size: "sm" })}
+          >
+            {sr.dashboard.addAppointment}
+          </Link>
+        </div>
 
         {ofDay.length > 0 ? (
           <DayList appointments={ofDay} timeZone={tenant.timezone} />

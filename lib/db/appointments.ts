@@ -56,3 +56,34 @@ export async function getAppointmentsInRange(input: {
 
   return appointmentListSchema.parse(data);
 }
+
+const writeResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), appointment_id: z.uuid() }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+export type AppointmentWriteResult = z.infer<typeof writeResultSchema>;
+
+export async function createAppointment(input: {
+  serviceId: string;
+  startAt: Date;
+  clientName: string;
+  phoneE164: string;
+  deviceId: string;
+}): Promise<AppointmentWriteResult> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("create_appointment", {
+    p_service_id: input.serviceId,
+    p_start_at: input.startAt.toISOString(),
+    p_client_name: input.clientName,
+    p_phone_e164: input.phoneE164,
+    p_device_id: input.deviceId,
+  });
+
+  if (error) {
+    throw new Error(`Upis termina nije uspeo: ${error.message}`);
+  }
+
+  return writeResultSchema.parse(data);
+}
