@@ -156,16 +156,19 @@ describe("izolacija između tenanta", () => {
     });
   });
 
-  it("neulogovan posetilac ne vidi ništa", async () => {
+  it("neulogovan posetilac ne dolazi ni do jedne tabele", async () => {
     await withRollback(async (db) => {
       const a = await createPopulatedTenant(db);
 
+      // Nekada je ovde stajalo „vidi nula redova", jer je anon imao pravo
+      // čitanja a RLS mu je vraćao prazno. Sad nema ni pravo, pa upit pada
+      // pre nego što politika uopšte dođe na red.
       await asAnon(db, async () => {
         for (const table of TENANT_SCOPED_TABLES) {
-          expect(
-            { table, count: await countIn(db, table, a.tenantId) },
-            `${table} je vidljiv neulogovanom posetiocu`,
-          ).toEqual({ table, count: 0 });
+          await expect(
+            inSavepoint(db, () => countIn(db, table, a.tenantId)),
+            `${table} je dostupan neulogovanom posetiocu`,
+          ).rejects.toThrow(/permission denied/i);
         }
       });
     });

@@ -107,12 +107,11 @@ describe("uređaji koji primaju obaveštenja", () => {
       const her = await createUser(db, tenantId);
       await subscribe(db, { tenantId, userId: her });
 
-      const seen = await asAnon(db, async () => {
-        const result = await db.query("select * from push_subscriptions");
-        return result.rows;
+      await asAnon(db, async () => {
+        await expect(
+          inSavepoint(db, () => db.query("select * from push_subscriptions")),
+        ).rejects.toThrow(/permission denied/i);
       });
-
-      expect(seen).toEqual([]);
     });
   });
 });

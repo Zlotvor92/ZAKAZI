@@ -267,15 +267,16 @@ describe("pravila zakazivanja", () => {
     await withRollback(async (db) => {
       const base = await salon(db);
 
-      const updated = await asAnon(db, async () => {
-        const result = await db.query(
-          "update tenants set booking_horizon_days = 3 where id = $1",
-          [base.tenantId],
-        );
-        return result.rowCount;
+      await asAnon(db, async () => {
+        await expect(
+          inSavepoint(db, () =>
+            db.query(
+              "update tenants set booking_horizon_days = 3 where id = $1",
+              [base.tenantId],
+            ),
+          ),
+        ).rejects.toThrow(/permission denied/i);
       });
-
-      expect(updated).toBe(0);
     });
   });
 });

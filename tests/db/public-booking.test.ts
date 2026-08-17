@@ -212,8 +212,7 @@ describe("neulogovan posetilac nema pristup tabelama", () => {
       const salon = await openSalon(db);
       await createClient(db, salon.tenantId, "+381649999999");
 
-      const counts = await asAnon(db, async () => {
-        const rows: Record<string, number> = {};
+      await asAnon(db, async () => {
         for (const table of [
           "tenants",
           "clients",
@@ -223,15 +222,14 @@ describe("neulogovan posetilac nema pristup tabelama", () => {
           "staff",
           "appointment_events",
         ]) {
-          const result = await db.query<{ count: string }>(
-            `select count(*)::int as count from ${table}`,
-          );
-          rows[table] = Number(result.rows[0]!.count);
+          await expect(
+            inSavepoint(db, () =>
+              db.query(`select count(*) from ${table}`),
+            ),
+            `${table} je dostupan neulogovanom posetiocu`,
+          ).rejects.toThrow(/permission denied/i);
         }
-        return rows;
       });
-
-      expect(Object.values(counts).every((count) => count === 0)).toBe(true);
     });
   });
 
@@ -240,24 +238,19 @@ describe("neulogovan posetilac nema pristup tabelama", () => {
       const salon = await openSalon(db);
       const clientId = await createClient(db, salon.tenantId);
 
+      // Termin nastaje isključivo kroz `public_book`, koja proverava radno
+      // vreme, ograničenja i blokade. Direktan upis bi zaobišao sve to, pa
+      // neprijavljeni do tabela ne dolazi uopšte.
       await asAnon(db, async () => {
-        const inserted = await db.query(
-          `insert into clients (tenant_id, name, phone_e164)
-           select $1, 'Uljez', '+381640000001'
-           where false`,
-          [salon.tenantId],
-        );
-        expect(inserted.rowCount).toBe(0);
-
         await expect(
           inSavepoint(db, () =>
             db.query(
               `insert into clients (tenant_id, name, phone_e164)
-               values ($1, 'Uljez', '+381640000002')`,
+               values ($1, 'Uljez', '+381640000001')`,
               [salon.tenantId],
             ),
           ),
-        ).rejects.toThrow(/row-level security/i);
+        ).rejects.toThrow(/permission denied/i);
 
         await expect(
           inSavepoint(db, () =>
@@ -269,7 +262,7 @@ describe("neulogovan posetilac nema pristup tabelama", () => {
               startAt: "2026-09-14T08:00:00Z",
             }),
           ),
-        ).rejects.toThrow(/row-level security/i);
+        ).rejects.toThrow(/permission denied/i);
       });
     });
   });
