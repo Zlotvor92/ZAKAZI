@@ -12,11 +12,21 @@ export default function manifest(): MetadataRoute.Manifest {
     description: sr.app.description,
     start_url: "/dashboard",
     display: "standalone",
-    background_color: "#0a0a0a",
-    theme_color: "#0a0a0a",
+    // Boje su aplikacijine, ne salonove: ovaj manifest deli svaki salon, a
+    // svaki od njih ima svoju boju na javnoj strani.
+    background_color: "#ffffff",
+    theme_color: "#be123c",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
+      // Android seče ikonu u svoj oblik. Ova verzija ima znak umanjen tako da
+      // ostane ceo unutar kruga koji sečenje poštuje.
+      {
+        src: "/icon-maskable-512.png",
+        sizes: "512x512",
+        type: "image/png",
+        purpose: "maskable",
+      },
     ],
   };
 }
