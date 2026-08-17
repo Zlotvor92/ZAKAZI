@@ -296,6 +296,12 @@ export const sr = {
     addToCalendar: "Dodaj u kalendar",
     addToCalendarHint:
       "Telefon će te sam podsetiti dan ranije i dva sata pre termina.",
+    addToCalendarStepsTitle: "Ako se ne otvori samo:",
+    addToCalendarStepsIos: "Pojaviće se ponuda da dodaš termin — dodirni „Dodaj\".",
+    addToCalendarStepsAndroid:
+      "Fajl će se preuzeti. Otvori obaveštenje o preuzimanju i izaberi kalendar aplikaciju.",
+    addToCalendarStepsGeneric:
+      "Otvori preuzeti fajl i izaberi svoju kalendar aplikaciju.",
     confirmedBody: "Vidimo se! Ako ne možeš da dođeš, javi salonu na vreme.",
     bookAnother: "Zakaži još jedan termin",
     minuteShort: "min",
