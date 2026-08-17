@@ -1,9 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import { cache } from "react";
-import {
-  getPublicBookingData,
-  type PublicBookingData,
-} from "@/lib/db/public-booking";
+import { getPublicBookingData } from "@/lib/db/public-booking";
 import { brandVariables } from "@/lib/domain/brand";
 import { sr } from "@/lib/i18n/sr";
 import { BookingFlow } from "./booking-flow";
@@ -40,7 +38,15 @@ export async function generateViewport({
  * pozadinu strane crta `body` — stil na `<main>` bi ostavio belo oko nje.
  * Vrednosti prolaze kroz `brandVariables`, koja pušta samo heks boje.
  */
-function Brand({ tenant }: { tenant: PublicBookingData["tenant"] }) {
+export function Brand({
+  tenant,
+}: {
+  tenant: {
+    brand_background: string | null;
+    brand_primary: string | null;
+    brand_accent: string | null;
+  };
+}) {
   const variables = brandVariables({
     background: tenant.brand_background,
     primary: tenant.brand_primary,
@@ -113,6 +119,13 @@ export default async function PublicBookingPage({ params }: PageProps) {
         </header>
 
         <BookingFlow data={data} />
+
+        <p className="text-muted-foreground pt-2 text-center text-xs">
+          {sr.booking.haveAppointment}{" "}
+          <Link href={`/${tenantSlug}/otkazi`} className="text-brand underline">
+            {sr.booking.manageLink}
+          </Link>
+        </p>
       </main>
     </>
   );

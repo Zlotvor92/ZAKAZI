@@ -62,8 +62,16 @@ describe("površina za neprijavljene", () => {
       expect(result.rows.map((row) => row.proname)).toEqual([
         // Čisti računski pomoćnik nad minutima, bez pristupa ijednoj tabeli.
         "add_minutes",
+        // Spisak termina za dati broj, na strani za otkazivanje.
+        "public_appointments_for_phone",
         "public_book",
         "public_booking_data",
+        // Otkazivanje termina od strane klijentkinje koja ga je zakazala.
+        "public_cancel_appointment",
+        // Ime, boje i logo salona za stranu za otkazivanje, van gejta
+        // `public_booking_enabled` — otkazivanje radi i kad je zakazivanje
+        // ručno isključeno.
+        "public_salon_summary",
         // Triger funkcija; pozvana direktno puca, jer nema reda nad kojim radi.
         "set_updated_at",
       ]);

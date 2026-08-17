@@ -242,6 +242,9 @@ export const sr = {
     newBookingTitle: "Novo zakazivanje",
     /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
     newBookingBody: "{klijent} — {usluga}, {vreme}",
+    clientCancelledTitle: "Termin otkazan",
+    /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
+    clientCancelledBody: "{klijent} je otkazala — {usluga}, {vreme}",
   },
   appointmentStatus: {
     pending: "Čeka",
@@ -331,6 +334,28 @@ export const sr = {
       too_short: "Broj telefona je prekratak.",
       too_long: "Broj telefona je predugačak.",
       looks_fake: "Taj broj nije ispravan. Upiši svoj pravi broj.",
+    },
+    haveAppointment: "Već imaš zakazan termin?",
+    manageLink: "Otkaži ga ovde",
+  },
+  cancel: {
+    title: "Otkazivanje termina",
+    back: "Nazad na zakazivanje",
+    intro: "Upiši broj telefona sa kog si zakazala.",
+    submit: "Pronađi termine",
+    submitting: "Tražim…",
+    changePhone: "Drugi broj",
+    empty: "Nema zakazanih termina za taj broj.",
+    cancelButton: "Otkaži",
+    cancelConfirm: "Sigurno otkazujem?",
+    cancelling: "Otkazujem…",
+    cancelledTitle: "Termin je otkazan",
+    cancelledBody: "Javi se salonu ako se predomisliš.",
+    failed: "Otkazivanje nije uspelo. Pokušaj ponovo.",
+    rejected: {
+      not_found: "Taj termin nije pronađen za uneti broj telefona.",
+      invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
+      invalid_phone: "Broj telefona nije ispravan.",
     },
   },
 } as const;
