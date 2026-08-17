@@ -58,12 +58,27 @@ describe("pokrivenost", () => {
 
       // Broj je namerno zakucan: nova tabela obara ovaj test i tera da se
       // politika napiše sada, a ne kad se primeti da nešto curi.
-      expect(result.rows.length).toBe(11);
+      expect(result.rows.length).toBe(12);
+
+      // `platform_owners` je jedina tabela bez ijedne politike, i to je
+      // najstroža moguća postavka: uz uključen RLS bez politike joj kroz API
+      // ne pristupa niko. Ako joj neko doda politiku, ovaj test to prijavi.
+      const closed = "platform_owners";
+
       for (const row of result.rows) {
         expect(
           { table: row.table_name, rls: row.rls_enabled },
           `${row.table_name} nema uključen RLS`,
         ).toEqual({ table: row.table_name, rls: true });
+
+        if (row.table_name === closed) {
+          expect(
+            Number(row.policies),
+            `${closed} više nije zatvorena za sve`,
+          ).toBe(0);
+          continue;
+        }
+
         expect(
           Number(row.policies),
           `${row.table_name} nema nijednu politiku`,

@@ -144,14 +144,14 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           </p>
         </div>
 
-        <dl className="bg-accent space-y-1 rounded-lg p-4 text-sm">
+        <dl className="bg-accent border-border space-y-1 rounded-xl border p-4 text-sm">
           <div className="font-medium">{state.appointment.serviceName}</div>
           <div className="tabular-nums">
             {formatInTimeZone(startAt, timeZone, "dd.MM.yyyy.")}{" "}
             {formatInTimeZone(startAt, timeZone, "HH:mm")}–
             {formatInTimeZone(endAt, timeZone, "HH:mm")}
           </div>
-          <div className="text-muted-foreground">
+          <div className="text-brand font-semibold">
             {formatPrice(state.appointment.priceRsd)}
           </div>
         </dl>
@@ -165,7 +165,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
               usluga: state.appointment.serviceName,
               salon: data.tenant.name,
             }).toString()}`}
-            className="border-border hover:bg-accent inline-flex h-12 w-full items-center justify-center rounded-md border text-sm font-medium"
+            className="border-border hover:border-primary hover:bg-accent inline-flex h-12 w-full items-center justify-center rounded-xl border text-sm font-medium transition-colors"
           >
             {sr.booking.addToCalendar}
           </a>
@@ -192,7 +192,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                 type="button"
                 data-testid="service-option"
                 onClick={() => setService(option)}
-                className="border-border hover:bg-accent flex min-h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left"
+                className="border-border hover:border-primary hover:bg-accent flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
               >
                 <span className="min-w-0">
                   <span className="block truncate text-sm font-medium">
@@ -202,7 +202,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                     {formatDuration(option.duration_min)}
                   </span>
                 </span>
-                <span className="shrink-0 text-sm tabular-nums">
+                <span className="text-brand shrink-0 text-sm font-semibold tabular-nums">
                   {formatPrice(option.price_rsd)}
                 </span>
               </button>
@@ -257,7 +257,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                   onClick={() => setDate(day.date)}
                   aria-pressed={day.date === date}
                   className={cn(
-                    "border-border flex min-h-16 w-16 shrink-0 flex-col items-center justify-center rounded-lg border",
+                    "border-border flex min-h-16 w-16 shrink-0 flex-col items-center justify-center rounded-xl border transition-colors",
                     day.date === date
                       ? "bg-primary text-primary-foreground border-primary"
                       : "hover:bg-accent",
@@ -288,7 +288,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                     type="button"
                     data-testid="slot-option"
                     onClick={() => setSlot(value)}
-                    className="border-border hover:bg-accent min-h-12 w-full rounded-lg border text-sm tabular-nums"
+                    className="border-border hover:border-primary hover:bg-accent min-h-12 w-full rounded-xl border text-sm font-medium tabular-nums transition-colors"
                   >
                     {formatInTimeZone(option.startAt, timeZone, "HH:mm")}
                   </button>

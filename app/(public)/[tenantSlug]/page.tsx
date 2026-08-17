@@ -1,6 +1,10 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cache } from "react";
-import { getPublicBookingData } from "@/lib/db/public-booking";
+import {
+  getPublicBookingData,
+  type PublicBookingData,
+} from "@/lib/db/public-booking";
+import { brandVariables } from "@/lib/domain/brand";
 import { sr } from "@/lib/i18n/sr";
 import { BookingFlow } from "./booking-flow";
 
@@ -16,6 +20,40 @@ export async function generateMetadata({
   const data = await bookingData(tenantSlug);
 
   return { title: data ? data.tenant.name : sr.booking.notFound };
+}
+
+/**
+ * Traka pretraživača na telefonu uzme boju salona, pa stranica ne izgleda kao
+ * tuđa aplikacija sa njihovim imenom u njoj.
+ */
+export async function generateViewport({
+  params,
+}: PageProps): Promise<Viewport> {
+  const { tenantSlug } = await params;
+  const data = await bookingData(tenantSlug);
+
+  return { themeColor: data?.tenant.brand_background ?? undefined };
+}
+
+/**
+ * Boje salona se ubacuju kao `:root` pravilo, ne kao stil na elementu, jer
+ * pozadinu strane crta `body` — stil na `<main>` bi ostavio belo oko nje.
+ * Vrednosti prolaze kroz `brandVariables`, koja pušta samo heks boje.
+ */
+function Brand({ tenant }: { tenant: PublicBookingData["tenant"] }) {
+  const variables = brandVariables({
+    background: tenant.brand_background,
+    primary: tenant.brand_primary,
+    accent: tenant.brand_accent,
+  });
+
+  if (variables === null) {
+    return null;
+  }
+
+  return (
+    <style dangerouslySetInnerHTML={{ __html: `:root{${variables}}` }} />
+  );
 }
 
 function Notice({ title, message }: { title: string; message: string }) {
@@ -39,19 +77,29 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
   if (data.services.length === 0) {
     return (
-      <Notice title={data.tenant.name} message={sr.booking.noServices} />
+      <>
+        <Brand tenant={data.tenant} />
+        <Notice title={data.tenant.name} message={sr.booking.noServices} />
+      </>
     );
   }
 
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-md p-4">
-      <header className="pb-2">
-        <h1 className="truncate text-xl font-semibold tracking-tight">
-          {data.tenant.name}
-        </h1>
-      </header>
+    <>
+      <Brand tenant={data.tenant} />
+      <main className="mx-auto min-h-dvh w-full max-w-md px-4 pb-10">
+        <header className="flex flex-col items-center gap-3 pt-8 pb-2 text-center">
+          {/* Prsten oko imena je isti potez kao prsten oko logoa. */}
+          <span className="border-primary text-brand flex size-16 items-center justify-center rounded-full border-2 text-2xl font-bold">
+            {data.tenant.name.trim().slice(0, 1).toUpperCase()}
+          </span>
+          <h1 className="text-2xl font-bold tracking-tight text-balance">
+            {data.tenant.name}
+          </h1>
+        </header>
 
-      <BookingFlow data={data} />
-    </main>
+        <BookingFlow data={data} />
+      </main>
+    </>
   );
 }
