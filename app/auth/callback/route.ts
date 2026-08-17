@@ -1,11 +1,18 @@
 import { createServerClient } from "@supabase/ssr";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireEnv, requireUrlEnv } from "@/lib/env";
 
-export async function GET(request: NextRequest) {
-  const code = request.nextUrl.searchParams.get("code");
+/** Vrste linkova koje ova ruta sme da razmeni za sesiju. */
+const OTP_TYPES = new Set<EmailOtpType>(["magiclink", "email", "recovery"]);
 
-  if (!code) {
+export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
+  const code = params.get("code");
+  const tokenHash = params.get("token_hash");
+  const type = params.get("type");
+
+  if (!code && !tokenHash) {
     return NextResponse.redirect(new URL("/prijava?greska=1", request.nextUrl));
   }
 
@@ -34,11 +41,21 @@ export async function GET(request: NextRequest) {
     },
   );
 
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  // Dva oblika istog linka. `code` traži da je isti pregledač i započeo
+  // prijavu, pa pukne kad mejl klijent otvori link unapred ili kad se link
+  // otvori na drugom uređaju. `token_hash` nema tu pretpostavku.
+  const { error } = code
+    ? await supabase.auth.exchangeCodeForSession(code)
+    : await supabase.auth.verifyOtp({
+        type: OTP_TYPES.has(type as EmailOtpType)
+          ? (type as EmailOtpType)
+          : "magiclink",
+        token_hash: tokenHash!,
+      });
 
   if (error) {
     console.error(
-      `exchangeCodeForSession nije uspeo: ${error.message} (status ${error.status ?? "?"})`,
+      `Razmena linka za sesiju nije uspela: ${error.message} (status ${error.status ?? "?"})`,
     );
     return NextResponse.redirect(new URL("/prijava?greska=1", request.nextUrl));
   }
