@@ -228,6 +228,12 @@ export async function createPopulatedTenant(
     [tenantId, staffId],
   );
 
+  await db.query(
+    `insert into blocklist (tenant_id, phone_e164, reason, created_by)
+     values ($1, '+381600000001', 'uzastopno ne dolazi', $2)`,
+    [tenantId, userId],
+  );
+
   // Red u `appointment_events` se ne upisuje ovde — triger nad `appointments`
   // ga napravi sam, i to je upravo ono što treba da važi i u testovima.
   const appointment = await insertAppointment(db, {

@@ -80,6 +80,7 @@ export const sr = {
       off_grid: "Taj termin nije u ponudi. Osveži stranicu i izaberi ponovo.",
       time_off: "Salon tada ne radi. Izaberi drugi dan.",
       slot_taken: "Neko je upravo uzeo taj termin. Izaberi drugi.",
+      blocked: "Sa ovog broja nije moguće zakazati preko interneta. Javi se salonu.",
       too_many_this_week:
         "Već imaš dva termina te nedelje. Izaberi drugi datum ili otkaži jedan.",
       too_many_upcoming:

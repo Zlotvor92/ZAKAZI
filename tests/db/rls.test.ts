@@ -22,6 +22,7 @@ const TENANT_SCOPED_TABLES = [
   "clients",
   "appointments",
   "appointment_events",
+  "blocklist",
 ] as const;
 
 async function countIn(
@@ -55,7 +56,9 @@ describe("pokrivenost", () => {
          order by c.relname`,
       );
 
-      expect(result.rows.length).toBe(10);
+      // Broj je namerno zakucan: nova tabela obara ovaj test i tera da se
+      // politika napiše sada, a ne kad se primeti da nešto curi.
+      expect(result.rows.length).toBe(11);
       for (const row of result.rows) {
         expect(
           { table: row.table_name, rls: row.rls_enabled },

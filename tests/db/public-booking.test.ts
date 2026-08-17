@@ -6,11 +6,13 @@ import {
 } from "@/lib/db/public-booking";
 import {
   asAnon,
+  asUser,
   closePool,
   createClient,
   createService,
   createStaff,
   createTenant,
+  createUser,
   inSavepoint,
   insertAppointment,
   withRollback,
@@ -1228,6 +1230,133 @@ describe("zaštita od lažnih zakazivanja", () => {
           ),
         ).rejects.toThrow(/permission denied/i);
       });
+    });
+  });
+});
+
+describe("blokirani broj", () => {
+  async function block(
+    db: pg.PoolClient,
+    tenantId: string,
+    phone: string,
+  ): Promise<void> {
+    await db.query(
+      "insert into blocklist (tenant_id, phone_e164, reason) values ($1, $2, 'uzastopno ne dolazi')",
+      [tenantId, phone],
+    );
+  }
+
+  it("ne može da zakaže", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645551001";
+      await block(db, salon.tenantId, phone);
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00"),
+          phone,
+        }),
+      );
+
+      expect(result).toEqual({ ok: false, reason: "blocked" });
+    });
+  });
+
+  it("blokada ne ostavlja ni klijenta ni termin", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645551002";
+      await block(db, salon.tenantId, phone);
+
+      await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00"),
+          phone,
+        }),
+      );
+
+      const clients = await db.query(
+        "select 1 from clients where tenant_id = $1 and phone_e164 = $2",
+        [salon.tenantId, phone],
+      );
+      expect(clients.rowCount).toBe(0);
+    });
+  });
+
+  it("blokada u jednom salonu ne važi u drugom", async () => {
+    await withRollback(async (db) => {
+      const mine = await openSalon(db);
+      const theirs = await openSalon(db);
+      const phone = "+381645551003";
+      await block(db, mine.tenantId, phone);
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: theirs.slug,
+          serviceId: theirs.serviceId,
+          startAt: await nextMonday(db, "10:00"),
+          phone,
+        }),
+      );
+
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  it("odblokiran broj ponovo zakazuje", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645551004";
+      await block(db, salon.tenantId, phone);
+      await db.query(
+        "delete from blocklist where tenant_id = $1 and phone_e164 = $2",
+        [salon.tenantId, phone],
+      );
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "10:00"),
+          phone,
+        }),
+      );
+
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  it("isti broj se ne može blokirati dva puta u istom salonu", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const phone = "+381645551005";
+      await block(db, salon.tenantId, phone);
+
+      await expect(
+        inSavepoint(db, () => block(db, salon.tenantId, phone)),
+      ).rejects.toThrow(/blocklist_tenant_id_phone_key/);
+    });
+  });
+
+  it("vlasnica ne vidi ni ne dira tuđu listu blokiranih", async () => {
+    await withRollback(async (db) => {
+      const mine = await openSalon(db);
+      const theirs = await openSalon(db);
+      const owner = await createUser(db, mine.tenantId);
+      await block(db, theirs.tenantId, "+381645551006");
+
+      const seen = await asUser(db, owner, async () => {
+        const rows = await db.query("select 1 from blocklist");
+        const deleted = await db.query("delete from blocklist");
+        return { rows: rows.rowCount, deleted: deleted.rowCount };
+      });
+
+      expect(seen).toEqual({ rows: 0, deleted: 0 });
     });
   });
 });
