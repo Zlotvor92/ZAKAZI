@@ -1,4 +1,4 @@
-# Zakazi.rs — sistem za zakazivanje termina
+# Majstorica — sistem za zakazivanje termina
 
 ## Šta gradimo
 

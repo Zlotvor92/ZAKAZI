@@ -1,6 +1,6 @@
 export const sr = {
   app: {
-    name: "Zakazi.rs",
+    name: "Majstorica",
     description: "Zakazivanje termina za beauty profesionalce",
   },
   signIn: {
