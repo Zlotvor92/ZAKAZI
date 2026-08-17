@@ -15,7 +15,7 @@ export default function manifest(): MetadataRoute.Manifest {
     // Boje su aplikacijine, ne salonove: ovaj manifest deli svaki salon, a
     // svaki od njih ima svoju boju na javnoj strani.
     background_color: "#ffffff",
-    theme_color: "#be123c",
+    theme_color: "#1e1b4b",
     icons: [
       { src: "/icon-192.png", sizes: "192x192", type: "image/png" },
       { src: "/icon-512.png", sizes: "512x512", type: "image/png" },
