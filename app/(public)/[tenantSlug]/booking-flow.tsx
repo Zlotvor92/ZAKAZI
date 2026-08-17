@@ -172,6 +172,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             <li key={option.id}>
               <button
                 type="button"
+                data-testid="service-option"
                 onClick={() => setService(option)}
                 className="border-border hover:bg-accent flex min-h-14 w-full items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left"
               >
@@ -234,6 +235,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
               <li key={day.date} className="snap-start">
                 <button
                   type="button"
+                  data-testid="day-option"
                   onClick={() => setDate(day.date)}
                   aria-pressed={day.date === date}
                   className={cn(
@@ -266,6 +268,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                 <li key={value}>
                   <button
                     type="button"
+                    data-testid="slot-option"
                     onClick={() => setSlot(value)}
                     className="border-border hover:bg-accent min-h-12 w-full rounded-lg border text-sm tabular-nums"
                   >

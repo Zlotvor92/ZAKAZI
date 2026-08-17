@@ -4,7 +4,6 @@ import {
   asAnon,
   asUser,
   closePool,
-  createClient,
   createService,
   createStaff,
   createTenant,

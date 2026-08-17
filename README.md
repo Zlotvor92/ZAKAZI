@@ -3,14 +3,13 @@
 Sistem za zakazivanje termina za solo beauty profesionalce u Srbiji.
 Specifikacija proizvoda i pravila razvoja su u [`CLAUDE.md`](./CLAUDE.md).
 
-Trenutno stanje: **Faza 2, blok 2A** — javno zakazivanje radi. Klijent otvori
-`/<slug-salona>`, izabere uslugu, dan i sat, i termin je odmah potvrđen, bez
-ijedne poruke. Plan cele faze je u [`docs/faza-2.md`](./docs/faza-2.md).
+Trenutno stanje: **Faza 2 je zaokružena**. Klijent otvori `/<slug-salona>`,
+izabere uslugu, dan i sat, i termin je odmah potvrđen, bez ijedne poruke.
+Vlasnica u kalendaru vidi svoj dan, sama unosi termine dogovorene uživo, menja
+im status, podešava radno vreme i pravila, blokira brojeve i unosi odsustva.
+Plan faze je u [`docs/faza-2.md`](./docs/faza-2.md).
 
-Blok 2B još ne postoji, pa vlasnica za sada ne može sama da unese termin ni da
-promeni radno vreme kroz interfejs. Dok to ne legne, link ne ide u svet —
-termin dogovoren uživo aplikacija ne vidi i javna stranica bi ga prodala
-drugom.
+Poruke i podsetnici, kapare i reputacioni skor tek dolaze.
 
 ## Šta treba imati
 
@@ -64,19 +63,25 @@ klijent.
 | `npm run lint` | ESLint |
 | `npm test` | testovi poslovne logike, bez baze |
 | `npm run test:db` | testovi ograničenja i RLS politika, traže Postgres |
+| `npm run test:e2e` | kritični tok kroz pregledač, traži pokrenut Supabase |
 
 `npm run test:db` pravi bazu `zakazi_test` na serveru iz `DATABASE_URL`
 (podrazumevano lokalni Supabase na portu 54322), primeni migracije i radi nad
 njom. Svaki test se vrti u transakciji koja se poništava.
+
+`npm run test:e2e` traži ceo lokalni Supabase (`supabase start`) i `.env.local`,
+jer prolazi kroz pregledač do prave baze. Pre prvog pokretanja treba
+`npx playwright install chromium`. Test zakazuje termin u seed salonu i ostavlja
+ga za sobom — pokreni `supabase db reset` kad hoćeš čist kalendar.
 
 ## Struktura
 
 ```
 app/(auth)/prijava/       prijava magic linkom
 app/(public)/             javna stranica za zakazivanje
-app/(dashboard)/          interfejs za salon
+app/(dashboard)/          kalendar, unos termina i podešavanja
 app/auth/callback/        razmena koda za sesiju
-components/calendar/      nedeljna mreža
+components/calendar/      traka nedelje i dnevni spisak
 lib/db/                   pristup podacima, po entitetu
 lib/domain/               poslovna logika, čiste funkcije bez I/O
 lib/i18n/sr.ts            svi tekstovi interfejsa
@@ -85,6 +90,7 @@ supabase/migrations/      numerisane SQL migracije
 supabase/seed.sql         početni podaci
 tests/domain/             testovi poslovne logike
 tests/db/                 testovi baze i RLS politika
+tests/e2e/                kritični tok kroz pregledač
 ```
 
 ## Objavljivanje
