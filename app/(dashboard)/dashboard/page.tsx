@@ -92,11 +92,19 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight">
           {tenant.name}
         </h1>
-        <form action={signOut}>
-          <Button type="submit" variant="outline" size="sm">
-            {sr.dashboard.signOut}
-          </Button>
-        </form>
+        <div className="flex shrink-0 items-center gap-1">
+          <Link
+            href="/dashboard/podesavanja"
+            className={buttonVariants({ variant: "ghost", size: "sm" })}
+          >
+            {sr.settings.open}
+          </Link>
+          <form action={signOut}>
+            <Button type="submit" variant="outline" size="sm">
+              {sr.dashboard.signOut}
+            </Button>
+          </form>
+        </div>
       </header>
 
       <nav className="flex items-center justify-between gap-2 pb-2">

@@ -39,6 +39,50 @@ export const sr = {
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
     invalidTransition: "Taj termin više ne može da promeni status.",
   },
+  settings: {
+    title: "Podešavanja",
+    open: "Podešavanja",
+    back: "Nazad na kalendar",
+    saved: "Sačuvano.",
+    failed: "Čuvanje nije uspelo. Pokušaj ponovo.",
+
+    linkTitle: "Tvoj link za zakazivanje",
+    linkHint:
+      "Ovo stavi u Instagram bio i u automatski odgovor na poruku. Klijent otvara i zakazuje sam.",
+
+    hoursTitle: "Radno vreme",
+    hoursHint: "Pauzu ostavi praznu ako je nemaš.",
+    working: "Radim",
+    notWorking: "Ne radim",
+    from: "Od",
+    to: "Do",
+    breakFrom: "Pauza od",
+    breakTo: "Pauza do",
+    useTemplate: "Popuni šablonom",
+    saveHours: "Sačuvaj radno vreme",
+
+    rulesTitle: "Pravila zakazivanja",
+    horizonLabel: "Koliko dana unapred klijent može da zakaže",
+    leadLabel: "Najranije koliko sati unapred",
+    publicLabel: "Zakazivanje preko interneta je uključeno",
+    saveRules: "Sačuvaj pravila",
+
+    blockedTitle: "Blokirani brojevi",
+    blockedEmpty: "Nijedan broj nije blokiran.",
+    blockedHint:
+      "Blokiran broj ne može sam preko interneta. Ti i dalje smeš da mu upišeš termin.",
+    addBlocked: "Blokiraj broj",
+    unblock: "Odblokiraj",
+
+    hoursProblem: {
+      end_before_start: "Kraj radnog vremena mora biti posle početka.",
+      break_outside_day: "Pauza mora biti unutar radnog vremena.",
+      break_end_before_start: "Pauza nije ispravno uneta.",
+      overlapping: "Smene se preklapaju.",
+      invalid: "Radno vreme nije ispravno.",
+      no_staff: "Salon nema nijednog aktivnog izvođača.",
+    },
+  },
   newAppointment: {
     title: "Novi termin",
     back: "Nazad na kalendar",
