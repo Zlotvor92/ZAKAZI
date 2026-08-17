@@ -182,6 +182,15 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
         <Button type="button" variant="outline" onClick={restart}>
           {sr.booking.bookAnother}
         </Button>
+
+        <p className="text-muted-foreground pt-2 text-xs">
+          <a
+            href={`/${data.tenant.slug}/otkazi`}
+            className="text-brand underline"
+          >
+            {sr.booking.manageLink}
+          </a>
+        </p>
       </div>
     );
   }
