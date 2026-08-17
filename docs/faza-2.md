@@ -387,6 +387,16 @@ svetlu pozadinu dobio belo na belom.
 Vrednosti završavaju u `<style>` tagu, pa prolaze kroz proveru i u kodu, ne samo
 kroz `check` u bazi.
 
+Logo stoji u Supabase Storage-u, u bazi mu je samo adresa: slike u redovima
+znače da svako čitanje salona vuče megabajte, a `tenants` se čita na svakom
+otvaranju kalendara. Ime fajla nosi trenutak slanja, pa zamenjen logo dobija
+novu adresu — inače keš pregledača i Instagrama danima vraća stari, a to je
+kvar koji niko ne prijavi jer „meni radi".
+
+Skladište ne zna za prijavljenog korisnika, pa fajl ide preko `service_role`.
+Zato se pravo proverava dvaput u bazi: pre slanja fajla i još jednom u
+`set_tenant_logo`, koja upisuje adresu.
+
 ## Obaveštenja o zakazivanju
 
 Kanal je Web Push. Odluka je pre svega o marži: pri dvesta zakazivanja mesečno
