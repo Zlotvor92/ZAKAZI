@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { blockNumber, unblockNumber } from "@/lib/db/blocklist";
 import { getCurrentTenant, updateBookingSettings } from "@/lib/db/tenants";
+import { removeService, saveService } from "@/lib/db/services";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
 import { setWorkingBlocks } from "@/lib/db/working-hours";
 import { addDays, instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar";
@@ -243,5 +244,67 @@ export async function removeBlockedNumber(id: string): Promise<SettingsState> {
   await unblockNumber(parsed.data);
 
   revalidatePath("/dashboard/podesavanja");
+  return { status: "saved" };
+}
+
+const serviceSchema = z.object({
+  id: z.union([z.uuid(), z.literal("")]),
+  name: z.string(),
+  durationMin: z.coerce.number().int().min(1).max(1440),
+  priceRsd: z.coerce.number().int().min(0).max(10_000_000),
+});
+
+export async function saveServiceEntry(
+  formData: FormData,
+): Promise<SettingsState> {
+  const parsed = serviceSchema.safeParse({
+    id: formData.get("id") ?? "",
+    name: formData.get("name"),
+    durationMin: formData.get("durationMin"),
+    priceRsd: formData.get("priceRsd"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  const result = await saveService({
+    id: parsed.data.id === "" ? null : parsed.data.id,
+    name: parsed.data.name,
+    durationMin: parsed.data.durationMin,
+    priceRsd: parsed.data.priceRsd,
+  });
+
+  if (!result.ok) {
+    const known = sr.settings.serviceProblem;
+    return {
+      status: "error",
+      message:
+        result.reason in known
+          ? known[result.reason as keyof typeof known]
+          : sr.settings.failed,
+    };
+  }
+
+  revalidatePath("/dashboard/podesavanja");
+  revalidatePath("/dashboard/termin/novi");
+  return { status: "saved" };
+}
+
+export async function deleteServiceEntry(id: string): Promise<SettingsState> {
+  const parsed = z.uuid().safeParse(id);
+
+  if (!parsed.success) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  const result = await removeService(parsed.data);
+
+  if (!result.ok) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  revalidatePath("/dashboard/podesavanja");
+  revalidatePath("/dashboard/termin/novi");
   return { status: "saved" };
 }

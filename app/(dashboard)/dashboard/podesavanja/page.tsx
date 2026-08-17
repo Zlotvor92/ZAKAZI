@@ -1,6 +1,7 @@
 import { headers } from "next/headers";
 import Link from "next/link";
 import { getBlockedNumbers } from "@/lib/db/blocklist";
+import { getActiveServices } from "@/lib/db/services";
 import { getCurrentTenant } from "@/lib/db/tenants";
 import { getUpcomingTimeOff } from "@/lib/db/time-off";
 import { getWorkingBlocks } from "@/lib/db/working-hours";
@@ -10,6 +11,7 @@ import { sr } from "@/lib/i18n/sr";
 import {
   BlockedNumbers,
   BookingRulesForm,
+  ServicesSection,
   TimeOffSection,
   WorkingHoursForm,
 } from "./settings-forms";
@@ -39,9 +41,10 @@ function Section({
 
 export default async function SettingsPage() {
   // Ništa od ovoga ne zavisi od salona, pa sve ide odjednom umesto u redu.
-  const [tenant, blocks, timeOff, blocked] = await Promise.all([
+  const [tenant, blocks, services, timeOff, blocked] = await Promise.all([
     getCurrentTenant(),
     getWorkingBlocks(),
+    getActiveServices(),
     getUpcomingTimeOff(),
     getBlockedNumbers(),
   ]);
@@ -74,6 +77,10 @@ export default async function SettingsPage() {
         <p className="text-muted-foreground pt-2 text-xs">
           {sr.settings.linkHint}
         </p>
+      </Section>
+
+      <Section title={sr.settings.servicesTitle}>
+        <ServicesSection services={services} />
       </Section>
 
       <Section title={sr.settings.hoursTitle}>

@@ -77,6 +77,24 @@ export const sr = {
     publicLabel: "Zakazivanje preko interneta je uključeno",
     saveRules: "Sačuvaj pravila",
 
+    servicesTitle: "Usluge",
+    servicesHint:
+      "Trajanje je koliko posao stvarno oduzme. Duža usluga sama pomeri termine koji dolaze posle nje.",
+    servicesEmpty: "Nema unetih usluga. Klijent bez njih ne može da zakaže.",
+    serviceName: "Naziv",
+    serviceNamePlaceholder: "Nadogradnja trepavica",
+    serviceDuration: "Traje (min)",
+    servicePrice: "Cena (RSD)",
+    saveService: "Sačuvaj",
+    addService: "Dodaj uslugu",
+    removeService: "Ukloni",
+    serviceProblem: {
+      invalid_name: "Upiši naziv usluge.",
+      invalid_duration: "Trajanje nije ispravno.",
+      invalid_price: "Cena nije ispravna.",
+      not_found: "Ta usluga više ne postoji.",
+    },
+
     blockedTitle: "Blokirani brojevi",
     blockedEmpty: "Nijedan broj nije blokiran.",
     blockedHint:

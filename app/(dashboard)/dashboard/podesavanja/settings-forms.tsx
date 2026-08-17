@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TimeSelect } from "@/components/ui/time-select";
 import type { BlockedNumber } from "@/lib/db/blocklist";
+import type { Service } from "@/lib/db/services";
 import type { TimeOff } from "@/lib/db/time-off";
 import {
   defaultWeek,
@@ -16,9 +17,11 @@ import {
 import { sr } from "@/lib/i18n/sr";
 import {
   addBlockedNumber,
+  deleteServiceEntry,
   deleteTimeOff,
   removeBlockedNumber,
   saveBookingRules,
+  saveServiceEntry,
   saveTimeOff,
   saveWorkingHours,
   type SettingsState,
@@ -564,4 +567,116 @@ function describeTimeOff(entry: TimeOff, timeZone: string): string {
   return fromDay === toDay
     ? `${fromDay} ${fromTime}–${toTime}`
     : `${fromDay} ${fromTime} – ${toDay} ${toTime}`;
+}
+
+export function ServicesSection({ services }: { services: Service[] }) {
+  const { pending, state, submit, call } = useSettingsAction();
+
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-xs">{sr.settings.servicesHint}</p>
+
+      {services.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          {sr.settings.servicesEmpty}
+        </p>
+      ) : null}
+
+      {services.map((service) => (
+        <form
+          key={service.id}
+          action={submit(saveServiceEntry)}
+          className="border-border space-y-2 rounded-lg border p-3"
+        >
+          <input type="hidden" name="id" value={service.id} />
+
+          <Input
+            name="name"
+            defaultValue={service.name}
+            maxLength={60}
+            required
+            aria-label={sr.settings.serviceName}
+          />
+
+          <div className="grid grid-cols-2 gap-2">
+            <Field label={sr.settings.serviceDuration}>
+              <Input
+                name="durationMin"
+                type="text"
+                inputMode="numeric"
+                defaultValue={service.duration_min}
+                required
+              />
+            </Field>
+            <Field label={sr.settings.servicePrice}>
+              <Input
+                name="priceRsd"
+                type="text"
+                inputMode="numeric"
+                defaultValue={service.price_rsd}
+                required
+              />
+            </Field>
+          </div>
+
+          <div className="flex gap-2">
+            <Button type="submit" size="sm" variant="outline" disabled={pending}>
+              {sr.settings.saveService}
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={pending}
+              onClick={() => call(() => deleteServiceEntry(service.id))}
+            >
+              {sr.settings.removeService}
+            </Button>
+          </div>
+        </form>
+      ))}
+
+      <form
+        action={submit(saveServiceEntry)}
+        className="border-border space-y-2 rounded-lg border border-dashed p-3"
+      >
+        <input type="hidden" name="id" value="" />
+
+        <Input
+          name="name"
+          placeholder={sr.settings.serviceNamePlaceholder}
+          maxLength={60}
+          required
+          aria-label={sr.settings.serviceName}
+        />
+
+        <div className="grid grid-cols-2 gap-2">
+          <Field label={sr.settings.serviceDuration}>
+            <Input
+              name="durationMin"
+              type="text"
+              inputMode="numeric"
+              defaultValue={90}
+              required
+            />
+          </Field>
+          <Field label={sr.settings.servicePrice}>
+            <Input
+              name="priceRsd"
+              type="text"
+              inputMode="numeric"
+              defaultValue={0}
+              required
+            />
+          </Field>
+        </div>
+
+        <Button type="submit" size="sm" disabled={pending}>
+          {sr.settings.addService}
+        </Button>
+      </form>
+
+      <Feedback state={state} />
+    </div>
+  );
 }
