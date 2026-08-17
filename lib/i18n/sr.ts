@@ -21,6 +21,20 @@ export const sr = {
   dashboard: {
     signOut: "Odjava",
     noTenant: "Tvoj nalog nije povezan ni sa jednim salonom.",
+    today: "Danas",
+    previousWeek: "Prethodna nedelja",
+    nextWeek: "Sledeća nedelja",
+    emptyDay: "Ovog dana nema zakazanih termina.",
+    notWorking: "Ovog dana ne radiš.",
+    fromPublicPage: "preko sajta",
+  },
+  appointmentStatus: {
+    pending: "Čeka",
+    confirmed: "Potvrđen",
+    completed: "Došla",
+    no_show: "Nije došla",
+    cancelled_by_client: "Otkazala klijentkinja",
+    cancelled_by_salon: "Otkazao salon",
   },
   calendar: {
     weekdaysShort: ["pon", "uto", "sre", "čet", "pet", "sub", "ned"],

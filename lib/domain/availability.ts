@@ -1,8 +1,7 @@
-import { fromZonedTime } from "date-fns-tz";
 import {
   addDays,
+  instantInTimeZone,
   isoWeekday,
-  minutesToTime,
   type WorkingInterval,
 } from "./calendar";
 
@@ -40,25 +39,6 @@ export type DayAvailability = {
 };
 
 const MINUTE = 60_000;
-const MINUTES_PER_DAY = 24 * 60;
-
-/**
- * Zidno vreme salona na dati datum pretvoreno u trenutak. Prevod ide preko
- * konkretnog datuma, nikad preko fiksnog pomeraja — samo tako 09:00 pada na
- * 09:00 i na dan kad se sat pomera.
- *
- * Postgres dozvoljava `24:00:00` kao vreme, a to je kraj dana, ne njegov
- * početak, pa se prelivanje prenosi na sledeći datum.
- */
-function instantAt(date: string, minuteOfDay: number, timeZone: string): Date {
-  const dayOffset = Math.floor(minuteOfDay / MINUTES_PER_DAY);
-  const withinDay = minuteOfDay - dayOffset * MINUTES_PER_DAY;
-
-  return fromZonedTime(
-    `${addDays(date, dayOffset)}T${minutesToTime(withinDay)}:00`,
-    timeZone,
-  );
-}
 
 function overlaps(
   startMs: number,
@@ -106,12 +86,12 @@ export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
         continue;
       }
 
-      const opensMs = instantAt(
+      const opensMs = instantInTimeZone(
         date,
         interval.startMinute,
         input.timeZone,
       ).getTime();
-      const closesMs = instantAt(
+      const closesMs = instantInTimeZone(
         date,
         interval.endMinute,
         input.timeZone,

@@ -1,25 +1,17 @@
 import { describe, expect, it } from "vitest";
 import {
   addDays,
-  buildWeekGrid,
   currentDateInTimeZone,
+  dayBoundsInTimeZone,
+  instantInTimeZone,
+  isoWeekDates,
   isoWeekday,
   minutesToTime,
   startOfIsoWeek,
   timeToMinutes,
-  type WorkingInterval,
 } from "@/lib/domain/calendar";
 
 const BELGRADE = "Europe/Belgrade";
-
-/** Radno vreme kakvo pravi seed: podeljena smena pon–pet, subota u komadu. */
-const SEED_WORKING_HOURS: WorkingInterval[] = [
-  ...[1, 2, 3, 4, 5].flatMap((weekday) => [
-    { weekday, startMinute: 9 * 60, endMinute: 13 * 60 },
-    { weekday, startMinute: 16 * 60, endMinute: 20 * 60 },
-  ]),
-  { weekday: 6, startMinute: 9 * 60, endMinute: 14 * 60 },
-];
 
 describe("vreme kao minuti", () => {
   it("čita i ispisuje sate i minute", () => {
@@ -69,14 +61,9 @@ describe("nedelja počinje u ponedeljak", () => {
   });
 });
 
-describe("mreža nedelje", () => {
-  it("ima sedam uzastopnih dana", () => {
-    const grid = buildWeekGrid({
-      weekStart: "2026-08-10",
-      workingHours: SEED_WORKING_HOURS,
-    });
-
-    expect(grid.days.map((day) => day.date)).toEqual([
+describe("sedam dana nedelje", () => {
+  it("uvek počinje ponedeljkom, ma koji dan bio zadat", () => {
+    expect(isoWeekDates("2026-08-13")).toEqual([
       "2026-08-10",
       "2026-08-11",
       "2026-08-12",
@@ -85,115 +72,66 @@ describe("mreža nedelje", () => {
       "2026-08-15",
       "2026-08-16",
     ]);
-    expect(grid.days.map((day) => day.weekday)).toEqual([1, 2, 3, 4, 5, 6, 7]);
   });
 
-  it("granice mreže idu od najranijeg do najkasnijeg sata", () => {
-    const grid = buildWeekGrid({
-      weekStart: "2026-08-10",
-      workingHours: SEED_WORKING_HOURS,
-    });
-
-    expect(minutesToTime(grid.startMinute)).toBe("09:00");
-    expect(minutesToTime(grid.endMinute)).toBe("20:00");
-    expect(grid.hourMarks).toHaveLength(12);
+  it("nedelja je poslednji dan svoje nedelje, ne prvi", () => {
+    expect(isoWeekDates("2026-08-16")[0]).toBe("2026-08-10");
+    expect(isoWeekDates("2026-08-16").at(-1)).toBe("2026-08-16");
   });
 
-  it("zaokružuje granice na pun sat", () => {
-    const grid = buildWeekGrid({
-      weekStart: "2026-08-10",
-      workingHours: [{ weekday: 1, startMinute: 9 * 60 + 30, endMinute: 17 * 60 + 15 }],
-    });
-
-    expect(minutesToTime(grid.startMinute)).toBe("09:00");
-    expect(minutesToTime(grid.endMinute)).toBe("18:00");
-  });
-
-  it("ponedeljak ima dva bloka sa pauzom između njih", () => {
-    const grid = buildWeekGrid({
-      weekStart: "2026-08-10",
-      workingHours: SEED_WORKING_HOURS,
-    });
-
-    const monday = grid.days[0]!;
-    expect(
-      monday.intervals.map(
-        (interval) =>
-          `${minutesToTime(interval.startMinute)}-${minutesToTime(interval.endMinute)}`,
-      ),
-    ).toEqual(["09:00-13:00", "16:00-20:00"]);
-  });
-
-  it("subota je jedan blok, nedelja nema nijedan", () => {
-    const grid = buildWeekGrid({
-      weekStart: "2026-08-10",
-      workingHours: SEED_WORKING_HOURS,
-    });
-
-    expect(grid.days[5]!.intervals).toEqual([
-      { startMinute: 9 * 60, endMinute: 14 * 60 },
-    ]);
-    expect(grid.days[6]!.intervals).toEqual([]);
-  });
-
-  it("bez unetog radnog vremena mreža i dalje ima sedam dana", () => {
-    const grid = buildWeekGrid({ weekStart: "2026-08-10", workingHours: [] });
-
-    expect(grid.days).toHaveLength(7);
-    expect(minutesToTime(grid.startMinute)).toBe("08:00");
-    expect(minutesToTime(grid.endMinute)).toBe("20:00");
-    expect(grid.days.every((day) => day.intervals.length === 0)).toBe(true);
+  it("nedelja koja preseca godinu ostaje cela", () => {
+    expect(isoWeekDates("2026-01-01")).toHaveLength(7);
+    expect(isoWeekDates("2026-01-01")[0]).toBe("2025-12-29");
   });
 });
 
-describe("nedelje sa prelaskom na drugo računanje vremena", () => {
-  it("nedelja sa 23 sata i dalje ima sedam dana i iste satnice", () => {
-    // 29.03.2026. Srbija prelazi na letnje vreme.
-    const grid = buildWeekGrid({
-      weekStart: "2026-03-23",
-      workingHours: SEED_WORKING_HOURS,
-    });
-
-    expect(grid.days.map((day) => day.date)).toEqual([
-      "2026-03-23",
-      "2026-03-24",
-      "2026-03-25",
-      "2026-03-26",
-      "2026-03-27",
-      "2026-03-28",
-      "2026-03-29",
-    ]);
-    expect(minutesToTime(grid.startMinute)).toBe("09:00");
-    expect(minutesToTime(grid.endMinute)).toBe("20:00");
+describe("zidno vreme salona kao trenutak", () => {
+  it("leti je pomeraj dva sata, zimi jedan", () => {
+    expect(instantInTimeZone("2026-08-10", 9 * 60, BELGRADE).toISOString()).toBe(
+      "2026-08-10T07:00:00.000Z",
+    );
+    expect(instantInTimeZone("2026-01-12", 9 * 60, BELGRADE).toISOString()).toBe(
+      "2026-01-12T08:00:00.000Z",
+    );
   });
 
-  it("nedelja sa 25 sati se ponaša isto", () => {
-    // 25.10.2026. Srbija prelazi na zimsko vreme.
-    const grid = buildWeekGrid({
-      weekStart: "2026-10-19",
-      workingHours: SEED_WORKING_HOURS,
-    });
-
-    expect(grid.days.map((day) => day.date)).toEqual([
-      "2026-10-19",
-      "2026-10-20",
-      "2026-10-21",
-      "2026-10-22",
-      "2026-10-23",
-      "2026-10-24",
-      "2026-10-25",
-    ]);
-    expect(grid.days[0]!.intervals[0]).toEqual({
-      startMinute: 9 * 60,
-      endMinute: 13 * 60,
-    });
+  it("na dan prelaska 09:00 je i dalje 09:00 po Beogradu", () => {
+    expect(instantInTimeZone("2026-10-25", 9 * 60, BELGRADE).toISOString()).toBe(
+      "2026-10-25T08:00:00.000Z",
+    );
+    expect(instantInTimeZone("2026-10-24", 9 * 60, BELGRADE).toISOString()).toBe(
+      "2026-10-24T07:00:00.000Z",
+    );
   });
 
-  it("dan prelaska ne pomera nedelju kojoj pripada", () => {
-    const springForward = new Date("2026-03-29T00:30:00Z");
-    const date = currentDateInTimeZone(springForward, BELGRADE);
+  it("ponoć na kraju dana pripada sledećem datumu", () => {
+    expect(instantInTimeZone("2026-08-10", 24 * 60, BELGRADE).toISOString()).toBe(
+      "2026-08-10T22:00:00.000Z",
+    );
+  });
+});
 
-    expect(date).toBe("2026-03-29");
-    expect(startOfIsoWeek(date)).toBe("2026-03-23");
+describe("granice dana po satu salona", () => {
+  it("dan traje od ponoći do ponoći po Beogradu", () => {
+    const bounds = dayBoundsInTimeZone("2026-08-10", BELGRADE);
+
+    expect(bounds.from.toISOString()).toBe("2026-08-09T22:00:00.000Z");
+    expect(bounds.to.toISOString()).toBe("2026-08-10T22:00:00.000Z");
+  });
+
+  it("dan prelaska na zimsko vreme ima dvadeset pet sati", () => {
+    const bounds = dayBoundsInTimeZone("2026-10-25", BELGRADE);
+    const hours =
+      (bounds.to.getTime() - bounds.from.getTime()) / (60 * 60 * 1000);
+
+    expect(hours).toBe(25);
+  });
+
+  it("dan prelaska na letnje vreme ima dvadeset tri sata", () => {
+    const bounds = dayBoundsInTimeZone("2026-03-29", BELGRADE);
+    const hours =
+      (bounds.to.getTime() - bounds.from.getTime()) / (60 * 60 * 1000);
+
+    expect(hours).toBe(23);
   });
 });

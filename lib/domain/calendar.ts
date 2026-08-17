@@ -1,4 +1,4 @@
-import { formatInTimeZone } from "date-fns-tz";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 export type WorkingInterval = {
   weekday: number;
@@ -6,24 +6,7 @@ export type WorkingInterval = {
   endMinute: number;
 };
 
-export type CalendarDay = {
-  /** Datum u tajmzoni salona, oblik YYYY-MM-DD. */
-  date: string;
-  /** ISO dan u nedelji: 1 = ponedeljak ... 7 = nedelja. */
-  weekday: number;
-  intervals: { startMinute: number; endMinute: number }[];
-};
-
-export type WeekGrid = {
-  days: CalendarDay[];
-  startMinute: number;
-  endMinute: number;
-  hourMarks: number[];
-};
-
-/** Kad salon nema unetog radnog vremena, mreža ipak mora nešto da pokaže. */
-const FALLBACK_START_MINUTE = 8 * 60;
-const FALLBACK_END_MINUTE = 20 * 60;
+const MINUTES_PER_DAY = 24 * 60;
 
 export function timeToMinutes(value: string): number {
   const [hours, minutes] = value.split(":");
@@ -69,48 +52,42 @@ export function startOfIsoWeek(date: string): string {
   return addDays(date, -(isoWeekday(date) - 1));
 }
 
-function gridBounds(intervals: WorkingInterval[]): {
-  startMinute: number;
-  endMinute: number;
-} {
-  if (intervals.length === 0) {
-    return { startMinute: FALLBACK_START_MINUTE, endMinute: FALLBACK_END_MINUTE };
-  }
+/**
+ * Zidno vreme salona na dati datum pretvoreno u trenutak. Prevod ide preko
+ * konkretnog datuma, nikad preko fiksnog pomeraja — samo tako 09:00 pada na
+ * 09:00 i na dan kad se sat pomera.
+ *
+ * Postgres dozvoljava `24:00:00` kao vreme, a to je kraj dana, ne njegov
+ * početak, pa se prelivanje prenosi na sledeći datum.
+ */
+export function instantInTimeZone(
+  date: string,
+  minuteOfDay: number,
+  timeZone: string,
+): Date {
+  const dayOffset = Math.floor(minuteOfDay / MINUTES_PER_DAY);
+  const withinDay = minuteOfDay - dayOffset * MINUTES_PER_DAY;
 
-  const earliest = Math.min(...intervals.map((interval) => interval.startMinute));
-  const latest = Math.max(...intervals.map((interval) => interval.endMinute));
+  return fromZonedTime(
+    `${addDays(date, dayOffset)}T${minutesToTime(withinDay)}:00`,
+    timeZone,
+  );
+}
 
+/** Ponoć do ponoći po satu salona, kao trenuci u UTC-u. */
+export function dayBoundsInTimeZone(
+  date: string,
+  timeZone: string,
+): { from: Date; to: Date } {
   return {
-    startMinute: Math.floor(earliest / 60) * 60,
-    endMinute: Math.ceil(latest / 60) * 60,
+    from: instantInTimeZone(date, 0, timeZone),
+    to: instantInTimeZone(date, MINUTES_PER_DAY, timeZone),
   };
 }
 
-export function buildWeekGrid(input: {
-  weekStart: string;
-  workingHours: WorkingInterval[];
-}): WeekGrid {
-  const { startMinute, endMinute } = gridBounds(input.workingHours);
+/** Sedam dana nedelje kojoj datum pripada, počev od ponedeljka. */
+export function isoWeekDates(date: string): string[] {
+  const monday = startOfIsoWeek(date);
 
-  const days: CalendarDay[] = [];
-  for (let offset = 0; offset < 7; offset += 1) {
-    const date = addDays(input.weekStart, offset);
-    const weekday = isoWeekday(date);
-    const intervals = input.workingHours
-      .filter((interval) => interval.weekday === weekday)
-      .map((interval) => ({
-        startMinute: interval.startMinute,
-        endMinute: interval.endMinute,
-      }))
-      .sort((left, right) => left.startMinute - right.startMinute);
-
-    days.push({ date, weekday, intervals });
-  }
-
-  const hourMarks: number[] = [];
-  for (let minute = startMinute; minute <= endMinute; minute += 60) {
-    hourMarks.push(minute);
-  }
-
-  return { days, startMinute, endMinute, hourMarks };
+  return Array.from({ length: 7 }, (_, offset) => addDays(monday, offset));
 }

@@ -1,30 +1,38 @@
-import { WeekGridView } from "@/components/calendar/week-grid";
-import { Button } from "@/components/ui/button";
-import { getWorkingHours } from "@/lib/db/working-hours";
-import { getCurrentTenant } from "@/lib/db/tenants";
+import Link from "next/link";
+import { DayList } from "@/components/calendar/day-list";
+import { WeekStrip, type StripDay } from "@/components/calendar/week-strip";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  buildWeekGrid,
+  getAppointmentsInRange,
+  LIVE_STATUSES,
+  type DashboardAppointment,
+} from "@/lib/db/appointments";
+import { getCurrentTenant } from "@/lib/db/tenants";
+import { getWorkingHours } from "@/lib/db/working-hours";
+import {
+  addDays,
   currentDateInTimeZone,
+  dayBoundsInTimeZone,
+  instantInTimeZone,
+  isoWeekDates,
+  isoWeekday,
   startOfIsoWeek,
 } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
 import { signOut } from "./actions";
 
-function weekLabel(weekStart: string, weekEnd: string): string {
-  const startDay = Number(weekStart.slice(8, 10));
-  const endDay = Number(weekEnd.slice(8, 10));
-  const startMonth = sr.calendar.months[Number(weekStart.slice(5, 7)) - 1];
-  const endMonth = sr.calendar.months[Number(weekEnd.slice(5, 7)) - 1];
-  const year = weekEnd.slice(0, 4);
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-  if (startMonth === endMonth) {
-    return `${startDay}–${endDay}. ${endMonth} ${year}.`;
-  }
+type PageProps = { searchParams: Promise<{ dan?: string }> };
 
-  return `${startDay}. ${startMonth} – ${endDay}. ${endMonth} ${year}.`;
+function dayHeading(date: string): string {
+  const day = Number(date.slice(8, 10));
+  const month = sr.calendar.months[Number(date.slice(5, 7)) - 1];
+
+  return `${sr.calendar.weekdaysShort[isoWeekday(date) - 1]}, ${day}. ${month}`;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({ searchParams }: PageProps) {
   const tenant = await getCurrentTenant();
 
   if (!tenant) {
@@ -37,24 +45,53 @@ export default async function DashboardPage() {
     );
   }
 
-  const workingHours = await getWorkingHours();
   const today = currentDateInTimeZone(new Date(), tenant.timezone);
-  const grid = buildWeekGrid({
-    weekStart: startOfIsoWeek(today),
-    workingHours,
-  });
+  const requested = (await searchParams).dan;
+  const selected = requested && DATE_PATTERN.test(requested) ? requested : today;
+
+  const weekDates = isoWeekDates(selected);
+  const week = {
+    from: instantInTimeZone(weekDates[0]!, 0, tenant.timezone),
+    to: dayBoundsInTimeZone(weekDates[6]!, tenant.timezone).to,
+  };
+
+  const [workingHours, appointments] = await Promise.all([
+    getWorkingHours(),
+    getAppointmentsInRange(week),
+  ]);
+
+  const live = appointments.filter((appointment) =>
+    LIVE_STATUSES.includes(appointment.status),
+  );
+
+  function onDate(date: string): DashboardAppointment[] {
+    const bounds = dayBoundsInTimeZone(date, tenant!.timezone);
+
+    return live.filter((appointment) => {
+      const startAt = new Date(appointment.start_at);
+      return startAt >= bounds.from && startAt < bounds.to;
+    });
+  }
+
+  const days: StripDay[] = weekDates.map((date) => ({
+    date,
+    appointments: onDate(date).length,
+    working: workingHours.some(
+      (interval) => interval.weekday === isoWeekday(date),
+    ),
+  }));
+
+  const selectedDay = days.find((day) => day.date === selected)!;
+  const ofDay = onDate(selected);
+  const previousWeek = addDays(startOfIsoWeek(selected), -7);
+  const nextWeek = addDays(startOfIsoWeek(selected), 7);
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-3xl p-4">
       <header className="flex items-center justify-between gap-4 pb-3">
-        <div className="min-w-0">
-          <h1 className="truncate text-lg font-semibold tracking-tight">
-            {tenant.name}
-          </h1>
-          <p className="text-muted-foreground text-xs">
-            {weekLabel(grid.days[0]!.date, grid.days[6]!.date)}
-          </p>
-        </div>
+        <h1 className="min-w-0 truncate text-lg font-semibold tracking-tight">
+          {tenant.name}
+        </h1>
         <form action={signOut}>
           <Button type="submit" variant="outline" size="sm">
             {sr.dashboard.signOut}
@@ -62,13 +99,44 @@ export default async function DashboardPage() {
         </form>
       </header>
 
-      {workingHours.length === 0 ? (
-        <p className="text-muted-foreground py-4 text-sm">
-          {sr.calendar.noWorkingHours}
-        </p>
-      ) : null}
+      <nav className="flex items-center justify-between gap-2 pb-2">
+        <Link
+          href={`/dashboard?dan=${previousWeek}`}
+          aria-label={sr.dashboard.previousWeek}
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          ‹
+        </Link>
+        <Link
+          href={`/dashboard?dan=${today}`}
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          {sr.dashboard.today}
+        </Link>
+        <Link
+          href={`/dashboard?dan=${nextWeek}`}
+          aria-label={sr.dashboard.nextWeek}
+          className={buttonVariants({ variant: "ghost", size: "sm" })}
+        >
+          ›
+        </Link>
+      </nav>
 
-      <WeekGridView grid={grid} today={today} />
+      <WeekStrip days={days} selected={selected} today={today} />
+
+      <section className="pt-4">
+        <h2 className="pb-1 text-sm font-semibold">{dayHeading(selected)}</h2>
+
+        {ofDay.length > 0 ? (
+          <DayList appointments={ofDay} timeZone={tenant.timezone} />
+        ) : (
+          <p className="text-muted-foreground py-6 text-sm">
+            {selectedDay.working
+              ? sr.dashboard.emptyDay
+              : sr.dashboard.notWorking}
+          </p>
+        )}
+      </section>
     </main>
   );
 }
