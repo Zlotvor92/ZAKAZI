@@ -5,7 +5,7 @@ export const sr = {
   },
   signIn: {
     title: "Prijava",
-    subtitle: "Pošaljemo ti link na mejl. Bez lozinke.",
+    subtitle: "Google nalogom ili linkom na mejl. Bez lozinke.",
     emailLabel: "Mejl adresa",
     emailPlaceholder: "ime@primer.rs",
     submit: "Pošalji mi link",
