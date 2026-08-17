@@ -3,20 +3,15 @@ import { DayList } from "@/components/calendar/day-list";
 import { WeekStrip, type StripDay } from "@/components/calendar/week-strip";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
-  getAppointmentsInRange,
+  getDashboardWeek,
   LIVE_STATUSES,
   type DashboardAppointment,
 } from "@/lib/db/appointments";
-import { getCurrentTenant } from "@/lib/db/tenants";
-import { getWorkingHours } from "@/lib/db/working-hours";
 import {
   addDays,
-  currentDateInTimeZone,
   dayBoundsInTimeZone,
-  instantInTimeZone,
   isoWeekDates,
   isoWeekday,
-  startOfIsoWeek,
 } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
 import { signOut } from "./actions";
@@ -33,14 +28,13 @@ function dayHeading(date: string): string {
 }
 
 export default async function DashboardPage({ searchParams }: PageProps) {
-  // Radno vreme ne zavisi od salona — RLS ga ionako sužava — pa ga nema
-  // razloga čekati u redu iza njega. Svaki obilazak manje se vidi na telefonu.
-  const [tenant, workingHours] = await Promise.all([
-    getCurrentTenant(),
-    getWorkingHours(),
-  ]);
+  const requested = (await searchParams).dan;
+  const asked = requested && DATE_PATTERN.test(requested) ? requested : null;
 
-  if (!tenant) {
+  // Jedan poziv umesto tri u nizu: salon, radno vreme i termini cele nedelje.
+  const week = await getDashboardWeek(asked);
+
+  if (!week) {
     return (
       <main className="mx-auto min-h-dvh w-full max-w-3xl p-4">
         <p className="text-muted-foreground py-8 text-sm">
@@ -50,24 +44,18 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     );
   }
 
-  const today = currentDateInTimeZone(new Date(), tenant.timezone);
-  const requested = (await searchParams).dan;
-  const selected = requested && DATE_PATTERN.test(requested) ? requested : today;
+  const { tenant, today } = week;
+  const selected = asked ?? today;
+  // Dani se izvode iz ponedeljka koji je vratila baza, da se prikazana nedelja
+  // i raspon po kom su termini birani ne mogu razići.
+  const weekDates = isoWeekDates(week.week_start);
 
-  const weekDates = isoWeekDates(selected);
-  const week = {
-    from: instantInTimeZone(weekDates[0]!, 0, tenant.timezone),
-    to: dayBoundsInTimeZone(weekDates[6]!, tenant.timezone).to,
-  };
-
-  const appointments = await getAppointmentsInRange(week);
-
-  const live = appointments.filter((appointment) =>
+  const live = week.appointments.filter((appointment) =>
     LIVE_STATUSES.includes(appointment.status),
   );
 
   function onDate(date: string): DashboardAppointment[] {
-    const bounds = dayBoundsInTimeZone(date, tenant!.timezone);
+    const bounds = dayBoundsInTimeZone(date, tenant.timezone);
 
     return live.filter((appointment) => {
       const startAt = new Date(appointment.start_at);
@@ -78,15 +66,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const days: StripDay[] = weekDates.map((date) => ({
     date,
     appointments: onDate(date).length,
-    working: workingHours.some(
+    working: week.working_hours.some(
       (interval) => interval.weekday === isoWeekday(date),
     ),
   }));
 
-  const selectedDay = days.find((day) => day.date === selected)!;
+  const selectedDay = days.find((day) => day.date === selected);
   const ofDay = onDate(selected);
-  const previousWeek = addDays(startOfIsoWeek(selected), -7);
-  const nextWeek = addDays(startOfIsoWeek(selected), 7);
+  const previousWeek = addDays(week.week_start, -7);
+  const nextWeek = addDays(week.week_start, 7);
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-3xl p-4">
@@ -149,7 +137,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <DayList appointments={ofDay} timeZone={tenant.timezone} />
         ) : (
           <p className="text-muted-foreground py-6 text-sm">
-            {selectedDay.working
+            {selectedDay?.working
               ? sr.dashboard.emptyDay
               : sr.dashboard.notWorking}
           </p>

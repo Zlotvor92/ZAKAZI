@@ -35,26 +35,48 @@ export const LIVE_STATUSES: AppointmentStatus[] = [
   "no_show",
 ];
 
+const weekSchema = z.object({
+  tenant: z.object({
+    id: z.uuid(),
+    slug: z.string(),
+    name: z.string(),
+    timezone: z.string(),
+    booking_horizon_days: z.number().int(),
+    min_lead_minutes: z.number().int(),
+    public_booking_enabled: z.boolean(),
+  }),
+  today: z.string(),
+  week_start: z.string(),
+  working_hours: z.array(
+    z.object({
+      weekday: z.number().int(),
+      start_minute: z.number().int(),
+      end_minute: z.number().int(),
+    }),
+  ),
+  appointments: appointmentListSchema,
+});
+
+export type DashboardWeek = z.infer<typeof weekSchema>;
+
 /**
- * Termini salona ulogovanog korisnika u datom rasponu. Ne filtrira po tenantu
- * — to radi RLS, i to je jedina odbrana na koju se oslanjamo.
+ * Salon, radno vreme i termini jedne nedelje u jednom pozivu. Domet bira RLS.
+ * `null` kad nalog nije povezan ni sa jednim salonom.
  */
-export async function getAppointmentsInRange(input: {
-  from: Date;
-  to: Date;
-}): Promise<DashboardAppointment[]> {
+export async function getDashboardWeek(
+  date: string | null,
+): Promise<DashboardWeek | null> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase.rpc("dashboard_appointments", {
-    p_from: input.from.toISOString(),
-    p_to: input.to.toISOString(),
+  const { data, error } = await supabase.rpc("dashboard_week", {
+    p_date: date,
   });
 
   if (error) {
-    throw new Error(`Čitanje termina nije uspelo: ${error.message}`);
+    throw new Error(`Čitanje kalendara nije uspelo: ${error.message}`);
   }
 
-  return appointmentListSchema.parse(data);
+  return data === null ? null : weekSchema.parse(data);
 }
 
 const writeResultSchema = z.discriminatedUnion("ok", [

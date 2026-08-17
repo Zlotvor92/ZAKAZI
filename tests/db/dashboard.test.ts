@@ -27,21 +27,36 @@ async function salon(db: pg.PoolClient) {
   return { tenantId, userId, staffId, serviceId, clientId };
 }
 
-async function listed(
+type Week = {
+  tenant: { timezone: string; name: string };
+  today: string;
+  week_start: string;
+  working_hours: { weekday: number }[];
+  appointments: Record<string, unknown>[];
+};
+
+async function week(
   db: pg.PoolClient,
-  from: string,
-  to: string,
-): Promise<Record<string, unknown>[]> {
-  const result = await db.query(
-    "select * from dashboard_appointments($1, $2)",
-    [from, to],
+  date: string | null,
+): Promise<Week | null> {
+  const result = await db.query<{ w: Week | null }>(
+    "select dashboard_week($1) as w",
+    [date],
   );
-  return result.rows;
+  return result.rows[0]!.w;
 }
 
-const SEPTEMBER = ["2026-09-01T00:00:00Z", "2026-10-01T00:00:00Z"] as const;
+async function listed(
+  db: pg.PoolClient,
+  date: string,
+): Promise<Record<string, unknown>[]> {
+  return (await week(db, date))?.appointments ?? [];
+}
 
-describe("dashboard_appointments", () => {
+/** Ponedeljak nedelje u kojoj su svi termini iz ovih testova. */
+const SEPTEMBER = "2026-09-07";
+
+describe("dashboard_week", () => {
   it("vraća termin sa imenom klijentkinje i nazivom usluge", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
@@ -51,7 +66,7 @@ describe("dashboard_appointments", () => {
       });
 
       const rows = await asUser(db, base.userId, () =>
-        listed(db, ...SEPTEMBER),
+        listed(db, SEPTEMBER),
       );
 
       expect(rows).toHaveLength(1);
@@ -73,13 +88,10 @@ describe("dashboard_appointments", () => {
       });
 
       const rows = await asUser(db, base.userId, () =>
-        listed(db, ...SEPTEMBER),
+        listed(db, SEPTEMBER),
       );
 
-      // Redovi stižu kroz PostgREST kao JSON, pa se datumi pretvaraju u niske.
-      const asJson = JSON.parse(JSON.stringify(rows));
-
-      expect(() => appointmentListSchema.parse(asJson)).not.toThrow();
+      expect(() => appointmentListSchema.parse(rows)).not.toThrow();
     });
   });
 
@@ -95,29 +107,81 @@ describe("dashboard_appointments", () => {
       }
 
       const rows = await asUser(db, base.userId, () =>
-        listed(db, ...SEPTEMBER),
+        listed(db, SEPTEMBER),
       );
 
-      expect(rows.map((row) => row["start_at"])).toEqual([
-        new Date("2026-09-10T08:00:00Z"),
-        new Date("2026-09-10T10:00:00Z"),
-        new Date("2026-09-10T12:00:00Z"),
+      expect(
+        rows.map((row) => new Date(String(row["start_at"])).toISOString()),
+      ).toEqual([
+        "2026-09-10T08:00:00.000Z",
+        "2026-09-10T10:00:00.000Z",
+        "2026-09-10T12:00:00.000Z",
       ]);
     });
   });
 
-  it("raspon seče ono što ne pripada", async () => {
+  it("vraća tačno nedelju kojoj traženi dan pripada", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
-      await insertAppointment(db, { ...base, startAt: "2026-08-31T22:00:00Z" });
-      await insertAppointment(db, { ...base, startAt: "2026-09-10T08:00:00Z" });
-      await insertAppointment(db, { ...base, startAt: "2026-10-01T08:00:00Z" });
+      // Nedelja 07–13.09.2026. Prvi i poslednji su van nje za po jedan dan.
+      await insertAppointment(db, { ...base, startAt: "2026-09-06T20:00:00Z" });
+      await insertAppointment(db, { ...base, startAt: "2026-09-07T08:00:00Z" });
+      await insertAppointment(db, { ...base, startAt: "2026-09-13T20:00:00Z" });
+      await insertAppointment(db, { ...base, startAt: "2026-09-14T08:00:00Z" });
 
-      const rows = await asUser(db, base.userId, () =>
-        listed(db, ...SEPTEMBER),
+      const rows = await asUser(db, base.userId, () => listed(db, SEPTEMBER));
+
+      expect(rows).toHaveLength(2);
+    });
+  });
+
+  it("bilo koji dan nedelje daje isti ponedeljak", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      const starts = await asUser(db, base.userId, async () => {
+        const monday = await week(db, "2026-09-07");
+        const sunday = await week(db, "2026-09-13");
+        return [monday!.week_start, sunday!.week_start];
+      });
+
+      expect(starts[0]).toBe(starts[1]);
+      expect(new Date(String(starts[0])).toISOString().slice(0, 10)).toBe(
+        "2026-09-07",
+      );
+    });
+  });
+
+  it("bez datuma vraća današnju nedelju i današnji dan", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      const today = await asUser(db, base.userId, async () => {
+        const now = await week(db, null);
+        return now!.today;
+      });
+
+      expect(today).toBeTruthy();
+    });
+  });
+
+  it("salon i radno vreme stižu istim pozivom", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const staffId = await db.query<{ id: string }>(
+        "select id from staff where tenant_id = $1",
+        [base.tenantId],
+      );
+      await db.query(
+        `insert into working_hours (tenant_id, staff_id, weekday, start_time, end_time)
+         values ($1, $2, 1, '09:00', '13:00')`,
+        [base.tenantId, staffId.rows[0]!.id],
       );
 
-      expect(rows).toHaveLength(1);
+      const data = await asUser(db, base.userId, () => week(db, SEPTEMBER));
+
+      expect(data!.tenant.timezone).toBe("Europe/Belgrade");
+      expect(data!.working_hours).toHaveLength(1);
     });
   });
 
@@ -131,7 +195,7 @@ describe("dashboard_appointments", () => {
       });
 
       const rows = await asUser(db, base.userId, () =>
-        listed(db, ...SEPTEMBER),
+        listed(db, SEPTEMBER),
       );
 
       expect(rows).toHaveLength(1);
@@ -149,7 +213,7 @@ describe("dashboard_appointments", () => {
       });
 
       const rows = await asUser(db, mine.userId, () =>
-        listed(db, ...SEPTEMBER),
+        listed(db, SEPTEMBER),
       );
 
       expect(rows).toEqual([]);
@@ -162,9 +226,21 @@ describe("dashboard_appointments", () => {
 
       await asAnon(db, async () => {
         await expect(
-          inSavepoint(db, () => listed(db, ...SEPTEMBER)),
+          inSavepoint(db, () => week(db, SEPTEMBER)),
         ).rejects.toThrow(/permission denied/i);
       });
+    });
+  });
+
+  it("nalog bez salona ne dobija ništa", async () => {
+    await withRollback(async (db) => {
+      const orphanTenant = await createTenant(db);
+      const orphan = await createUser(db, orphanTenant);
+      await db.query("delete from memberships where user_id = $1", [orphan]);
+
+      const data = await asUser(db, orphan, () => week(db, SEPTEMBER));
+
+      expect(data).toBeNull();
     });
   });
 });
