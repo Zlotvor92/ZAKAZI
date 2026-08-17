@@ -190,17 +190,19 @@ async function book(
     name?: string;
     phone?: string;
     deviceId?: string;
+    networkHash?: string;
   },
 ): Promise<BookResult> {
   const result = await db.query<{ result: BookResult }>(
-    "select public_book($1, $2, $3, $4, $5, $6) as result",
+    "select public_book($1, $2, $3, $4, $5, $6, $7) as result",
     [
       input.slug,
       input.serviceId,
       input.startAt,
       input.name ?? "Jelena",
-      input.phone ?? "+381641234567",
+      input.phone ?? "+381645123480",
       input.deviceId ?? null,
+      input.networkHash ?? null,
     ],
   );
   return result.rows[0]!.result;
@@ -1449,6 +1451,127 @@ describe("duga usluga pomera ostatak dana", () => {
       );
 
       expect(result).toEqual({ ok: false, reason: "outside_working_hours" });
+    });
+  });
+});
+
+describe("ograničenje po mreži", () => {
+  /**
+   * Kolačić uređaja se briše za deset sekundi. Ovo pokriva ono što posetilac
+   * ne bira sam — adresu sa koje dolazi.
+   */
+  it("osam zakazivanja sa iste mreže u jednom satu je granica", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db, { horizonDays: 90 });
+      const network = "mreza-aaa";
+
+      // Svako sa svojim brojem i svojim uređajem, da granice po broju i po
+      // uređaju ne bi presudile pre mrežne.
+      for (let i = 0; i < 8; i += 1) {
+        const startAt = await nextMonday(db, "09:00", i);
+        const result = await asAnon(db, () =>
+          book(db, {
+            slug: salon.slug,
+            serviceId: salon.serviceId,
+            startAt,
+            phone: `+38164555${String(1000 + i)}`,
+            deviceId: `uredjaj-${i}`,
+            networkHash: network,
+          }),
+        );
+        expect({ i, ok: result.ok }).toEqual({ i, ok: true });
+      }
+
+      const startAt = await nextMonday(db, "10:30", 0);
+      const ninth = await asAnon(db, () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt,
+          phone: "+381645559999",
+          deviceId: "uredjaj-9",
+          networkHash: network,
+        }),
+      );
+
+      expect(ninth).toEqual({ ok: false, reason: "too_many_from_network" });
+    });
+  });
+
+  it("druga mreža nije pogođena tuđim brojanjem", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db, { horizonDays: 90 });
+
+      for (let i = 0; i < 8; i += 1) {
+        const startAt = await nextMonday(db, "09:00", i);
+        await asAnon(db, () =>
+          book(db, {
+            slug: salon.slug,
+            serviceId: salon.serviceId,
+            startAt,
+            phone: `+38164556${String(1000 + i)}`,
+            deviceId: `uredjaj-${i}`,
+            networkHash: "mreza-aaa",
+          }),
+        );
+      }
+
+      const startAt = await nextMonday(db, "10:30", 0);
+      const other = await asAnon(db, () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt,
+          phone: "+381645568888",
+          deviceId: "uredjaj-drugi",
+          networkHash: "mreza-bbb",
+        }),
+      );
+
+      expect(other.ok).toBe(true);
+    });
+  });
+
+  it("bez prosleđene mreže zakazivanje prolazi kao i pre", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const startAt = await nextMonday(db, "09:00");
+
+      const result = await asAnon(db, () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt,
+          phone: "+381645557777",
+        }),
+      );
+
+      expect(result.ok).toBe(true);
+    });
+  });
+
+  it("mreža se upisuje u istoriju, adresa se ne čuva", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const startAt = await nextMonday(db, "09:00");
+
+      await asAnon(db, () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt,
+          phone: "+381645556666",
+          networkHash: "mreza-ccc",
+        }),
+      );
+
+      const rows = await db.query<{ network_hash: string | null }>(
+        `select network_hash from appointment_events
+         where tenant_id = $1 and from_status is null`,
+        [salon.tenantId],
+      );
+
+      expect(rows.rows).toEqual([{ network_hash: "mreza-ccc" }]);
     });
   });
 });

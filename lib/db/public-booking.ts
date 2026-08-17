@@ -94,6 +94,7 @@ export async function bookPublicAppointment(input: {
   clientName: string;
   phoneE164: string;
   deviceId: string | null;
+  networkHash: string | null;
 }): Promise<BookResult> {
   const supabase = await createClient();
 
@@ -104,6 +105,7 @@ export async function bookPublicAppointment(input: {
     p_client_name: input.clientName,
     p_phone_e164: input.phoneE164,
     p_device_id: input.deviceId,
+    p_network_hash: input.networkHash,
   });
 
   if (error) {

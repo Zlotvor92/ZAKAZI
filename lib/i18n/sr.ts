@@ -223,7 +223,7 @@ export const sr = {
     nameLabel: "Ime klijentkinje",
     namePlaceholder: "Jelena Petrović",
     phoneLabel: "Broj telefona",
-    phonePlaceholder: "064 123 4567",
+    phonePlaceholder: "064 512 3480",
     submit: "Sačuvaj termin",
     submitting: "Čuvam…",
     noServices: "Prvo unesi bar jednu uslugu.",
@@ -285,7 +285,7 @@ export const sr = {
     nameLabel: "Ime i prezime",
     namePlaceholder: "Jelena Petrović",
     phoneLabel: "Broj telefona",
-    phonePlaceholder: "064 123 4567",
+    phonePlaceholder: "064 512 3480",
     phoneHint: "Salon te zove na ovaj broj ako nešto iskrsne.",
     submit: "Zakaži termin",
     submitting: "Zakazujem…",
@@ -320,6 +320,8 @@ export const sr = {
         "Već imaš više zakazanih termina u ovom salonu. Otkaži neki ili se javi salonu.",
       too_many_from_device:
         "Sa ovog uređaja je zakazano previše termina. Ako zakazuješ za nekog drugog, javi se salonu.",
+      too_many_from_network:
+        "Sa ove mreže je upravo zakazano previše termina. Pokušaj ponovo za sat vremena ili se javi salonu.",
       too_fast: "Sačekaj pola minuta pa pokušaj ponovo.",
     },
     /** Problemi koje vraća `normalizePhone`. */
@@ -328,6 +330,7 @@ export const sr = {
       not_a_number: "Broj telefona nije ispravan.",
       too_short: "Broj telefona je prekratak.",
       too_long: "Broj telefona je predugačak.",
+      looks_fake: "Taj broj nije ispravan. Upiši svoj pravi broj.",
     },
   },
 } as const;

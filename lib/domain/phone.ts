@@ -13,7 +13,41 @@ const E164 = /^\+[1-9][0-9]{7,14}$/;
 /** Razmak, crta, kosa crta, tačka i zagrada su način na koji ljudi pišu broj. */
 const WRITTEN_PHONE = /^\+?[0-9\s()./-]+$/;
 
-export type PhoneProblem = "empty" | "not_a_number" | "too_short" | "too_long";
+export type PhoneProblem =
+  | "empty"
+  | "not_a_number"
+  | "too_short"
+  | "too_long"
+  | "looks_fake";
+
+/**
+ * Broj koji je neko izmislio dok je kucao.
+ *
+ * Gleda se pretplatnički deo, bez mrežnog prefiksa: u `641234567` to je
+ * `1234567`. Stvaran broj takav praktično ne postoji, a upravo tako izgleda
+ * ono što se otkuca kad se ne planira doći.
+ */
+function looksFake(subscriber: string): boolean {
+  if (subscriber.length >= 6 && /^(\d)\1+$/.test(subscriber)) {
+    return true;
+  }
+
+  // Sedam, ne šest: u kraćem obliku broja (`064 123 456`) pretplatnički deo
+  // ima tačno šest cifara, pa bi niz od šest odbio i stvaran broj.
+  if (subscriber.length < 7) {
+    return false;
+  }
+
+  let ascending = true;
+  let descending = true;
+  for (let i = 1; i < subscriber.length; i += 1) {
+    const step = Number(subscriber[i]) - Number(subscriber[i - 1]);
+    if (step !== 1) ascending = false;
+    if (step !== -1) descending = false;
+  }
+
+  return ascending || descending;
+}
 
 export type PhoneNormalization =
   | { ok: true; e164: string }
@@ -76,11 +110,22 @@ export function normalizePhone(input: string): PhoneNormalization {
     return { ok: false, reason: "too_long" };
   }
 
+  // Prve dve cifre su mreža (`64`, `11`), ostalo je pretplatnik.
+  if (looksFake(national.slice(2))) {
+    return { ok: false, reason: "looks_fake" };
+  }
+
   return validate(international);
 }
 
 function validate(international: string): PhoneNormalization {
   const e164 = `+${international}`;
+
+  // I strani broj sme da bude izmišljen; mrežne opsege drugih zemalja ne
+  // znamo, pa se proverava samo ono što je očigledno.
+  if (/^(\d)\1+$/.test(international)) {
+    return { ok: false, reason: "looks_fake" };
+  }
 
   if (E164.test(e164)) {
     return { ok: true, e164 };

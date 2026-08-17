@@ -8,6 +8,7 @@ import { deviceId } from "@/lib/device";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sr } from "@/lib/i18n/sr";
 import { notifyTenant } from "@/lib/messaging/push";
+import { networkHash } from "@/lib/network";
 
 const bookingSchema = z.object({
   slug: z.string().min(1),
@@ -70,6 +71,7 @@ export async function submitBooking(
     clientName: name,
     phoneE164: phone.e164,
     deviceId: await deviceId(),
+    networkHash: await networkHash(parsed.data.slug),
   });
 
   if (!result.ok) {
