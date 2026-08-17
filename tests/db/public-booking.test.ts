@@ -1575,3 +1575,30 @@ describe("ograničenje po mreži", () => {
     });
   });
 });
+
+describe("izmišljen broj ne prolazi ni direktnim pozivom", () => {
+  it("baza ga odbija i kad forma nije ni pitana", async () => {
+    // Zaobilaženje forme je jedini scenario koji ovo pokriva: `anon` ključ i
+    // slug salona su javni, pa se `public_book` može pozvati i bez stranice.
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const startAt = await nextMonday(db, "09:00");
+
+      for (const phone of ["+381641111111", "+381641234567"]) {
+        const result = await asAnon(db, () =>
+          book(db, {
+            slug: salon.slug,
+            serviceId: salon.serviceId,
+            startAt,
+            phone,
+          }),
+        );
+
+        expect({ phone, result }).toEqual({
+          phone,
+          result: { ok: false, reason: "invalid_phone" },
+        });
+      }
+    });
+  });
+});

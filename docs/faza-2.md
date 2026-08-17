@@ -95,8 +95,10 @@ kasnije menjale bez kopanja po `public_book`.
 
 | Provera | Granica | Šta hvata |
 |---|---|---|
+| Oblik broja | — | izmišljen broj (`064 111 1111`, `064 123 4567`) |
 | Isti broj, nedelja oko traženog datuma | 2 | zauzimanje više termina u istoj nedelji |
 | Isti broj, svi budući termini | 4 nepoznat / 6 poznat | razmazivanje rezervacija po horizontu |
+| Ista mreža, poslednji sat | 8 | skripta koja briše kolačić |
 | Isti uređaj, svi budući termini | 6 | jedan čovek, mnogo lažnih brojeva |
 | Isti uređaj, razmak između dva zakazivanja | 30 sekundi | skripta |
 
@@ -118,24 +120,54 @@ besplatno: trenje raste sa rizikom, a ne sa brojem termina.
 što neko radi u jednom salonu ne postoji u drugom; deljenje signala između
 salona je Faza 4 i tamo ide samo izvedeni rizik, nikad broj telefona.
 
-### Šta namerno nije urađeno
+### Mreža i oblik broja: dve odluke koje su preokrenute
+
+Oba su ranije stajala pod „namerno nije urađeno". Razlozi su bili tačni za ono
+što je tada bilo zamišljeno, a ne za ono što je na kraju napravljeno.
+
+**Limit po IP adresi** je odbijen jer „stotine ljudi dele istu izlaznu adresu,
+pa bi lažno pozitivnih bilo više nego uhvaćenih". To važi za usku granicu.
+Granica je **osam zakazivanja na sat po salonu** — jedan solo salon toliko ne
+primi ni u najboljem danu, a kamoli sa jedne adrese. Prigovor je bio protiv
+strogog limita, ne protiv postojanja limita.
+
+Adresa se ne čuva. Čuva se `sha256(slug || adresa)`, pa isti posetilac u dva
+salona daje dva različita heša i spisak toga ko je gde bio se ne može sastaviti
+ni sa pristupom bazi.
+
+**Odbijanje brojeva koji „izgledaju lažno"** je odbijeno jer „`064 111 1111` je
+nekome stvaran broj". Nije — takvi opsezi se ne dodeljuju. Ali prigovor je
+pogodio nešto drugo, i to se potvrdilo: prva verzija provere odbijala je niz od
+šest cifara i time i **stvaran** kratki oblik broja (`064 123 456`), gde
+pretplatnički deo ima tačno šest. Test je to uhvatio. Prag je sada sedam za
+nizove, šest za ponovljenu cifru.
+
+Provera stoji **na dva mesta**: u `normalizePhone` zbog poruke, i u
+`phone_looks_fake` u bazi zbog odbrane — `anon` ključ i slug su javni, pa se
+`public_book` može pozvati i bez stranice. Test `fake-number.test.ts` propušta
+iste brojeve kroz obe i pada ako se raziđu.
+
+### Šta i dalje namerno nije urađeno
 
 - **CAPTCHA.** Ne dok postoji išta drugo, i nikad kao prva mera.
-- **Limit po IP adresi.** Ogromna većina zakazivanja doći će sa mobilne mreže,
-  gde stotine ljudi dele istu izlaznu adresu. Lažno pozitivnih bi bilo više
-  nego uhvaćenih.
-- **Odbijanje brojeva koji „izgledaju lažno".** `064 111 1111` je nekome
-  stvaran broj. Nagađanje po obliku hvata malo, a odbija prave ljude.
-- **Blocklist.** Tabela je u modelu i provera bi bila pet redova, ali dok
-  vlasnica nema ekran sa kog nekoga blokira, to je provera nad praznom tabelom.
-  Ide kao prva stvar u 2B — to je najjače oružje protiv stvarne pretnje, a
-  stvarna pretnja nije botnet nego jedna uporna osoba.
+- **Provera broja porukom.** Jedino što lažan broj čini nemogućim, i jedino što
+  košta. Odloženo dok se ne vidi ima li lažnih zakazivanja uopšte; sada se to
+  može i izmeriti, jer termin označen sa „Nije došla" ostaje u istoriji.
+- **Hardverski identifikator uređaja.** Pregledač ga nema, a i Android ga je
+  zaključao od verzije 10. Otisak pregledača ne razlikuje dva ista telefona,
+  menja se pri svakom ažuriranju, i lični je podatak po ZZPL-u.
+- **Depozit.** Najjače zaustavlja trolove i najviše obara konverziju. Čeka
+  odluku o naplati.
 
 ### Granice koje treba prepraviti kad bude podataka
 
-Sve su konstante u `booking_limit_reason`. Prvi kandidat je granica od 4 buduća
-termina za nepoznat broj: mušterija koja hoće stalni termin dva meseca unapred
-udara u nju pre nego što je jednom došla.
+Sve su konstante u `booking_limit_reason`.
+
+**Granica od 4 buduća termina za nepoznat broj nije kandidat — proverena je i
+ostaje.** Spuštanje na 3 obara test „ko dolazi svake nedelje ne udara u limit":
+stalna mušterija koja zakaže četiri nedelje unapred, a nijednom nije označena
+kao došla, dobija odbijenicu. To je najskuplja greška koju ovaj deo može da
+napravi. Troll koji drži tri termina umesto četiri nije dobitak vredan te cene.
 
 ## Arhitektura javnog pristupa
 
