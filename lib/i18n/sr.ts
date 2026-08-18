@@ -23,6 +23,13 @@ export const sr = {
     ],
     forWho:
       "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
+    dataTitle: "Prijava preko Google naloga",
+    dataBody:
+      "Vlasnica salona ulazi svojim Google nalogom. Tom prilikom čitamo samo njeno ime i mejl adresu — taman koliko treba da prepoznamo čiji je salon. Ništa drugo sa Google naloga ne tražimo i ne čuvamo: ni kontakte, ni poštu, ni kalendar, ni fotografije.",
+    dataMore: "Detaljnije u politici privatnosti",
+    clientsTitle: "Klijentkinje se ne prijavljuju",
+    clientsBody:
+      "Za zakazivanje termina nije potreban nalog. Klijentkinja ostavlja samo ime i broj telefona, da bi salon mogao da je pozove ako nešto iskrsne.",
     signIn: "Prijava za salone",
     signInHint: "Registracija je za sada zatvorena.",
   },

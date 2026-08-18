@@ -4,9 +4,25 @@ import { buttonVariants } from "@/components/ui/button";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 
+/**
+ * Naslov je golo ime aplikacije, bez dodatka posle crte.
+ *
+ * Google pri proveri brenda poredi „App name" iz konzole sa imenom koje nađe
+ * na početnoj strani, i taj deo pada kad se stringovi ne poklapaju od reči do
+ * reči. Zato ime stoji isto u naslovu, u `application-name` i u Open Graph
+ * oznakama — opis ide u `description`, gde mu je i mesto.
+ */
 export const metadata: Metadata = {
-  title: `${sr.app.name} — ${sr.app.description}`,
+  title: sr.app.name,
   description: sr.home.tagline,
+  applicationName: sr.app.name,
+  openGraph: {
+    type: "website",
+    siteName: sr.app.name,
+    title: sr.app.name,
+    description: sr.home.tagline,
+    locale: "sr_RS",
+  },
 };
 
 /**
@@ -44,6 +60,32 @@ export default function HomePage() {
       <p className="text-muted-foreground text-sm leading-relaxed">
         {sr.home.forWho}
       </p>
+
+      {/*
+        Google pre nego što odobri brendiranje prijave traži da početna strana
+        „sa transparentnošću objasni svrhu zbog koje aplikacija traži podatke
+        korisnika". Zato ovaj odeljak stoji ovde, a ne samo u politici
+        privatnosti.
+      */}
+      <section className="space-y-4 border-t pt-6">
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold">{sr.home.dataTitle}</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {sr.home.dataBody}{" "}
+            <Link href="/politika-privatnosti" className="underline">
+              {sr.home.dataMore}
+            </Link>
+            .
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold">{sr.home.clientsTitle}</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {sr.home.clientsBody}
+          </p>
+        </div>
+      </section>
 
       <div className="space-y-2">
         <Link href="/prijava" className={cn(buttonVariants(), "w-full")}>
