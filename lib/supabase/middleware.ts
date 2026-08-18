@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { requireEnv, requireUrlEnv } from "@/lib/env";
 
 const SIGN_IN_PATH = "/prijava";
+const HOME_PATH = "/";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
@@ -47,7 +48,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (signedIn && path === SIGN_IN_PATH) {
+  // Početna strana postoji zbog posetioca koji ne zna šta je ovo. Vlasnici
+  // koja je već prijavljena ne treba prodajni tekst nego njen dan, pa je
+  // odavde skreće isto kao sa strane za prijavu.
+  if (signedIn && (path === SIGN_IN_PATH || path === HOME_PATH)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
