@@ -53,12 +53,14 @@ export type UpcomingAppointment = z.infer<typeof upcomingAppointmentSchema>;
 export async function getAppointmentsForPhone(
   slug: string,
   phoneE164: string,
+  networkHash: string | null,
 ): Promise<UpcomingAppointment[] | null> {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("public_appointments_for_phone", {
     p_slug: slug,
     p_phone_e164: phoneE164,
+    p_network_hash: networkHash,
   });
 
   if (error) {

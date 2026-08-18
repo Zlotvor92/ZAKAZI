@@ -41,7 +41,11 @@ export async function lookupAppointments(
     return { status: "error", message: sr.booking.phoneProblem[phone.reason] };
   }
 
-  const appointments = await getAppointmentsForPhone(parsed.data.slug, phone.e164);
+  const appointments = await getAppointmentsForPhone(
+    parsed.data.slug,
+    phone.e164,
+    await networkHash(parsed.data.slug),
+  );
 
   if (appointments === null) {
     return { status: "error", message: sr.booking.closed };
