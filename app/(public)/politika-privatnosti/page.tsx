@@ -48,11 +48,9 @@ export default function PrivacyPolicyPage() {
       <div className="divide-border divide-y">
         <Section title="1. Ko je rukovalac podataka">
           <p>
-            Rukovalac podataka je [POPUNI: ime i prezime ili naziv
-            preduzetničke radnje / firme], [POPUNI: adresa sedišta],
-            [POPUNI: matični broj / PIB, ako postoji]. Za sva pitanja o
+            Rukovalac podataka je Aleksandar Vuletić. Za sva pitanja o
             privatnosti i ostvarivanje prava opisanih ovde, možeš nam se
-            javiti na [POPUNI: kontakt e-mail adresa].
+            javiti na avuletic92@gmail.com.
           </p>
           <p>
             Kad zakazuješ termin preko javne stranice salona, salon je taj koji
