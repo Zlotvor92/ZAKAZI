@@ -60,12 +60,14 @@ describe("pokrivenost", () => {
 
       // Broj je namerno zakucan: nova tabela obara ovaj test i tera da se
       // politika napiše sada, a ne kad se primeti da nešto curi.
-      expect(result.rows.length).toBe(14);
+      expect(result.rows.length).toBe(15);
 
-      // `platform_owners` je jedina tabela bez ijedne politike, i to je
-      // najstroža moguća postavka: uz uključen RLS bez politike joj kroz API
-      // ne pristupa niko. Ako joj neko doda politiku, ovaj test to prijavi.
-      const closed = "platform_owners";
+      // Tabele bez ijedne politike, i to je najstroža moguća postavka: uz
+      // uključen RLS bez politike im kroz API ne pristupa niko, samo
+      // `security definer` funkcije. `platform_owners` je otvorena namerno;
+      // `phone_lookup_attempts` je samo brojač pokušaja, ničiji podaci van
+      // heša mreže nikad ne treba da budu vidljivi kroz API.
+      const closed = new Set(["platform_owners", "phone_lookup_attempts"]);
 
       for (const row of result.rows) {
         expect(
@@ -73,10 +75,10 @@ describe("pokrivenost", () => {
           `${row.table_name} nema uključen RLS`,
         ).toEqual({ table: row.table_name, rls: true });
 
-        if (row.table_name === closed) {
+        if (closed.has(row.table_name)) {
           expect(
             Number(row.policies),
-            `${closed} više nije zatvorena za sve`,
+            `${row.table_name} više nije zatvorena za sve`,
           ).toBe(0);
           continue;
         }
