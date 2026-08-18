@@ -344,6 +344,10 @@ export const sr = {
     haveAppointment: "Već imaš zakazan termin?",
     manageLink: "Otkaži ga ovde",
   },
+  legal: {
+    terms: "Uslovi korišćenja",
+    privacy: "Politika privatnosti",
+  },
   cancel: {
     title: "Otkazivanje termina",
     back: "Nazad na zakazivanje",
