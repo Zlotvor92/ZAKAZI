@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import type { AdminSalon } from "@/lib/db/admin";
+import { pluralize } from "@/lib/domain/plural";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import {
@@ -73,11 +74,15 @@ function Row({ salon }: { salon: AdminSalon }) {
       <dl className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 pt-3 text-xs">
         <div>
           <dd className="inline tabular-nums">{salon.services_count}</dd>{" "}
-          <dt className="inline">{sr.admin.servicesCount}</dt>
+          <dt className="inline">
+            {pluralize(salon.services_count, sr.admin.servicesCount)}
+          </dt>
         </div>
         <div>
           <dd className="inline tabular-nums">{salon.upcoming_count}</dd>{" "}
-          <dt className="inline">{sr.admin.upcomingCount}</dt>
+          <dt className="inline">
+            {pluralize(salon.upcoming_count, sr.admin.upcomingCount)}
+          </dt>
         </div>
         <div>
           <dt className="inline">
