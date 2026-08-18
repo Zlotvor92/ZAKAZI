@@ -126,6 +126,16 @@ export default async function PublicBookingPage({ params }: PageProps) {
             {sr.booking.manageLink}
           </Link>
         </p>
+
+        <p className="text-muted-foreground pt-4 text-center text-xs">
+          <Link href="/uslovi-koriscenja" className="underline">
+            {sr.legal.terms}
+          </Link>{" "}
+          ·{" "}
+          <Link href="/politika-privatnosti" className="underline">
+            {sr.legal.privacy}
+          </Link>
+        </p>
       </main>
     </>
   );
