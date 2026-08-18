@@ -9,6 +9,9 @@ export type Tenant = {
   booking_horizon_days: number;
   min_lead_minutes: number;
   public_booking_enabled: boolean;
+  brand_background: string | null;
+  brand_primary: string | null;
+  brand_accent: string | null;
 };
 
 export const tenantSummaryListSchema = z.array(
@@ -47,7 +50,7 @@ export async function getCurrentTenant(
   const query = supabase
     .from("tenants")
     .select(
-      "id, slug, name, timezone, booking_horizon_days, min_lead_minutes, public_booking_enabled",
+      "id, slug, name, timezone, booking_horizon_days, min_lead_minutes, public_booking_enabled, brand_background, brand_primary, brand_accent",
     );
 
   const { data, error } = await (tenantId === null
@@ -89,6 +92,39 @@ export async function createTenant(input: {
   }
 
   return createResultSchema.parse(data);
+}
+
+const brandResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+export type BrandSaveResult = z.infer<typeof brandResultSchema>;
+
+/**
+ * Boje idu kroz funkciju, ne kroz `update`: vlasnici je privilegija nad
+ * `brand_*` kolonama oduzeta zajedno sa ostatkom tabele.
+ */
+export async function setTenantBrand(input: {
+  tenantId: string;
+  background: string | null;
+  primary: string | null;
+  accent: string | null;
+}): Promise<BrandSaveResult> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("set_tenant_brand", {
+    p_tenant_id: input.tenantId,
+    p_background: input.background,
+    p_primary: input.primary,
+    p_accent: input.accent,
+  });
+
+  if (error) {
+    throw new Error(`Upis boja nije uspeo: ${error.message}`);
+  }
+
+  return brandResultSchema.parse(data);
 }
 
 /**

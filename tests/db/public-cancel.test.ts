@@ -367,7 +367,9 @@ describe("otkazivanje termina brojem telefona", () => {
     });
   });
 
-  it("već otkazan termin se ne otkazuje ponovo", async () => {
+  it("već otkazan termin kaže da je već otkazan", async () => {
+    // Dve kartice ili dupli dodir na dugme. Klijentkinja je dobila tačno ono
+    // što je htela, pa poruka ne sme da je šalje da zove salon.
     await withRollback(async (db) => {
       const phone = "+381645552006";
       const base = await salonWithAppointment(db, phone);
@@ -380,7 +382,35 @@ describe("otkazivanje termina brojem telefona", () => {
       const second = await asAnon(db, () =>
         cancel(db, { slug: base.slug, phone, appointmentId: base.appointmentId }),
       );
-      expect(second).toEqual({ ok: false, reason: "invalid_transition" });
+      expect(second).toEqual({ ok: false, reason: "already_cancelled" });
+    });
+  });
+
+  it("prošao termin i dalje upućuje na salon", async () => {
+    // Granica prethodnog testa: `completed` i `no_show` nisu otkazani, tu je
+    // „javi se salonu" tačan odgovor i mora da ostane.
+    await withRollback(async (db) => {
+      for (const status of ["completed", "no_show"]) {
+        const phone = "+381645552016";
+        const base = await salonWithAppointment(db, phone);
+        await db.query("update appointments set status = $1 where id = $2", [
+          status,
+          base.appointmentId,
+        ]);
+
+        const result = await asAnon(db, () =>
+          cancel(db, {
+            slug: base.slug,
+            phone,
+            appointmentId: base.appointmentId,
+          }),
+        );
+
+        expect({ status, result }).toEqual({
+          status,
+          result: { ok: false, reason: "invalid_transition" },
+        });
+      }
     });
   });
 

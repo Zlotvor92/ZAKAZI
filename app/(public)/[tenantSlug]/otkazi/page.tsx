@@ -16,7 +16,11 @@ export async function generateMetadata({
   const { tenantSlug } = await params;
   const data = await salonSummary(tenantSlug);
 
-  return { title: data ? `${sr.cancel.title} — ${data.name}` : sr.booking.notFound };
+  return {
+    title: data
+      ? `${sr.cancel.title} — ${data.name}`
+      : sr.booking.unavailableTitle,
+  };
 }
 
 export default async function CancelPage({ params }: PageProps) {
@@ -64,8 +68,11 @@ export default async function CancelPage({ params }: PageProps) {
 
         <CancelFlow slug={data.slug} timeZone={data.timezone} />
 
-        <p className="text-muted-foreground pt-4 text-center text-xs">
-          <Link href={`/${tenantSlug}`} className="text-brand underline">
+        <p className="text-muted-foreground pt-2 text-center text-xs">
+          <Link
+            href={`/${tenantSlug}`}
+            className="text-brand inline-block py-3.5 underline"
+          >
             {sr.cancel.back}
           </Link>
         </p>

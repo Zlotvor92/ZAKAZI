@@ -5,7 +5,9 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   blockClientOfAppointment,
+  getAppointmentHistory,
   setAppointmentStatus,
+  type AppointmentHistoryEntry,
 } from "@/lib/db/appointments";
 import { getMyTenants } from "@/lib/db/tenants";
 import { deviceId } from "@/lib/device";
@@ -82,6 +84,27 @@ export async function changeStatus(
 
   revalidatePath("/dashboard");
   return { ok: true };
+}
+
+export type HistoryState =
+  | { ok: true; entries: AppointmentHistoryEntry[] }
+  | { ok: false; message: string };
+
+/** Učitava se tek na dodir: većina termina nikad ne bude ni otvorena. */
+export async function loadHistory(
+  appointmentId: string,
+): Promise<HistoryState> {
+  const parsed = z.uuid().safeParse(appointmentId);
+
+  if (!parsed.success) {
+    return { ok: false, message: sr.history.failed };
+  }
+
+  try {
+    return { ok: true, entries: await getAppointmentHistory(parsed.data) };
+  } catch {
+    return { ok: false, message: sr.history.failed };
+  }
 }
 
 export async function blockClient(appointmentId: string): Promise<ActionState> {

@@ -235,6 +235,39 @@ describe("konzola vidi sve salone", () => {
     });
   });
 
+  it("salon čija je vlasnica i vlasnik platforme nije „bez vlasnice”", async () => {
+    // `create_tenant` upisuje vlasnika platforme kao `owner` člana svakog
+    // salona, pa konzola bira člana koji to nije. Kad je vlasnica salona
+    // ujedno i vlasnik platforme, drugog člana nema — i pre ove popravke se
+    // prikazivalo prazno polje za salon koji vlasnicu uredno ima.
+    await withRollback(async (db) => {
+      const admin = await makeAdmin(db);
+      const adminEmail = await db.query<{ email: string }>(
+        "select email from auth.users where id = $1",
+        [admin],
+      );
+
+      const created = await asUser(db, admin, () =>
+        openSalon(db, {
+          name: "Salon Šefa",
+          ownerEmail: adminEmail.rows[0]!.email,
+        }),
+      );
+      if (!created.ok) throw new Error(created.reason);
+
+      const listed = await asUser(db, admin, async () => {
+        const result = await db.query<{ id: string; owner_email: string }>(
+          "select id, owner_email from admin_salons()",
+        );
+        return result.rows;
+      });
+
+      expect(listed).toEqual([
+        { id: created.id, owner_email: adminEmail.rows[0]!.email },
+      ]);
+    });
+  });
+
   it("vlasnica salona ne vidi ni svoj salon u konzoli", async () => {
     await withRollback(async (db) => {
       const admin = await makeAdmin(db);

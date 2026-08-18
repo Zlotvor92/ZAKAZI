@@ -70,6 +70,17 @@ function GoogleButton() {
   );
 }
 
+/**
+ * Google se nudi svuda osim tamo gde je izričito isključen.
+ *
+ * Kad provajder nije podešen u Supabase-u, `signInWithOAuth` i dalje uredno
+ * sastavi adresu — greška stiže tek kad pregledač ode na nju, i to kao sirov
+ * JSON na beloj strani bez povratka. To se ne može uhvatiti unapred, pa
+ * okruženje u kojem Google nije podešen (podrazumevano lokalno) dugme ne
+ * prikazuje umesto da vodi u ćorsokak.
+ */
+const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN !== "false";
+
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
@@ -96,15 +107,19 @@ export function SignInForm() {
 
   return (
     <div className="space-y-5">
-      <GoogleButton />
+      {GOOGLE_ENABLED ? (
+        <>
+          <GoogleButton />
 
-      {/* Mejlom se prijavljuje onaj ko nema Google nalog; oba puta vode istom
-          korisniku, jer se traži ista adresa. */}
-      <div className="flex items-center gap-3">
-        <span className="bg-border h-px flex-1" />
-        <span className="text-muted-foreground text-xs">{sr.signIn.or}</span>
-        <span className="bg-border h-px flex-1" />
-      </div>
+          {/* Mejlom se prijavljuje onaj ko nema Google nalog; oba puta vode
+              istom korisniku, jer se traži ista adresa. */}
+          <div className="flex items-center gap-3">
+            <span className="bg-border h-px flex-1" />
+            <span className="text-muted-foreground text-xs">{sr.signIn.or}</span>
+            <span className="bg-border h-px flex-1" />
+          </div>
+        </>
+      ) : null}
 
       <form action={formAction} className="space-y-4">
         <div className="space-y-2">

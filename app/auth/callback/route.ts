@@ -12,6 +12,21 @@ export async function GET(request: NextRequest) {
   const tokenHash = params.get("token_hash");
   const type = params.get("type");
 
+  // Provajder koji odbije prijavu (korisnik odustane na Google ekranu, nalog
+  // ne postoji, provajder ugašen) vraća korisnika ovde sa `error` umesto sa
+  // kodom. Bez ove grane on bi dobio istu poruku kao za istekao mejl link,
+  // koja u tom slučaju nema smisla.
+  const oauthError = params.get("error");
+  if (oauthError) {
+    console.error(
+      `Prijava preko provajdera nije uspela: ${oauthError}` +
+        ` (${params.get("error_description") ?? "bez opisa"})`,
+    );
+    return NextResponse.redirect(
+      new URL("/prijava?greska=google", request.nextUrl),
+    );
+  }
+
   if (!code && !tokenHash) {
     return NextResponse.redirect(new URL("/prijava?greska=1", request.nextUrl));
   }

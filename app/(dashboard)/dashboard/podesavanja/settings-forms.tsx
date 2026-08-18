@@ -15,12 +15,14 @@ import {
   type DayShape,
 } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
+import { brandVariables } from "@/lib/domain/brand";
 import {
   addBlockedNumber,
   deleteServiceEntry,
   deleteTimeOff,
   removeBlockedNumber,
   saveBookingRules,
+  saveBrand,
   saveServiceEntry,
   saveTimeOff,
   saveWorkingHours,
@@ -64,7 +66,20 @@ function useSettingsAction() {
     });
   }
 
-  return { pending, state, submit, call };
+  /**
+   * Ishod prethodnog čuvanja prestaje da važi čim se polje promeni.
+   *
+   * Bez ovoga „Sačuvano." stoji i dalje dok se kuca nova vrednost, pa i kad
+   * pregledač sam odbije slanje zbog neispravnog broja (`min`/`max` na polju)
+   * — a tada ništa nije sačuvano iako poruka tvrdi da jeste.
+   */
+  function reset() {
+    setState((current) =>
+      current.status === "idle" ? current : { status: "idle" },
+    );
+  }
+
+  return { pending, state, submit, call, reset };
 }
 
 type SlotMode = "count" | "minutes";
@@ -91,7 +106,7 @@ function slotSummary(day: DayShape): string {
 }
 
 export function WorkingHoursForm({ week }: { week: DayShape[] }) {
-  const { pending, state, submit } = useSettingsAction();
+  const { pending, state, submit, reset } = useSettingsAction();
   const [days, setDays] = useState(week);
   const [mode, setMode] = useState<SlotMode>("minutes");
 
@@ -112,7 +127,11 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
   }
 
   return (
-    <form action={submit(saveWorkingHours)} className="space-y-3">
+    <form
+      action={submit(saveWorkingHours)}
+      onChange={reset}
+      className="space-y-3"
+    >
       <p className="text-muted-foreground text-xs">{sr.settings.hoursHint}</p>
 
       {/* Oba načina upisuju isti podatak; prekidač menja samo šta se kuca. */}
@@ -137,7 +156,8 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
 
       {days.map((day) => (
         <div key={day.weekday} className="border-border rounded-lg border p-3">
-          <label className="flex items-center gap-2 pb-2">
+          {/* Kvačica je 20px, ali se dodiruje ceo red visok 44px. */}
+          <label className="flex min-h-11 items-center gap-2">
             <input
               type="checkbox"
               name={`working-${day.weekday}`}
@@ -145,7 +165,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
               onChange={(event) =>
                 update(day.weekday, { working: event.target.checked })
               }
-              className="size-4"
+              className="size-5"
             />
             <span className="text-sm font-medium">
               {sr.calendar.weekdaysShort[day.weekday - 1]}
@@ -331,10 +351,14 @@ export function BookingRulesForm({
   leadHours: number;
   publicEnabled: boolean;
 }) {
-  const { pending, state, submit } = useSettingsAction();
+  const { pending, state, submit, reset } = useSettingsAction();
 
   return (
-    <form action={submit(saveBookingRules)} className="space-y-3">
+    <form
+      action={submit(saveBookingRules)}
+      onChange={reset}
+      className="space-y-3"
+    >
       <label className="block space-y-1">
         <span className="text-sm font-medium">{sr.settings.horizonLabel}</span>
         <Input
@@ -359,12 +383,12 @@ export function BookingRulesForm({
         />
       </label>
 
-      <label className="flex items-center gap-2">
+      <label className="flex min-h-11 items-center gap-2">
         <input
           type="checkbox"
           name="publicEnabled"
           defaultChecked={publicEnabled}
-          className="size-4"
+          className="size-5"
         />
         <span className="text-sm">{sr.settings.publicLabel}</span>
       </label>
@@ -378,15 +402,146 @@ export function BookingRulesForm({
   );
 }
 
+/** Salon koji još nije birao boje kreće od bele i boje aplikacije. */
+const DEFAULT_BACKGROUND = "#ffffff";
+const DEFAULT_PRIMARY = "#4d213c";
+
+function ColorField({
+  label,
+  name,
+  value,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex min-h-11 items-center justify-between gap-3">
+      <span className="text-sm">{label}</span>
+      <input
+        type="color"
+        name={name}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="border-input size-11 shrink-0 cursor-pointer rounded-md border bg-transparent"
+      />
+    </label>
+  );
+}
+
+export function BrandForm({
+  background,
+  primary,
+  accent,
+}: {
+  background: string | null;
+  primary: string | null;
+  accent: string | null;
+}) {
+  const { pending, state, submit, reset } = useSettingsAction();
+  const [useOwn, setUseOwn] = useState(
+    background !== null && primary !== null,
+  );
+  const [bg, setBg] = useState(background ?? DEFAULT_BACKGROUND);
+  const [pri, setPri] = useState(primary ?? DEFAULT_PRIMARY);
+  const [acc, setAcc] = useState(accent);
+
+  // Ista funkcija koju koristi i javna strana, pa je prikaz ono što će
+  // klijentkinja stvarno videti — uključujući boju slova, koju bira sama
+  // prema luminansi pozadine.
+  const preview = useOwn
+    ? brandVariables({ background: bg, primary: pri, accent: acc })
+    : null;
+
+  return (
+    <form action={submit(saveBrand)} onChange={reset} className="space-y-3">
+      <p className="text-muted-foreground text-xs">{sr.settings.brandHint}</p>
+
+      <label className="flex min-h-11 items-center gap-2">
+        <input
+          type="checkbox"
+          name="useOwnColors"
+          checked={useOwn}
+          onChange={(event) => setUseOwn(event.target.checked)}
+          className="size-5"
+        />
+        <span className="text-sm">{sr.settings.brandUseOwn}</span>
+      </label>
+
+      {useOwn ? (
+        <div className="space-y-1">
+          <ColorField
+            label={sr.settings.brandBackground}
+            name="background"
+            value={bg}
+            onChange={setBg}
+          />
+          <ColorField
+            label={sr.settings.brandPrimary}
+            name="primary"
+            value={pri}
+            onChange={setPri}
+          />
+          <ColorField
+            label={sr.settings.brandAccent}
+            name="accent"
+            value={acc ?? pri}
+            onChange={setAcc}
+          />
+          <p className="text-muted-foreground text-xs">
+            {sr.settings.brandAccentHint}
+          </p>
+        </div>
+      ) : null}
+
+      {preview ? (
+        <div className="space-y-1">
+          <span className="text-muted-foreground block text-xs">
+            {sr.settings.brandPreview}
+          </span>
+          {/* Isti postupak kao na javnoj strani: vrednosti prolaze kroz
+              `brandVariables`, koja pušta samo heks boje. */}
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `.brand-preview{${preview}}`,
+            }}
+          />
+          <div className="brand-preview border-border bg-background text-foreground space-y-2 rounded-xl border p-3">
+            <div className="border-border bg-card flex items-center justify-between rounded-lg border p-2">
+              <span className="text-sm font-medium">
+                {sr.settings.brandPreviewService}
+              </span>
+              <span className="text-brand text-sm font-semibold">
+                3.000 RSD
+              </span>
+            </div>
+            <div className="bg-primary text-primary-foreground rounded-md py-2 text-center text-sm font-medium">
+              {sr.settings.brandPreviewButton}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <Button type="submit" disabled={pending}>
+        {sr.settings.saveBrand}
+      </Button>
+
+      <Feedback state={state} />
+    </form>
+  );
+}
+
 export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
-  const { pending, state, submit, call } = useSettingsAction();
+  const { pending, state, submit, call, reset } = useSettingsAction();
 
   function unblock(id: string) {
     call(() => removeBlockedNumber(id));
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" onChange={reset}>
       <p className="text-muted-foreground text-xs">{sr.settings.blockedHint}</p>
 
       {numbers.length === 0 ? (
@@ -450,14 +605,14 @@ export function TimeOffSection({
   timeZone: string;
   today: string;
 }) {
-  const { pending, state, submit, call } = useSettingsAction();
+  const { pending, state, submit, call, reset } = useSettingsAction();
 
   function remove(id: string) {
     call(() => deleteTimeOff(id));
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" onChange={reset}>
       <p className="text-muted-foreground text-xs">{sr.settings.timeOffHint}</p>
 
       {entries.length === 0 ? (
@@ -570,10 +725,10 @@ function describeTimeOff(entry: TimeOff, timeZone: string): string {
 }
 
 export function ServicesSection({ services }: { services: Service[] }) {
-  const { pending, state, submit, call } = useSettingsAction();
+  const { pending, state, submit, call, reset } = useSettingsAction();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" onChange={reset}>
       <p className="text-muted-foreground text-xs">{sr.settings.servicesHint}</p>
 
       {services.length === 0 ? (
@@ -619,7 +774,10 @@ export function ServicesSection({ services }: { services: Service[] }) {
             </Field>
           </div>
 
-          <div className="flex gap-2">
+          {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
+              osam piksela razmaka, od kojih jedno briše uslugu, na telefonu su
+              ista meta. Potvrda je isti postupak kao kod blokiranja broja. */}
+          <div className="flex items-center justify-between gap-2">
             <Button type="submit" size="sm" variant="outline" disabled={pending}>
               {sr.settings.saveService}
             </Button>
@@ -627,8 +785,14 @@ export function ServicesSection({ services }: { services: Service[] }) {
               type="button"
               size="sm"
               variant="ghost"
+              className="text-destructive hover:text-destructive"
               disabled={pending}
-              onClick={() => call(() => deleteServiceEntry(service.id))}
+              onClick={() => {
+                if (!window.confirm(sr.settings.removeServiceConfirm)) {
+                  return;
+                }
+                call(() => deleteServiceEntry(service.id));
+              }}
             >
               {sr.settings.removeService}
             </Button>

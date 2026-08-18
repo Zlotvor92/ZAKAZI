@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { sr } from "@/lib/i18n/sr";
 
 export const metadata: Metadata = {
@@ -50,7 +51,11 @@ export default function PrivacyPolicyPage() {
           <p>
             Rukovalac podataka je Aleksandar Vuletić. Za sva pitanja o
             privatnosti i ostvarivanje prava opisanih ovde, možeš nam se
-            javiti na avuletic92@gmail.com.
+            javiti na{" "}
+            <a href="mailto:avuletic92@gmail.com" className="underline">
+              avuletic92@gmail.com
+            </a>
+            .
           </p>
           <p>
             Kad zakazuješ termin preko javne stranice salona, salon je taj koji
@@ -217,7 +222,13 @@ export default function PrivacyPolicyPage() {
             <br />
             Bulevar kralja Aleksandra 15, 11000 Beograd
             <br />
-            office@poverenik.rs · +381 11 3408 900
+            <a href="mailto:office@poverenik.rs" className="underline">
+              office@poverenik.rs
+            </a>{" "}
+            ·{" "}
+            <a href="tel:+381113408900" className="underline">
+              +381 11 3408 900
+            </a>
           </p>
         </Section>
 
@@ -238,6 +249,15 @@ export default function PrivacyPolicyPage() {
           </p>
         </Section>
       </div>
+
+      <p className="text-muted-foreground pt-6 text-center text-xs">
+        <Link
+          href="/uslovi-koriscenja"
+          className="inline-block py-3.5 underline"
+        >
+          {sr.legal.terms}
+        </Link>
+      </p>
     </main>
   );
 }

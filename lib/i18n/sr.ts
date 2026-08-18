@@ -22,6 +22,8 @@ export const sr = {
   },
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
+    googleFailed:
+      "Prijava preko Google naloga nije uspela. Pokušaj ponovo ili zatraži link na mejl.",
   },
   tenants: {
     switchLabel: "Salon",
@@ -38,8 +40,9 @@ export const sr = {
     resume: "Vrati u rad",
     suspendConfirm: "Pauziraj salon? Link za zakazivanje prestaje da radi.",
     ownerUnknown: "bez vlasnice",
-    servicesCount: "usluga",
-    upcomingCount: "termina uskoro",
+    /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
+    servicesCount: ["usluga", "usluge", "usluga"],
+    upcomingCount: ["termin uskoro", "termina uskoro", "termina uskoro"],
     neverBooked: "još nijedno zakazivanje",
     lastBooking: "poslednje zakazivanje",
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
@@ -156,12 +159,29 @@ export const sr = {
     saveService: "Sačuvaj",
     addService: "Dodaj uslugu",
     removeService: "Ukloni",
+    removeServiceConfirm:
+      "Ukloni ovu uslugu? Nestaje iz ponude za zakazivanje. Već zakazani termini ostaju.",
     serviceProblem: {
       invalid_name: "Upiši naziv usluge.",
       invalid_duration: "Trajanje nije ispravno.",
       invalid_price: "Cena nije ispravna.",
       not_found: "Ta usluga više ne postoji.",
     },
+
+    brandTitle: "Boje tvoje stranice",
+    brandHint:
+      "Boje se vide na stranici za zakazivanje koju deliš klijentkinjama. Boju slova biramo sami, prema pozadini, da tekst uvek ostane čitljiv.",
+    brandUseOwn: "Koristi svoje boje",
+    brandBackground: "Pozadina",
+    brandPrimary: "Osnovna boja",
+    brandAccent: "Naglasak (cena, linkovi)",
+    brandAccentHint: "Ako je ne postaviš, koristi se osnovna boja.",
+    brandPreview: "Ovako izgleda",
+    brandPreviewService: "Nadogradnja trepavica",
+    brandPreviewButton: "Zakaži termin",
+    saveBrand: "Sačuvaj boje",
+    brandInvalid: "Boja nije ispravna.",
+    brandIncomplete: "Postavi i pozadinu i osnovnu boju, ili isključi svoje boje.",
 
     pushTitle: "Obaveštenja o zakazivanju",
     pushHint:
@@ -254,6 +274,26 @@ export const sr = {
     cancelled_by_client: "Otkazala klijentkinja",
     cancelled_by_salon: "Otkazao salon",
   },
+  history: {
+    show: "Istorija",
+    hide: "Sakrij istoriju",
+    loading: "Učitavam…",
+    empty: "Nema zapisa za ovaj termin.",
+    failed: "Istorija nije mogla da se učita.",
+    /** Prvi zapis nema prethodni status — tada je termin nastao. */
+    created: "Zakazan",
+    /** Ko je izazvao promenu. */
+    actor: {
+      user: "salon",
+      client: "klijentkinja",
+      system: "sistem",
+    },
+  },
+  cancelled: {
+    /** Otkazani termini dana, sklopljeni ispod spiska. */
+    toggle: "Otkazani",
+    none: "Nema otkazanih termina.",
+  },
   calendar: {
     weekdaysShort: ["pon", "uto", "sre", "čet", "pet", "sub", "ned"],
     months: [
@@ -273,7 +313,14 @@ export const sr = {
     noWorkingHours: "Radno vreme još nije uneto.",
   },
   booking: {
-    notFound: "Ovaj salon ne postoji.",
+    /**
+     * Naslov kad `public_booking_data` vrati `null`. To je i nepostojeći slug
+     * i salon koji je isključio zakazivanje i pauziran salon — namerno se ne
+     * razlikuju, pa naslov mora biti tačan za sva tri. „Ovaj salon ne
+     * postoji" nije: tvrdi nepostojanje salona koji uredno postoji, i to je
+     * ono što se vidi u kartici pregledača i u pregledu linka na Instagramu.
+     */
+    unavailableTitle: "Zakazivanje nije dostupno",
     closed: "Ovaj salon trenutno ne prima zakazivanje preko interneta.",
     noServices: "Salon još nije uneo usluge koje nudi.",
     chooseService: "Šta zakazuješ?",
@@ -349,6 +396,11 @@ export const sr = {
     terms: "Uslovi korišćenja",
     privacy: "Politika privatnosti",
   },
+  notFound: {
+    title: "Ove stranice nema",
+    body: "Adresa je možda pogrešno prepisana, ili stranica više ne postoji.",
+    home: "Nazad na početak",
+  },
   cancel: {
     title: "Otkazivanje termina",
     back: "Nazad na zakazivanje",
@@ -365,6 +417,7 @@ export const sr = {
     failed: "Otkazivanje nije uspelo. Pokušaj ponovo.",
     rejected: {
       not_found: "Taj termin nije pronađen za uneti broj telefona.",
+      already_cancelled: "Taj termin je već otkazan.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
       invalid_phone: "Broj telefona nije ispravan.",
     },

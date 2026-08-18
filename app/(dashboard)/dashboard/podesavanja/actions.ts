@@ -8,7 +8,11 @@ import {
   removePushSubscription,
   savePushSubscription,
 } from "@/lib/db/push";
-import { getCurrentTenant, updateBookingSettings } from "@/lib/db/tenants";
+import {
+  getCurrentTenant,
+  setTenantBrand,
+  updateBookingSettings,
+} from "@/lib/db/tenants";
 import { removeService, saveService } from "@/lib/db/services";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
 import { setWorkingBlocks } from "@/lib/db/working-hours";
@@ -131,6 +135,64 @@ export async function saveBookingRules(
   });
 
   revalidatePath("/dashboard/podesavanja");
+  return { status: "saved" };
+}
+
+/** Prazno polje znači „vrati na podrazumevano", ne „nije popunjeno". */
+const colorSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/)
+  .nullable();
+
+const brandSchema = z.object({
+  background: colorSchema,
+  primary: colorSchema,
+  accent: colorSchema,
+});
+
+function color(value: FormDataEntryValue | null): string | null {
+  return typeof value === "string" && value !== "" ? value : null;
+}
+
+export async function saveBrand(formData: FormData): Promise<SettingsState> {
+  // Prekidač „koristi svoje boje": kad je ugašen, sve tri se brišu odjednom.
+  const useOwn = formData.get("useOwnColors") === "on";
+
+  const parsed = brandSchema.safeParse({
+    background: useOwn ? color(formData.get("background")) : null,
+    primary: useOwn ? color(formData.get("primary")) : null,
+    accent: useOwn ? color(formData.get("accent")) : null,
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: sr.settings.brandInvalid };
+  }
+
+  const tenant = await getCurrentTenant(await selectedTenantId());
+  if (!tenant) {
+    return { status: "error", message: sr.dashboard.noTenant };
+  }
+
+  const result = await setTenantBrand({
+    tenantId: tenant.id,
+    background: parsed.data.background,
+    primary: parsed.data.primary,
+    accent: parsed.data.accent,
+  });
+
+  if (!result.ok) {
+    return {
+      status: "error",
+      message:
+        result.reason === "incomplete"
+          ? sr.settings.brandIncomplete
+          : sr.settings.failed,
+    };
+  }
+
+  revalidatePath("/dashboard/podesavanja");
+  // Javna strana nosi boje, pa i ona mora da se osveži.
+  revalidatePath(`/${tenant.slug}`);
   return { status: "saved" };
 }
 

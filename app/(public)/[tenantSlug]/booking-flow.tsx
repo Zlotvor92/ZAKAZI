@@ -2,7 +2,7 @@
 
 import { formatInTimeZone } from "date-fns-tz";
 import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { PublicBookingData, PublicService } from "@/lib/db/public-booking";
@@ -105,8 +105,21 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
   const [date, setDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
   const [state, setState] = useState<BookingState>({ status: "idle" });
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   const timeZone = data.tenant.timezone;
+
+  /**
+   * Tastatura pokrije donju trećinu ekrana, a dugme za slanje stoji ispod
+   * poslednjeg polja — na 375×812 završi tačno iza nje, pa izgleda kao da
+   * forme nema kraj. Odlaganje čeka da se tastatura otvori: bez njega se
+   * skroluje po staroj visini prozora i dugme opet ostane ispod.
+   */
+  function revealSubmit() {
+    window.setTimeout(() => {
+      submitRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+    }, 300);
+  }
 
   function restart() {
     setState({ status: "idle" });
@@ -412,6 +425,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
               required
               placeholder={sr.booking.phonePlaceholder}
               aria-describedby="phone-hint"
+              onFocus={revealSubmit}
             />
             <p id="phone-hint" className="text-muted-foreground text-xs">
               {sr.booking.phoneHint}
@@ -424,7 +438,12 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             </p>
           ) : null}
 
-          <Button type="submit" className="h-12 w-full" disabled={pending}>
+          <Button
+            ref={submitRef}
+            type="submit"
+            className="h-12 w-full scroll-mb-4"
+            disabled={pending}
+          >
             {pending ? sr.booking.submitting : sr.booking.submit}
           </Button>
         </form>

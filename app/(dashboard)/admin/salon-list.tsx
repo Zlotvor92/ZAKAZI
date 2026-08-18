@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import type { AdminSalon } from "@/lib/db/admin";
+import { pluralize } from "@/lib/domain/plural";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import {
@@ -73,11 +74,15 @@ function Row({ salon }: { salon: AdminSalon }) {
       <dl className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 pt-3 text-xs">
         <div>
           <dd className="inline tabular-nums">{salon.services_count}</dd>{" "}
-          <dt className="inline">{sr.admin.servicesCount}</dt>
+          <dt className="inline">
+            {pluralize(salon.services_count, sr.admin.servicesCount)}
+          </dt>
         </div>
         <div>
           <dd className="inline tabular-nums">{salon.upcoming_count}</dd>{" "}
-          <dt className="inline">{sr.admin.upcomingCount}</dt>
+          <dt className="inline">
+            {pluralize(salon.upcoming_count, sr.admin.upcomingCount)}
+          </dt>
         </div>
         <div>
           <dt className="inline">
@@ -125,7 +130,9 @@ function Row({ salon }: { salon: AdminSalon }) {
         {/* Slanje kreće čim se slika izabere; jedno dugme manje. */}
         <label
           className={cn(
-            "border-border hover:bg-accent inline-flex h-8 cursor-pointer items-center rounded-md border px-3 text-sm font-medium",
+            // Ista visina i ista proširena dodirna zona kao `size="sm"` dugme
+            // pored kojeg stoji.
+            "border-border hover:bg-accent relative inline-flex h-9 cursor-pointer items-center rounded-md border px-3 text-sm font-medium after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']",
             pending && "pointer-events-none opacity-50",
           )}
         >
