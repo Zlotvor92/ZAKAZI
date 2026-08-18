@@ -3,6 +3,29 @@ export const sr = {
     name: "Doteraj Me",
     description: "Zakazivanje termina za beauty profesionalce",
   },
+  home: {
+    tagline: "Zakazivanje termina za solo beauty profesionalce u Srbiji.",
+    intro:
+      "Klijentkinja otvori link tvog salona, izabere uslugu i slobodan sat, i termin je zakazan — bez dopisivanja i bez čekanja da odgovoriš.",
+    points: [
+      {
+        title: "Klijentkinja zakazuje sama",
+        body: "Podeliš link u opisu profila. Ona bira uslugu, dan i sat iz tvog stvarnog radnog vremena, u svako doba dana.",
+      },
+      {
+        title: "Dan ti stoji na telefonu",
+        body: "Vidiš šta te čeka, unosiš termine dogovorene uživo, menjaš im status i upisuješ odsustva.",
+      },
+      {
+        title: "Dva termina ne mogu na isto mesto",
+        body: "Preklapanje odbija sama baza, ne aplikacija. Dupla rezervacija nije moguća ni kad dve klijentkinje kliknu u istoj sekundi.",
+      },
+    ],
+    forWho:
+      "Napravljeno za one koje rade same ili u dvoje — nokat-tehničarke, kozmetičarke, majstore za trepavice i obrve, brijače.",
+    signIn: "Prijava za salone",
+    signInHint: "Naloge otvara vlasnik platforme; registracija je zatvorena.",
+  },
   signIn: {
     title: "Prijava",
     subtitle: "Google nalogom ili linkom na mejl. Bez lozinke.",
