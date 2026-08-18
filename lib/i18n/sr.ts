@@ -4,27 +4,27 @@ export const sr = {
     description: "Zakazivanje termina za beauty profesionalce",
   },
   home: {
-    tagline: "Zakazivanje termina za solo beauty profesionalce u Srbiji.",
+    tagline: "Zakazivanje termina za male salone lepote u Srbiji.",
     intro:
-      "Klijentkinja otvori link tvog salona, izabere uslugu i slobodan sat, i termin je zakazan — bez dopisivanja i bez čekanja da odgovoriš.",
+      "Klijentkinja otvori link tvog salona, izabere uslugu i slobodan termin — i to je to. Bez dopisivanja i bez čekanja da joj odgovoriš.",
     points: [
       {
         title: "Klijentkinja zakazuje sama",
-        body: "Podeliš link u opisu profila. Ona bira uslugu, dan i sat iz tvog stvarnog radnog vremena, u svako doba dana.",
+        body: "Podeliš link u opisu profila na Instagramu. Ona bira uslugu, dan i sat iz tvog radnog vremena — i onda kada ti ne stigneš do telefona.",
       },
       {
-        title: "Dan ti stoji na telefonu",
-        body: "Vidiš šta te čeka, unosiš termine dogovorene uživo, menjaš im status i upisuješ odsustva.",
+        title: "Ceo dan ti je u telefonu",
+        body: "Vidiš šta te čeka, dodaješ termine dogovorene uživo, menjaš im status i upisuješ slobodne dane.",
       },
       {
-        title: "Dva termina ne mogu na isto mesto",
-        body: "Preklapanje odbija sama baza, ne aplikacija. Dupla rezervacija nije moguća ni kad dve klijentkinje kliknu u istoj sekundi.",
+        title: "Isti sat ne može dvaput",
+        body: "Zauzet termin se više nikome ne nudi — ni kada dve klijentkinje kliknu u istoj sekundi.",
       },
     ],
     forWho:
-      "Napravljeno za one koje rade same ili u dvoje — nokat-tehničarke, kozmetičarke, majstore za trepavice i obrve, brijače.",
+      "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
     signIn: "Prijava za salone",
-    signInHint: "Naloge otvara vlasnik platforme; registracija je zatvorena.",
+    signInHint: "Registracija je za sada zatvorena.",
   },
   signIn: {
     title: "Prijava",
