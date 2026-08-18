@@ -47,6 +47,14 @@ export const sr = {
     lastBooking: "poslednje zakazivanje",
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
 
+    paidUntilLabel: "Plaćeno do",
+    paidUntilNone: "ne naplaćuje se",
+    /** `{datum}` se zamenjuje pre prikaza. */
+    paidUntilActive: "plaćeno do {datum}",
+    paidUntilDueSoon: "ističe {datum}",
+    paidUntilOverdue: "isteklo {datum}",
+    paidUntilClear: "Obriši datum",
+
     logoLabel: "Logo",
     logoChoose: "Postavi logo",
     logoReplace: "Promeni logo",
@@ -89,6 +97,17 @@ export const sr = {
   dashboard: {
     signOut: "Odjava",
     noTenant: "Tvoj nalog nije povezan ni sa jednim salonom.",
+    /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
+    daysCount: ["dan", "dana", "dana"],
+    /** `{dana}` se zamenjuje pre prikaza. */
+    subscriptionDueSoonTitle: "Pretplata ističe za {dana}",
+    subscriptionDueTodayTitle: "Pretplata ističe danas",
+    subscriptionDueBody:
+      "Kad istekne, link za zakazivanje prestaje da radi dok se ne obnovi. Tvoji termini i klijenti ostaju.",
+    subscriptionOverdueTitle: "Pretplata je istekla",
+    subscriptionOverdueBody:
+      "Javi se da obnoviš pretplatu. Dok je ne obnoviš, link za zakazivanje može biti ugašen.",
+
     suspendedTitle: "Salon je pauziran",
     suspendedBody:
       "Link za zakazivanje trenutno ne radi, pa klijentkinje ne mogu same da zakažu. Tvoji termini i klijenti su tu i možeš da radiš normalno.",

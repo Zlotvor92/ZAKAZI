@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAdminSalons, isPlatformOwner } from "@/lib/db/admin";
+import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
 import { NewSalonForm } from "./new-salon-form";
 import { SalonList } from "./salon-list";
@@ -32,7 +33,12 @@ export default async function AdminPage() {
         <NewSalonForm />
       </div>
 
-      <SalonList salons={salons} />
+      {/* Svi saloni su u Srbiji, pa konzola meri dan po Beogradu — ne po
+          tajmzoni pojedinačnog salona. */}
+      <SalonList
+        salons={salons}
+        today={currentDateInTimeZone(new Date(), "Europe/Belgrade")}
+      />
     </main>
   );
 }

@@ -16,13 +16,75 @@ import {
   isoWeekDates,
   isoWeekday,
 } from "@/lib/domain/calendar";
+import { pluralize } from "@/lib/domain/plural";
+import { daysUntil, subscriptionState } from "@/lib/domain/subscription";
 import { sr } from "@/lib/i18n/sr";
+import { cn } from "@/lib/utils";
 import { selectedTenantId } from "@/lib/tenant";
 import { signOut, switchTenant } from "./actions";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 type PageProps = { searchParams: Promise<{ dan?: string }> };
+
+/**
+ * Upozorenje da pretplata ističe ili je istekla.
+ *
+ * Ništa se ne gasi samo — pauzu i dalje pritiska vlasnik platforme ručno.
+ * Ovo postoji da mu potez ne dođe kao iznenađenje: vlasnica koja vidi datum
+ * ima priliku da obnovi pre nego što joj link stane.
+ */
+function SubscriptionNotice({
+  paidUntil,
+  today,
+}: {
+  paidUntil: string | null;
+  today: string;
+}) {
+  const state = subscriptionState(paidUntil, today);
+
+  if (state === "none" || state === "active" || paidUntil === null) {
+    return null;
+  }
+
+  const left = daysUntil(paidUntil, today);
+  const overdue = state === "overdue";
+
+  const title = overdue
+    ? sr.dashboard.subscriptionOverdueTitle
+    : left === 0
+      ? sr.dashboard.subscriptionDueTodayTitle
+      : sr.dashboard.subscriptionDueSoonTitle.replace(
+          "{dana}",
+          `${left} ${pluralize(left, sr.dashboard.daysCount)}`,
+        );
+
+  return (
+    <div
+      role="status"
+      className={cn(
+        "mb-2 rounded-xl border p-3",
+        overdue
+          ? "border-destructive/40 bg-destructive/10"
+          : "border-border bg-accent",
+      )}
+    >
+      <p
+        className={cn(
+          "text-sm font-semibold",
+          overdue && "text-destructive",
+        )}
+      >
+        {title}
+      </p>
+      <p className="text-muted-foreground pt-1 text-xs">
+        {overdue
+          ? sr.dashboard.subscriptionOverdueBody
+          : sr.dashboard.subscriptionDueBody}
+      </p>
+    </div>
+  );
+}
 
 function dayHeading(date: string): string {
   const day = Number(date.slice(8, 10));
@@ -150,7 +212,11 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             {sr.dashboard.suspendedBody}
           </p>
         </div>
-      ) : null}
+      ) : (
+        /* Pauziran salon već ima svoju traku — dve jedna iznad druge bi samo
+           gurnule kalendar niže. Salon bez datuma ne vidi ništa. */
+        <SubscriptionNotice paidUntil={tenant.paid_until} today={today} />
+      )}
 
       <nav className="flex items-center justify-between gap-2 pb-2">
         <Link

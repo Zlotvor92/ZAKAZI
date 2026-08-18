@@ -12,6 +12,8 @@ const salonSchema = z.object({
   services_count: z.number().int(),
   upcoming_count: z.number().int(),
   last_booking_at: z.string().nullable(),
+  /** `null` kad se salonu ne naplaćuje. Vidi `paid_until` u bazi. */
+  paid_until: z.string().nullable(),
 });
 
 export const adminSalonListSchema = z.array(salonSchema);
@@ -68,6 +70,30 @@ export async function setSalonSuspended(input: {
   }
 
   return writeResultSchema.parse(data);
+}
+
+const paidUntilResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+/** `null` briše datum i vraća salon u stanje u kome se ne naplaćuje. */
+export async function setSalonPaidUntil(input: {
+  tenantId: string;
+  paidUntil: string | null;
+}): Promise<z.infer<typeof paidUntilResultSchema>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("set_tenant_paid_until", {
+    p_tenant_id: input.tenantId,
+    p_paid_until: input.paidUntil,
+  });
+
+  if (error) {
+    throw new Error(`Upis datuma pretplate nije uspeo: ${error.message}`);
+  }
+
+  return paidUntilResultSchema.parse(data);
 }
 
 const createResultSchema = z.discriminatedUnion("ok", [

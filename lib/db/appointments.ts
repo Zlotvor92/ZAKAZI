@@ -44,6 +44,8 @@ export const dashboardWeekSchema = z.object({
     min_lead_minutes: z.number().int(),
     public_booking_enabled: z.boolean(),
     suspended: z.boolean(),
+    /** `null` kad se salonu ne naplaćuje — tada nema ni upozorenja. */
+    paid_until: z.string().nullable(),
   }),
   tenants: z.array(
     z.object({ id: z.uuid(), slug: z.string(), name: z.string() }),
