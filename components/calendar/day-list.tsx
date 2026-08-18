@@ -6,9 +6,11 @@ import { Button } from "@/components/ui/button";
 import {
   blockClient,
   changeStatus,
+  loadHistory,
   type ActionState,
 } from "@/app/(dashboard)/dashboard/actions";
 import type {
+  AppointmentHistoryEntry,
   AppointmentStatus,
   DashboardAppointment,
 } from "@/lib/db/appointments";
@@ -45,6 +47,106 @@ function actionsFor(status: AppointmentStatus): Action[] {
     default:
       return [];
   }
+}
+
+/**
+ * Jedan red istorije: „14:32 · Potvrđen → Otkazala klijentkinja (klijentkinja)".
+ * Prvi zapis nema prethodni status — tada je termin nastao.
+ */
+function HistoryLine({
+  entry,
+  timeZone,
+}: {
+  entry: AppointmentHistoryEntry;
+  timeZone: string;
+}) {
+  const when = formatInTimeZone(
+    new Date(entry.created_at),
+    timeZone,
+    "dd.MM. HH:mm",
+  );
+
+  return (
+    <li className="text-muted-foreground flex flex-wrap gap-x-1 text-xs">
+      <span className="tabular-nums">{when}</span>
+      <span aria-hidden>·</span>
+      <span>
+        {entry.from_status
+          ? `${sr.appointmentStatus[entry.from_status]} → ${sr.appointmentStatus[entry.to_status]}`
+          : sr.history.created}
+      </span>
+      <span>({sr.history.actor[entry.actor_type]})</span>
+    </li>
+  );
+}
+
+function History({
+  appointmentId,
+  timeZone,
+}: {
+  appointmentId: string;
+  timeZone: string;
+}) {
+  const [loading, startLoading] = useTransition();
+  const [entries, setEntries] = useState<AppointmentHistoryEntry[] | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const [shown, setShown] = useState(false);
+
+  function toggle() {
+    if (shown) {
+      setShown(false);
+      return;
+    }
+
+    setShown(true);
+
+    // Jednom učitano ostaje: istorija se ne menja dok je red otvoren.
+    if (entries !== null) {
+      return;
+    }
+
+    startLoading(async () => {
+      const result = await loadHistory(appointmentId);
+      if (result.ok) {
+        setEntries(result.entries);
+        setFailed(null);
+      } else {
+        setFailed(result.message);
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-1">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-expanded={shown}
+        onClick={toggle}
+      >
+        {shown ? sr.history.hide : sr.history.show}
+      </Button>
+
+      {shown ? (
+        loading ? (
+          <p className="text-muted-foreground text-xs">{sr.history.loading}</p>
+        ) : failed ? (
+          <p role="alert" className="text-destructive text-xs">
+            {failed}
+          </p>
+        ) : entries && entries.length > 0 ? (
+          <ul className="space-y-0.5">
+            {entries.map((entry) => (
+              <HistoryLine key={entry.id} entry={entry} timeZone={timeZone} />
+            ))}
+          </ul>
+        ) : (
+          <p className="text-muted-foreground text-xs">{sr.history.empty}</p>
+        )
+      ) : null}
+    </div>
+  );
 }
 
 function Row({
@@ -147,6 +249,8 @@ function Row({
               {error}
             </p>
           ) : null}
+
+          <History appointmentId={appointment.id} timeZone={timeZone} />
         </div>
       ) : null}
     </li>
@@ -155,20 +259,55 @@ function Row({
 
 export function DayList({
   appointments,
+  cancelled,
   timeZone,
 }: {
   appointments: DashboardAppointment[];
+  cancelled: DashboardAppointment[];
   timeZone: string;
 }) {
+  const [showCancelled, setShowCancelled] = useState(false);
+
   return (
-    <ul className="divide-border divide-y">
-      {appointments.map((appointment) => (
-        <Row
-          key={appointment.id}
-          appointment={appointment}
-          timeZone={timeZone}
-        />
-      ))}
-    </ul>
+    <>
+      <ul className="divide-border divide-y">
+        {appointments.map((appointment) => (
+          <Row
+            key={appointment.id}
+            appointment={appointment}
+            timeZone={timeZone}
+          />
+        ))}
+      </ul>
+
+      {/* Otkazan termin je oslobodio svoje vreme, pa ne stoji u spisku dana —
+          ali mora da postoji negde: bez ovoga u interfejsu ne ostaje nikakav
+          trag da je termin ikada postojao, ni put do njegove istorije. */}
+      {cancelled.length > 0 ? (
+        <div className="border-border border-t pt-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-expanded={showCancelled}
+            onClick={() => setShowCancelled((was) => !was)}
+          >
+            {sr.cancelled.toggle} · {cancelled.length}
+          </Button>
+
+          {showCancelled ? (
+            <ul className="divide-border divide-y opacity-70">
+              {cancelled.map((appointment) => (
+                <Row
+                  key={appointment.id}
+                  appointment={appointment}
+                  timeZone={timeZone}
+                />
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
+    </>
   );
 }

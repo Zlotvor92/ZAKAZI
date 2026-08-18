@@ -71,24 +71,33 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const live = week.appointments.filter((appointment) =>
     LIVE_STATUSES.includes(appointment.status),
   );
+  const cancelled = week.appointments.filter(
+    (appointment) => !LIVE_STATUSES.includes(appointment.status),
+  );
 
-  function onDate(date: string): DashboardAppointment[] {
+  function within(
+    list: DashboardAppointment[],
+    date: string,
+  ): DashboardAppointment[] {
     const bounds = dayBoundsInTimeZone(date, tenant.timezone);
 
-    return live.filter((appointment) => {
+    return list.filter((appointment) => {
       const startAt = new Date(appointment.start_at);
       return startAt >= bounds.from && startAt < bounds.to;
     });
   }
 
+  // Tačka na traci dana broji samo žive termine: otkazan termin je oslobodio
+  // svoje vreme i ne sme da izgleda kao zauzet dan.
   const days: StripDay[] = weekDates.map((date) => ({
     date,
-    appointments: onDate(date).length,
+    appointments: within(live, date).length,
     working: week.blocks.some((block) => block.weekday === isoWeekday(date)),
   }));
 
   const selectedDay = days.find((day) => day.date === selected);
-  const ofDay = onDate(selected);
+  const ofDay = within(live, selected);
+  const cancelledOfDay = within(cancelled, selected);
   const previousWeek = addDays(week.week_start, -7);
   const nextWeek = addDays(week.week_start, 7);
 
@@ -179,15 +188,23 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           </Link>
         </div>
 
-        {ofDay.length > 0 ? (
-          <DayList appointments={ofDay} timeZone={tenant.timezone} />
-        ) : (
+        {ofDay.length === 0 ? (
           <p className="text-muted-foreground py-6 text-sm">
             {selectedDay?.working
               ? sr.dashboard.emptyDay
               : sr.dashboard.notWorking}
           </p>
-        )}
+        ) : null}
+
+        {/* I kad dan nema nijedan živ termin: otkazani se i dalje nude, jer
+            objašnjavaju zašto je dan prazan. */}
+        {ofDay.length > 0 || cancelledOfDay.length > 0 ? (
+          <DayList
+            appointments={ofDay}
+            cancelled={cancelledOfDay}
+            timeZone={tenant.timezone}
+          />
+        ) : null}
       </section>
     </main>
   );

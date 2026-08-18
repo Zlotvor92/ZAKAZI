@@ -149,6 +149,33 @@ export async function setAppointmentStatus(input: {
   return statusResultSchema.parse(data);
 }
 
+const historyEntrySchema = z.object({
+  id: z.uuid(),
+  from_status: appointmentSchema.shape.status.nullable(),
+  to_status: appointmentSchema.shape.status,
+  actor_type: z.enum(["user", "client", "system"]),
+  created_at: z.string(),
+});
+
+export type AppointmentHistoryEntry = z.infer<typeof historyEntrySchema>;
+
+/** Prazna lista i za tuđi termin i za termin koji ne postoji — RLS bira. */
+export async function getAppointmentHistory(
+  appointmentId: string,
+): Promise<AppointmentHistoryEntry[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("appointment_history", {
+    p_appointment_id: appointmentId,
+  });
+
+  if (error) {
+    throw new Error(`Čitanje istorije termina nije uspelo: ${error.message}`);
+  }
+
+  return z.array(historyEntrySchema).parse(data);
+}
+
 const blockResultSchema = z.discriminatedUnion("ok", [
   z.object({ ok: z.literal(true), phone_e164: z.string() }),
   z.object({ ok: z.literal(false), reason: z.string() }),

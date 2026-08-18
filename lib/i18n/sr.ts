@@ -259,6 +259,26 @@ export const sr = {
     cancelled_by_client: "Otkazala klijentkinja",
     cancelled_by_salon: "Otkazao salon",
   },
+  history: {
+    show: "Istorija",
+    hide: "Sakrij istoriju",
+    loading: "Učitavam…",
+    empty: "Nema zapisa za ovaj termin.",
+    failed: "Istorija nije mogla da se učita.",
+    /** Prvi zapis nema prethodni status — tada je termin nastao. */
+    created: "Zakazan",
+    /** Ko je izazvao promenu. */
+    actor: {
+      user: "salon",
+      client: "klijentkinja",
+      system: "sistem",
+    },
+  },
+  cancelled: {
+    /** Otkazani termini dana, sklopljeni ispod spiska. */
+    toggle: "Otkazani",
+    none: "Nema otkazanih termina.",
+  },
   calendar: {
     weekdaysShort: ["pon", "uto", "sre", "čet", "pet", "sub", "ned"],
     months: [
