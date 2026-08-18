@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { sr } from "@/lib/i18n/sr";
 
 export const metadata: Metadata = {
@@ -148,10 +149,20 @@ export default function TermsOfServicePage() {
         <Section title="10. Kontakt">
           <p>
             Za sva pitanja u vezi sa ovim uslovima, javi se Aleksandru
-            Vuletiću na avuletic92@gmail.com.
+            Vuletiću na{" "}
+            <a href="mailto:avuletic92@gmail.com" className="underline">
+              avuletic92@gmail.com
+            </a>
+            .
           </p>
         </Section>
       </div>
+
+      <p className="text-muted-foreground pt-6 text-center text-xs">
+        <Link href="/politika-privatnosti" className="underline">
+          {sr.legal.privacy}
+        </Link>
+      </p>
     </main>
   );
 }

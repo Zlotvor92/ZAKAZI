@@ -38,8 +38,9 @@ export const sr = {
     resume: "Vrati u rad",
     suspendConfirm: "Pauziraj salon? Link za zakazivanje prestaje da radi.",
     ownerUnknown: "bez vlasnice",
-    servicesCount: "usluga",
-    upcomingCount: "termina uskoro",
+    /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
+    servicesCount: ["usluga", "usluge", "usluga"],
+    upcomingCount: ["termin uskoro", "termina uskoro", "termina uskoro"],
     neverBooked: "još nijedno zakazivanje",
     lastBooking: "poslednje zakazivanje",
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
@@ -273,7 +274,14 @@ export const sr = {
     noWorkingHours: "Radno vreme još nije uneto.",
   },
   booking: {
-    notFound: "Ovaj salon ne postoji.",
+    /**
+     * Naslov kad `public_booking_data` vrati `null`. To je i nepostojeći slug
+     * i salon koji je isključio zakazivanje i pauziran salon — namerno se ne
+     * razlikuju, pa naslov mora biti tačan za sva tri. „Ovaj salon ne
+     * postoji" nije: tvrdi nepostojanje salona koji uredno postoji, i to je
+     * ono što se vidi u kartici pregledača i u pregledu linka na Instagramu.
+     */
+    unavailableTitle: "Zakazivanje nije dostupno",
     closed: "Ovaj salon trenutno ne prima zakazivanje preko interneta.",
     noServices: "Salon još nije uneo usluge koje nudi.",
     chooseService: "Šta zakazuješ?",
@@ -349,6 +357,11 @@ export const sr = {
     terms: "Uslovi korišćenja",
     privacy: "Politika privatnosti",
   },
+  notFound: {
+    title: "Ove stranice nema",
+    body: "Adresa je možda pogrešno prepisana, ili stranica više ne postoji.",
+    home: "Nazad na početak",
+  },
   cancel: {
     title: "Otkazivanje termina",
     back: "Nazad na zakazivanje",
@@ -365,6 +378,7 @@ export const sr = {
     failed: "Otkazivanje nije uspelo. Pokušaj ponovo.",
     rejected: {
       not_found: "Taj termin nije pronađen za uneti broj telefona.",
+      already_cancelled: "Taj termin je već otkazan.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
       invalid_phone: "Broj telefona nije ispravan.",
     },

@@ -17,7 +17,7 @@ export async function generateMetadata({
   const { tenantSlug } = await params;
   const data = await bookingData(tenantSlug);
 
-  return { title: data ? data.tenant.name : sr.booking.notFound };
+  return { title: data ? data.tenant.name : sr.booking.unavailableTitle };
 }
 
 /**

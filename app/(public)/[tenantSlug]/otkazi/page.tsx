@@ -16,7 +16,11 @@ export async function generateMetadata({
   const { tenantSlug } = await params;
   const data = await salonSummary(tenantSlug);
 
-  return { title: data ? `${sr.cancel.title} — ${data.name}` : sr.booking.notFound };
+  return {
+    title: data
+      ? `${sr.cancel.title} — ${data.name}`
+      : sr.booking.unavailableTitle,
+  };
 }
 
 export default async function CancelPage({ params }: PageProps) {
