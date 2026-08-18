@@ -61,6 +61,32 @@ export default function HomePage() {
         {sr.home.forWho}
       </p>
 
+      {/*
+        Google pre nego što odobri brendiranje prijave traži da početna strana
+        „sa transparentnošću objasni svrhu zbog koje aplikacija traži podatke
+        korisnika". Zato ovaj odeljak stoji ovde, a ne samo u politici
+        privatnosti.
+      */}
+      <section className="space-y-4 border-t pt-6">
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold">{sr.home.dataTitle}</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {sr.home.dataBody}{" "}
+            <Link href="/politika-privatnosti" className="underline">
+              {sr.home.dataMore}
+            </Link>
+            .
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <h2 className="text-sm font-semibold">{sr.home.clientsTitle}</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {sr.home.clientsBody}
+          </p>
+        </div>
+      </section>
+
       <div className="space-y-2">
         <Link href="/prijava" className={cn(buttonVariants(), "w-full")}>
           {sr.home.signIn}
