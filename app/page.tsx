@@ -4,9 +4,25 @@ import { buttonVariants } from "@/components/ui/button";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 
+/**
+ * Naslov je golo ime aplikacije, bez dodatka posle crte.
+ *
+ * Google pri proveri brenda poredi „App name" iz konzole sa imenom koje nađe
+ * na početnoj strani, i taj deo pada kad se stringovi ne poklapaju od reči do
+ * reči. Zato ime stoji isto u naslovu, u `application-name` i u Open Graph
+ * oznakama — opis ide u `description`, gde mu je i mesto.
+ */
 export const metadata: Metadata = {
-  title: `${sr.app.name} — ${sr.app.description}`,
+  title: sr.app.name,
   description: sr.home.tagline,
+  applicationName: sr.app.name,
+  openGraph: {
+    type: "website",
+    siteName: sr.app.name,
+    title: sr.app.name,
+    description: sr.home.tagline,
+    locale: "sr_RS",
+  },
 };
 
 /**
