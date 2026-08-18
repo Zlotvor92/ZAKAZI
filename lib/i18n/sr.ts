@@ -22,7 +22,7 @@ export const sr = {
       },
     ],
     forWho:
-      "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske i berberske usluge.",
+      "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
     signIn: "Prijava za salone",
     signInHint: "Registracija je za sada zatvorena.",
   },
