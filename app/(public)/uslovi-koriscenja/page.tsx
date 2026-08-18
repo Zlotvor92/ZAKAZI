@@ -147,8 +147,8 @@ export default function TermsOfServicePage() {
 
         <Section title="10. Kontakt">
           <p>
-            Za sva pitanja u vezi sa ovim uslovima, javi se na [POPUNI:
-            kontakt e-mail adresa].
+            Za sva pitanja u vezi sa ovim uslovima, javi se Aleksandru
+            Vuletiću na avuletic92@gmail.com.
           </p>
         </Section>
       </div>
