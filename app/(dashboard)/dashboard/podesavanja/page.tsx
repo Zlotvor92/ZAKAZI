@@ -46,11 +46,19 @@ export default async function SettingsPage() {
   const tenant = await getCurrentTenant(await selectedTenantId());
 
   if (!tenant) {
+    // Ovde se stiže i sa izborom salona koji više ne važi. Bez puta nazad
+    // strana je ćorsokak: kalendar bar nudi izbor salona, a ovde ga nema.
     return (
       <main className="mx-auto min-h-dvh w-full max-w-md p-4">
         <p className="text-muted-foreground py-8 text-sm">
           {sr.dashboard.noTenant}
         </p>
+        <Link
+          href="/dashboard"
+          className="text-brand inline-flex min-h-11 items-center text-sm underline"
+        >
+          ‹ {sr.settings.back}
+        </Link>
       </main>
     );
   }

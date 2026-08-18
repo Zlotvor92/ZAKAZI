@@ -159,6 +159,8 @@ export const sr = {
     saveService: "Sačuvaj",
     addService: "Dodaj uslugu",
     removeService: "Ukloni",
+    removeServiceConfirm:
+      "Ukloni ovu uslugu? Nestaje iz ponude za zakazivanje. Već zakazani termini ostaju.",
     serviceProblem: {
       invalid_name: "Upiši naziv usluge.",
       invalid_duration: "Trajanje nije ispravno.",

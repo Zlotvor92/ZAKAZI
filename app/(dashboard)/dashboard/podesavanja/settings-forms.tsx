@@ -64,7 +64,20 @@ function useSettingsAction() {
     });
   }
 
-  return { pending, state, submit, call };
+  /**
+   * Ishod prethodnog čuvanja prestaje da važi čim se polje promeni.
+   *
+   * Bez ovoga „Sačuvano." stoji i dalje dok se kuca nova vrednost, pa i kad
+   * pregledač sam odbije slanje zbog neispravnog broja (`min`/`max` na polju)
+   * — a tada ništa nije sačuvano iako poruka tvrdi da jeste.
+   */
+  function reset() {
+    setState((current) =>
+      current.status === "idle" ? current : { status: "idle" },
+    );
+  }
+
+  return { pending, state, submit, call, reset };
 }
 
 type SlotMode = "count" | "minutes";
@@ -91,7 +104,7 @@ function slotSummary(day: DayShape): string {
 }
 
 export function WorkingHoursForm({ week }: { week: DayShape[] }) {
-  const { pending, state, submit } = useSettingsAction();
+  const { pending, state, submit, reset } = useSettingsAction();
   const [days, setDays] = useState(week);
   const [mode, setMode] = useState<SlotMode>("minutes");
 
@@ -112,7 +125,11 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
   }
 
   return (
-    <form action={submit(saveWorkingHours)} className="space-y-3">
+    <form
+      action={submit(saveWorkingHours)}
+      onChange={reset}
+      className="space-y-3"
+    >
       <p className="text-muted-foreground text-xs">{sr.settings.hoursHint}</p>
 
       {/* Oba načina upisuju isti podatak; prekidač menja samo šta se kuca. */}
@@ -331,10 +348,14 @@ export function BookingRulesForm({
   leadHours: number;
   publicEnabled: boolean;
 }) {
-  const { pending, state, submit } = useSettingsAction();
+  const { pending, state, submit, reset } = useSettingsAction();
 
   return (
-    <form action={submit(saveBookingRules)} className="space-y-3">
+    <form
+      action={submit(saveBookingRules)}
+      onChange={reset}
+      className="space-y-3"
+    >
       <label className="block space-y-1">
         <span className="text-sm font-medium">{sr.settings.horizonLabel}</span>
         <Input
@@ -379,14 +400,14 @@ export function BookingRulesForm({
 }
 
 export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
-  const { pending, state, submit, call } = useSettingsAction();
+  const { pending, state, submit, call, reset } = useSettingsAction();
 
   function unblock(id: string) {
     call(() => removeBlockedNumber(id));
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" onChange={reset}>
       <p className="text-muted-foreground text-xs">{sr.settings.blockedHint}</p>
 
       {numbers.length === 0 ? (
@@ -450,14 +471,14 @@ export function TimeOffSection({
   timeZone: string;
   today: string;
 }) {
-  const { pending, state, submit, call } = useSettingsAction();
+  const { pending, state, submit, call, reset } = useSettingsAction();
 
   function remove(id: string) {
     call(() => deleteTimeOff(id));
   }
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" onChange={reset}>
       <p className="text-muted-foreground text-xs">{sr.settings.timeOffHint}</p>
 
       {entries.length === 0 ? (
@@ -570,10 +591,10 @@ function describeTimeOff(entry: TimeOff, timeZone: string): string {
 }
 
 export function ServicesSection({ services }: { services: Service[] }) {
-  const { pending, state, submit, call } = useSettingsAction();
+  const { pending, state, submit, call, reset } = useSettingsAction();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" onChange={reset}>
       <p className="text-muted-foreground text-xs">{sr.settings.servicesHint}</p>
 
       {services.length === 0 ? (
@@ -619,7 +640,10 @@ export function ServicesSection({ services }: { services: Service[] }) {
             </Field>
           </div>
 
-          <div className="flex gap-2">
+          {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
+              osam piksela razmaka, od kojih jedno briše uslugu, na telefonu su
+              ista meta. Potvrda je isti postupak kao kod blokiranja broja. */}
+          <div className="flex items-center justify-between gap-2">
             <Button type="submit" size="sm" variant="outline" disabled={pending}>
               {sr.settings.saveService}
             </Button>
@@ -627,8 +651,14 @@ export function ServicesSection({ services }: { services: Service[] }) {
               type="button"
               size="sm"
               variant="ghost"
+              className="text-destructive hover:text-destructive"
               disabled={pending}
-              onClick={() => call(() => deleteServiceEntry(service.id))}
+              onClick={() => {
+                if (!window.confirm(sr.settings.removeServiceConfirm)) {
+                  return;
+                }
+                call(() => deleteServiceEntry(service.id));
+              }}
             >
               {sr.settings.removeService}
             </Button>

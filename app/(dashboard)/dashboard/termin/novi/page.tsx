@@ -14,11 +14,19 @@ export default async function NewAppointmentPage({ searchParams }: PageProps) {
   const tenant = await getCurrentTenant(await selectedTenantId());
 
   if (!tenant) {
+    // Isto kao u podešavanjima: izbor salona koji više ne važi ne sme da
+    // ostavi stranu bez ijednog puta dalje.
     return (
       <main className="mx-auto min-h-dvh w-full max-w-md p-4">
         <p className="text-muted-foreground py-8 text-sm">
           {sr.dashboard.noTenant}
         </p>
+        <Link
+          href="/dashboard"
+          className="text-brand inline-flex min-h-11 items-center text-sm underline"
+        >
+          ‹ {sr.newAppointment.back}
+        </Link>
       </main>
     );
   }
