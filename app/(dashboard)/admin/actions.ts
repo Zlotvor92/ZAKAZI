@@ -7,6 +7,7 @@ import {
   createSalon,
   isPlatformOwner,
   setSalonLogo,
+  setSalonPaidUntil,
   setSalonSuspended,
 } from "@/lib/db/admin";
 import { uploadLogo } from "@/lib/db/logo";
@@ -158,6 +159,39 @@ export async function toggleSalon(
   }
 
   revalidatePath("/admin");
+  revalidatePath("/dashboard", "layout");
+  return { status: "idle" };
+}
+
+/** Prazan datum briše evidenciju i vraća salon u stanje bez naplate. */
+const paidUntilSchema = z.union([
+  z.iso.date(),
+  z.literal("").transform(() => null),
+  z.null(),
+]);
+
+export async function savePaidUntil(
+  tenantId: string,
+  paidUntil: string | null,
+): Promise<AdminState> {
+  const id = z.uuid().safeParse(tenantId);
+  const date = paidUntilSchema.safeParse(paidUntil);
+
+  if (!id.success || !date.success) {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
+  const result = await setSalonPaidUntil({
+    tenantId: id.data,
+    paidUntil: date.data,
+  });
+
+  if (!result.ok) {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
+  revalidatePath("/admin");
+  // Vlasnica vidi svoj datum u kalendaru, pa i on mora da se osveži.
   revalidatePath("/dashboard", "layout");
   return { status: "idle" };
 }

@@ -2,13 +2,16 @@
 
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import type { AdminSalon } from "@/lib/db/admin";
 import { pluralize } from "@/lib/domain/plural";
+import { subscriptionState } from "@/lib/domain/subscription";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import {
   enterSalon,
   removeLogo,
+  savePaidUntil,
   saveLogo,
   toggleSalon,
   type AdminState,
@@ -21,7 +24,48 @@ function formatDate(value: string): string {
   return `${date.getDate()}. ${month}`;
 }
 
-function Row({ salon }: { salon: AdminSalon }) {
+/**
+ * `yyyy-MM-dd` u `dd.MM.yyyy.`, bez pravljenja `Date` objekta — datum
+ * pretplate nema vreme, pa nema ni tajmzonu koja bi ga pomerila za dan.
+ * Godina stoji jer isteklo ume da bude staro mesecima.
+ */
+function formatDay(value: string): string {
+  const [year, month, day] = value.split("-");
+
+  return `${day}.${month}.${year}.`;
+}
+
+/** Stanje pretplate kao jedan red teksta, obojen prema hitnosti. */
+function PaidUntil({ salon, today }: { salon: AdminSalon; today: string }) {
+  const state = subscriptionState(salon.paid_until, today);
+
+  if (state === "none" || salon.paid_until === null) {
+    return (
+      <span className="text-muted-foreground">{sr.admin.paidUntilNone}</span>
+    );
+  }
+
+  const date = formatDay(salon.paid_until);
+  const label = {
+    overdue: sr.admin.paidUntilOverdue,
+    due_soon: sr.admin.paidUntilDueSoon,
+    active: sr.admin.paidUntilActive,
+  }[state].replace("{datum}", date);
+
+  return (
+    <span
+      className={cn(
+        state === "overdue" && "text-destructive font-medium",
+        state === "due_soon" && "font-medium",
+        state === "active" && "text-muted-foreground",
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function Row({ salon, today }: { salon: AdminSalon; today: string }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<AdminState>({ status: "idle" });
   const logoLabel = salon.logo_url ? sr.admin.logoReplace : sr.admin.logoChoose;
@@ -91,7 +135,32 @@ function Row({ salon }: { salon: AdminSalon }) {
               : sr.admin.neverBooked}
           </dt>
         </div>
+        <div>
+          <dt className="inline">
+            <PaidUntil salon={salon} today={today} />
+          </dt>
+        </div>
       </dl>
+
+      {/* Datum se menja odmah po izboru: jedno dugme manje, kao i kod logoa.
+          Prazno polje briše evidenciju i vraća salon u stanje bez naplate. */}
+      <label className="flex min-h-11 items-center gap-2 pt-2">
+        <span className="text-muted-foreground text-xs">
+          {sr.admin.paidUntilLabel}
+        </span>
+        <Input
+          type="date"
+          defaultValue={salon.paid_until ?? ""}
+          disabled={pending}
+          className="h-9 w-auto text-sm"
+          onChange={(event) => {
+            const value = event.target.value;
+            startTransition(async () => {
+              setState(await savePaidUntil(salon.id, value === "" ? null : value));
+            });
+          }}
+        />
+      </label>
 
       <div className="flex flex-wrap gap-2 pt-3">
         <Button
@@ -184,7 +253,13 @@ function Row({ salon }: { salon: AdminSalon }) {
   );
 }
 
-export function SalonList({ salons }: { salons: AdminSalon[] }) {
+export function SalonList({
+  salons,
+  today,
+}: {
+  salons: AdminSalon[];
+  today: string;
+}) {
   if (salons.length === 0) {
     return <p className="text-muted-foreground text-sm">{sr.admin.empty}</p>;
   }
@@ -192,7 +267,7 @@ export function SalonList({ salons }: { salons: AdminSalon[] }) {
   return (
     <ul className="space-y-3">
       {salons.map((salon) => (
-        <Row key={salon.id} salon={salon} />
+        <Row key={salon.id} salon={salon} today={today} />
       ))}
     </ul>
   );
