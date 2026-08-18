@@ -130,7 +130,9 @@ function Row({ salon }: { salon: AdminSalon }) {
         {/* Slanje kreće čim se slika izabere; jedno dugme manje. */}
         <label
           className={cn(
-            "border-border hover:bg-accent inline-flex h-8 cursor-pointer items-center rounded-md border px-3 text-sm font-medium",
+            // Ista visina i ista proširena dodirna zona kao `size="sm"` dugme
+            // pored kojeg stoji.
+            "border-border hover:bg-accent relative inline-flex h-9 cursor-pointer items-center rounded-md border px-3 text-sm font-medium after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']",
             pending && "pointer-events-none opacity-50",
           )}
         >

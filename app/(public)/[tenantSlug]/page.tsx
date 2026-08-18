@@ -120,19 +120,31 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
         <BookingFlow data={data} />
 
+        {/* `inline-block` sa uspravnim razmakom: tekst ostaje u rečenici, a
+            dodirna zona naraste na 44px. Bez toga je meta visoka koliko i
+            slovo. */}
         <p className="text-muted-foreground pt-2 text-center text-xs">
           {sr.booking.haveAppointment}{" "}
-          <Link href={`/${tenantSlug}/otkazi`} className="text-brand underline">
+          <Link
+            href={`/${tenantSlug}/otkazi`}
+            className="text-brand inline-block py-3.5 underline"
+          >
             {sr.booking.manageLink}
           </Link>
         </p>
 
-        <p className="text-muted-foreground pt-4 text-center text-xs">
-          <Link href="/uslovi-koriscenja" className="underline">
+        <p className="text-muted-foreground text-center text-xs">
+          <Link
+            href="/uslovi-koriscenja"
+            className="inline-block py-3.5 underline"
+          >
             {sr.legal.terms}
           </Link>{" "}
           ·{" "}
-          <Link href="/politika-privatnosti" className="underline">
+          <Link
+            href="/politika-privatnosti"
+            className="inline-block py-3.5 underline"
+          >
             {sr.legal.privacy}
           </Link>
         </p>

@@ -147,7 +147,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <Link
           href={`/dashboard?dan=${previousWeek}`}
           aria-label={sr.dashboard.previousWeek}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
+          className={buttonVariants({ variant: "ghost", size: "icon" })}
         >
           ‹
         </Link>
@@ -160,7 +160,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
         <Link
           href={`/dashboard?dan=${nextWeek}`}
           aria-label={sr.dashboard.nextWeek}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
+          className={buttonVariants({ variant: "ghost", size: "icon" })}
         >
           ›
         </Link>

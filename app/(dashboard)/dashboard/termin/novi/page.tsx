@@ -46,7 +46,7 @@ export default async function NewAppointmentPage({ searchParams }: PageProps) {
       <header className="pb-4">
         <Link
           href={`/dashboard?dan=${date}`}
-          className="text-muted-foreground text-sm"
+          className="text-muted-foreground inline-flex min-h-11 items-center text-sm"
         >
           ‹ {sr.newAppointment.back}
         </Link>

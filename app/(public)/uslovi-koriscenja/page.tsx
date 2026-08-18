@@ -159,7 +159,10 @@ export default function TermsOfServicePage() {
       </div>
 
       <p className="text-muted-foreground pt-6 text-center text-xs">
-        <Link href="/politika-privatnosti" className="underline">
+        <Link
+          href="/politika-privatnosti"
+          className="inline-block py-3.5 underline"
+        >
           {sr.legal.privacy}
         </Link>
       </p>

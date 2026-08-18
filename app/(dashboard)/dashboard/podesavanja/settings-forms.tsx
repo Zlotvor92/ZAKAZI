@@ -154,7 +154,8 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
 
       {days.map((day) => (
         <div key={day.weekday} className="border-border rounded-lg border p-3">
-          <label className="flex items-center gap-2 pb-2">
+          {/* Kvačica je 20px, ali se dodiruje ceo red visok 44px. */}
+          <label className="flex min-h-11 items-center gap-2">
             <input
               type="checkbox"
               name={`working-${day.weekday}`}
@@ -162,7 +163,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
               onChange={(event) =>
                 update(day.weekday, { working: event.target.checked })
               }
-              className="size-4"
+              className="size-5"
             />
             <span className="text-sm font-medium">
               {sr.calendar.weekdaysShort[day.weekday - 1]}
@@ -380,12 +381,12 @@ export function BookingRulesForm({
         />
       </label>
 
-      <label className="flex items-center gap-2">
+      <label className="flex min-h-11 items-center gap-2">
         <input
           type="checkbox"
           name="publicEnabled"
           defaultChecked={publicEnabled}
-          className="size-4"
+          className="size-5"
         />
         <span className="text-sm">{sr.settings.publicLabel}</span>
       </label>

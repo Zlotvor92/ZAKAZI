@@ -20,7 +20,10 @@ export default async function AdminPage() {
         <h1 className="text-lg font-semibold tracking-tight">
           {sr.admin.title}
         </h1>
-        <Link href="/dashboard" className="text-muted-foreground text-sm">
+        <Link
+          href="/dashboard"
+          className="text-muted-foreground inline-flex min-h-11 items-center text-sm"
+        >
           {sr.admin.back} ›
         </Link>
       </header>

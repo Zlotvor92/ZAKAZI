@@ -251,7 +251,10 @@ export default function PrivacyPolicyPage() {
       </div>
 
       <p className="text-muted-foreground pt-6 text-center text-xs">
-        <Link href="/uslovi-koriscenja" className="underline">
+        <Link
+          href="/uslovi-koriscenja"
+          className="inline-block py-3.5 underline"
+        >
           {sr.legal.terms}
         </Link>
       </p>

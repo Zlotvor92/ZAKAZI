@@ -79,7 +79,10 @@ export default async function SettingsPage() {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-md p-4">
       <header className="pb-2">
-        <Link href="/dashboard" className="text-muted-foreground text-sm">
+        <Link
+          href="/dashboard"
+          className="text-muted-foreground inline-flex min-h-11 items-center text-sm"
+        >
           ‹ {sr.settings.back}
         </Link>
         <h1 className="pt-2 text-lg font-semibold tracking-tight">
