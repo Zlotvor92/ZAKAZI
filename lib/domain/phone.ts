@@ -18,7 +18,8 @@ export type PhoneProblem =
   | "not_a_number"
   | "too_short"
   | "too_long"
-  | "looks_fake";
+  | "looks_fake"
+  | "foreign";
 
 /**
  * Broj koji je neko izmislio dok je kucao.
@@ -55,8 +56,9 @@ export type PhoneNormalization =
 
 /**
  * Broj kako ga je neko otkucao pretvara u E.164. Podrazumevana zemlja je
- * Srbija, pa `0641234567` i `641234567` daju isto što i `+381641234567` —
- * strani broj mora da nosi `+`, inače se čita kao domaći i ispadne predugačak.
+ * Srbija, pa `0641234567` i `641234567` daju isto što i `+381641234567`.
+ * Strani brojevi se odbijaju: salon zove nazad sa srpske mreže, pa broj koji
+ * niko ne može da pozove nije zakazivanje, samo zauzet termin.
  */
 export function normalizePhone(input: string): PhoneNormalization {
   const written = input.trim();
@@ -97,7 +99,13 @@ export function normalizePhone(input: string): PhoneNormalization {
   }
 
   if (!international.startsWith(SERBIA_COUNTRY_CODE)) {
-    return validate(international);
+    // I dalje razlikuje "ovo uopšte nije broj" (npr. `+0...`, nijedna zemlja
+    // nema pozivni koji počinje nulom) od "ovo je stran broj" — prva poruka
+    // je tačnija za očiglednu grešku u kucanju.
+    const result = validate(international);
+    return !result.ok && result.reason === "not_a_number"
+      ? result
+      : { ok: false, reason: "foreign" };
   }
 
   const national = international.slice(SERBIA_COUNTRY_CODE.length);
@@ -121,8 +129,6 @@ export function normalizePhone(input: string): PhoneNormalization {
 function validate(international: string): PhoneNormalization {
   const e164 = `+${international}`;
 
-  // I strani broj sme da bude izmišljen; mrežne opsege drugih zemalja ne
-  // znamo, pa se proverava samo ono što je očigledno.
   if (/^(\d)\1+$/.test(international)) {
     return { ok: false, reason: "looks_fake" };
   }

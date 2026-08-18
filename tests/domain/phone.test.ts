@@ -67,10 +67,12 @@ describe("domaći fiksni broj", () => {
 });
 
 describe("strani broj", () => {
-  it("prolazi ako nosi plus", () => {
-    expect(e164("+49 151 12345678")).toBe("+4915112345678");
-    expect(e164("+387 61 123 456")).toBe("+38761123456");
-    expect(e164("+382 67 123 456")).toBe("+38267123456");
+  it("odbija se i kad je inače ispravno napisan", () => {
+    // Salon zove nazad sa srpske mreže; broj koji niko ne može da pozove
+    // nije zakazivanje, samo zauzet termin.
+    expect(problem("+49 151 12345678")).toBe("foreign");
+    expect(problem("+387 61 123 456")).toBe("foreign");
+    expect(problem("+382 67 123 456")).toBe("foreign");
   });
 
   it("bez plusa se čita kao domaći i ispadne predugačak", () => {
@@ -110,12 +112,9 @@ describe("broj koji ne valja", () => {
     expect(problem("06451234801")).toBe("too_long");
   });
 
-  it("prekratak strani broj", () => {
-    expect(problem("+1234")).toBe("too_short");
-  });
-
-  it("predugačak strani broj", () => {
-    expect(problem("+491511234567890123")).toBe("too_long");
+  it("strani broj se odbija pre nego što se i pogleda dužina", () => {
+    expect(problem("+1234")).toBe("foreign");
+    expect(problem("+491511234567890123")).toBe("foreign");
   });
 });
 
@@ -158,10 +157,6 @@ describe("izmišljen broj", () => {
     // `064 123 456` je stvaran oblik broja; šest cifara u nizu tu nije dokaz.
     expect(normalizePhone("064123456").ok).toBe(true);
     expect(normalizePhone("021456789").ok).toBe(true);
-  });
-
-  it("strani broj od samih istih cifara se odbija", () => {
-    expect(problem("+11111111111")).toBe("looks_fake");
   });
 
   it("stvaran broj sa ponovljenim ciframa prolazi", () => {

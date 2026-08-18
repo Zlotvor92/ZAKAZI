@@ -340,6 +340,7 @@ export const sr = {
       too_short: "Broj telefona je prekratak.",
       too_long: "Broj telefona je predugačak.",
       looks_fake: "Taj broj nije ispravan. Upiši svoj pravi broj.",
+      foreign: "Upiši srpski broj telefona — salon te zove nazad na njega.",
     },
     haveAppointment: "Već imaš zakazan termin?",
     manageLink: "Otkaži ga ovde",

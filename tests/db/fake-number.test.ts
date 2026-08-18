@@ -62,8 +62,16 @@ describe("izmišljen broj u bazi", () => {
     // Ovo je poenta ovog fajla. Provera na formi služi lepšoj poruci, a baza
     // brani — ali samo dok obe kažu isto. Ako neko promeni jednu, ovaj test
     // pukne pre nego što razlika stigne na produkciju.
+    //
+    // Strani brojevi su izuzeti: forma ih odbija razlogom `foreign`, pre nego
+    // što uopšte stigne do provere obrasca cifara — to poređenje pripada
+    // testu za strane brojeve, ne ovom.
     await withRollback(async (db) => {
-      for (const phone of [...FAKE, ...REAL]) {
+      const domestic = [...FAKE, ...REAL].filter((phone) =>
+        phone.startsWith("+381"),
+      );
+
+      for (const phone of domestic) {
         const inForm = normalizePhone(phone);
         const formSaysFake = !inForm.ok && inForm.reason === "looks_fake";
 
