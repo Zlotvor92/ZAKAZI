@@ -76,7 +76,6 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand-accent);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-mono);
 }
 
 @layer base {
