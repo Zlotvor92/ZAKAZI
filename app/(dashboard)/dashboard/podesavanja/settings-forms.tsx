@@ -15,12 +15,14 @@ import {
   type DayShape,
 } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
+import { brandVariables } from "@/lib/domain/brand";
 import {
   addBlockedNumber,
   deleteServiceEntry,
   deleteTimeOff,
   removeBlockedNumber,
   saveBookingRules,
+  saveBrand,
   saveServiceEntry,
   saveTimeOff,
   saveWorkingHours,
@@ -393,6 +395,137 @@ export function BookingRulesForm({
 
       <Button type="submit" disabled={pending}>
         {sr.settings.saveRules}
+      </Button>
+
+      <Feedback state={state} />
+    </form>
+  );
+}
+
+/** Salon koji još nije birao boje kreće od bele i boje aplikacije. */
+const DEFAULT_BACKGROUND = "#ffffff";
+const DEFAULT_PRIMARY = "#4d213c";
+
+function ColorField({
+  label,
+  name,
+  value,
+  onChange,
+}: {
+  label: string;
+  name: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="flex min-h-11 items-center justify-between gap-3">
+      <span className="text-sm">{label}</span>
+      <input
+        type="color"
+        name={name}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="border-input size-11 shrink-0 cursor-pointer rounded-md border bg-transparent"
+      />
+    </label>
+  );
+}
+
+export function BrandForm({
+  background,
+  primary,
+  accent,
+}: {
+  background: string | null;
+  primary: string | null;
+  accent: string | null;
+}) {
+  const { pending, state, submit, reset } = useSettingsAction();
+  const [useOwn, setUseOwn] = useState(
+    background !== null && primary !== null,
+  );
+  const [bg, setBg] = useState(background ?? DEFAULT_BACKGROUND);
+  const [pri, setPri] = useState(primary ?? DEFAULT_PRIMARY);
+  const [acc, setAcc] = useState(accent);
+
+  // Ista funkcija koju koristi i javna strana, pa je prikaz ono što će
+  // klijentkinja stvarno videti — uključujući boju slova, koju bira sama
+  // prema luminansi pozadine.
+  const preview = useOwn
+    ? brandVariables({ background: bg, primary: pri, accent: acc })
+    : null;
+
+  return (
+    <form action={submit(saveBrand)} onChange={reset} className="space-y-3">
+      <p className="text-muted-foreground text-xs">{sr.settings.brandHint}</p>
+
+      <label className="flex min-h-11 items-center gap-2">
+        <input
+          type="checkbox"
+          name="useOwnColors"
+          checked={useOwn}
+          onChange={(event) => setUseOwn(event.target.checked)}
+          className="size-5"
+        />
+        <span className="text-sm">{sr.settings.brandUseOwn}</span>
+      </label>
+
+      {useOwn ? (
+        <div className="space-y-1">
+          <ColorField
+            label={sr.settings.brandBackground}
+            name="background"
+            value={bg}
+            onChange={setBg}
+          />
+          <ColorField
+            label={sr.settings.brandPrimary}
+            name="primary"
+            value={pri}
+            onChange={setPri}
+          />
+          <ColorField
+            label={sr.settings.brandAccent}
+            name="accent"
+            value={acc ?? pri}
+            onChange={setAcc}
+          />
+          <p className="text-muted-foreground text-xs">
+            {sr.settings.brandAccentHint}
+          </p>
+        </div>
+      ) : null}
+
+      {preview ? (
+        <div className="space-y-1">
+          <span className="text-muted-foreground block text-xs">
+            {sr.settings.brandPreview}
+          </span>
+          {/* Isti postupak kao na javnoj strani: vrednosti prolaze kroz
+              `brandVariables`, koja pušta samo heks boje. */}
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `.brand-preview{${preview}}`,
+            }}
+          />
+          <div className="brand-preview border-border bg-background text-foreground space-y-2 rounded-xl border p-3">
+            <div className="border-border bg-card flex items-center justify-between rounded-lg border p-2">
+              <span className="text-sm font-medium">
+                {sr.settings.brandPreviewService}
+              </span>
+              <span className="text-brand text-sm font-semibold">
+                3.000 RSD
+              </span>
+            </div>
+            <div className="bg-primary text-primary-foreground rounded-md py-2 text-center text-sm font-medium">
+              {sr.settings.brandPreviewButton}
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <Button type="submit" disabled={pending}>
+        {sr.settings.saveBrand}
       </Button>
 
       <Feedback state={state} />

@@ -168,6 +168,21 @@ export const sr = {
       not_found: "Ta usluga više ne postoji.",
     },
 
+    brandTitle: "Boje tvoje stranice",
+    brandHint:
+      "Boje se vide na stranici za zakazivanje koju deliš klijentkinjama. Boju slova biramo sami, prema pozadini, da tekst uvek ostane čitljiv.",
+    brandUseOwn: "Koristi svoje boje",
+    brandBackground: "Pozadina",
+    brandPrimary: "Osnovna boja",
+    brandAccent: "Naglasak (cena, linkovi)",
+    brandAccentHint: "Ako je ne postaviš, koristi se osnovna boja.",
+    brandPreview: "Ovako izgleda",
+    brandPreviewService: "Nadogradnja trepavica",
+    brandPreviewButton: "Zakaži termin",
+    saveBrand: "Sačuvaj boje",
+    brandInvalid: "Boja nije ispravna.",
+    brandIncomplete: "Postavi i pozadinu i osnovnu boju, ili isključi svoje boje.",
+
     pushTitle: "Obaveštenja o zakazivanju",
     pushHint:
       "Kad neko zakaže preko interneta, telefon ti odmah javi. Ne košta ništa.",

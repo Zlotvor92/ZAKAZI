@@ -13,6 +13,7 @@ import { selectedTenantId } from "@/lib/tenant";
 import {
   BlockedNumbers,
   BookingRulesForm,
+  BrandForm,
   ServicesSection,
   TimeOffSection,
   WorkingHoursForm,
@@ -110,6 +111,14 @@ export default async function SettingsPage() {
           horizonDays={tenant.booking_horizon_days}
           leadHours={Math.round(tenant.min_lead_minutes / 60)}
           publicEnabled={tenant.public_booking_enabled}
+        />
+      </Section>
+
+      <Section title={sr.settings.brandTitle}>
+        <BrandForm
+          background={tenant.brand_background}
+          primary={tenant.brand_primary}
+          accent={tenant.brand_accent}
         />
       </Section>
 
