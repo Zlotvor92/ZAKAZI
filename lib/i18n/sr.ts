@@ -22,6 +22,8 @@ export const sr = {
   },
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
+    googleFailed:
+      "Prijava preko Google naloga nije uspela. Pokušaj ponovo ili zatraži link na mejl.",
   },
   tenants: {
     switchLabel: "Salon",

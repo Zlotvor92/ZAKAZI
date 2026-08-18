@@ -20,7 +20,9 @@ export default async function SignInPage({
 
         {greska ? (
           <p role="alert" className="text-destructive text-center text-sm">
-            {sr.callback.failed}
+            {greska === "google"
+              ? sr.callback.googleFailed
+              : sr.callback.failed}
           </p>
         ) : null}
 
