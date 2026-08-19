@@ -1,0 +1,135 @@
+name: Backup
+
+# Dve nezavisne kopije, jer kopija kod istog provajdera kod kog je i baza ne
+# pomaže kad problem bude sam nalog: privatni GitHub repo i Cloudflare R2.
+#
+# Ništa se ne šalje u otvorenom obliku. Dump se šifruje `age`-om, javnim
+# ključem — CI ume da zaključa, ali ne i da otključa. Privatni ključ nije
+# nigde u GitHub-u, pa ni provala u ovaj nalog ne otvara brojeve telefona ni
+# beleške o klijentkinjama.
+
+on:
+  # 01:20 UTC je 03:20 po Beogradu leti, 02:20 zimi — kad niko ne zakazuje.
+  schedule:
+    - cron: "20 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    name: Dnevna kopija
+    runs-on: ubuntu-latest
+
+    env:
+      # Javni ključ nije tajna — njime se može samo zaključati. Otključava se
+      # isključivo privatnim, koji nije nigde na GitHub-u.
+      AGE_PUBLIC_KEY: age1vumv7v3emyr887gg8dr9j9muah2vlk40y25fd5rzgvafm4qyws9qdgnfdt
+      BACKUP_REPO: Zlotvor92/zakazi-backup
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+
+    steps:
+      # Slika runnera nosi pg_dump 16, a server je 17. Stariji pg_dump odbija
+      # da čita noviji server, pa bi posao pao na prvom koraku.
+      - name: PostgreSQL klijent 17
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17 age
+          pg_dump --version
+
+      # Pooler na 6543 radi u transaction režimu, u kom pg_dump ne može da drži
+      # konzistentan snimak. Session režim je na 5432, na istom hostu.
+      - name: Kopija baze
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          pg_dump \
+            --host=aws-0-eu-central-1.pooler.supabase.com \
+            --port=5432 \
+            --username=postgres.onoaympwuewxoqtkeguz \
+            --dbname=postgres \
+            --schema=public \
+            --schema=auth \
+            --no-owner \
+            --no-privileges \
+            --quote-all-identifiers \
+            | gzip -9 > dump.sql.gz
+          echo "DUMP_BYTES=$(stat -c%s dump.sql.gz)" >> "$GITHUB_ENV"
+
+      # Prazan ili krnj dump se šifruje jednako lepo kao ispravan, pa bi se
+      # tiho slao mesecima. Ovde se gleda pre šifrovanja, dok se još može.
+      - name: Provera da kopija nije prazna
+        run: |
+          set -euo pipefail
+          test "$DUMP_BYTES" -gt 10000 || { echo "Kopija je sumnjivo mala: $DUMP_BYTES B"; exit 1; }
+          for t in appointments clients tenants appointment_events; do
+            gzip -dc dump.sql.gz | grep -q "CREATE TABLE \"public\".\"$t\"" \
+              || { echo "U kopiji nema tabele $t"; exit 1; }
+          done
+          gzip -dc dump.sql.gz | tail -1 | grep -q "PostgreSQL database dump complete" \
+            || { echo "Kopija nije zatvorena kako treba — pg_dump je prekinut"; exit 1; }
+          echo "Kopija ima $DUMP_BYTES B i sve očekivane tabele."
+
+      - name: Šifrovanje
+        run: |
+          set -euo pipefail
+          NAME="zakazi-$(date -u +%Y-%m-%d).sql.gz.age"
+          age --recipient "$AGE_PUBLIC_KEY" --output "$NAME" dump.sql.gz
+          rm -f dump.sql.gz
+          echo "BACKUP_FILE=$NAME" >> "$GITHUB_ENV"
+
+      # Drugo odredište je opciono: dok njegovi podaci ne postoje, korak se
+      # preskače i kopija svejedno ode u privatni repo. Čim se dodaju, uključi
+      # se sam, bez izmene ovog fajla.
+      - name: Slanje na Cloudflare R2
+        if: env.R2_ACCOUNT_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+          aws s3 cp "$BACKUP_FILE" "s3://$R2_BUCKET/$BACKUP_FILE" \
+            --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+
+      # Istorija ovog repoa je usput i verzionisanje: svaki dan stoji kao svoj
+      # commit, pa se može uzeti stanje od pre nedelju dana, ne samo poslednje.
+      - name: Slanje u privatni repo
+        env:
+          GIT_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 \
+            "https://x-access-token:${GIT_TOKEN}@github.com/$BACKUP_REPO.git" repo
+          mkdir -p repo/dnevno
+          cp "$BACKUP_FILE" "repo/dnevno/$BACKUP_FILE"
+          cd repo
+          git config user.name "backup"
+          git config user.email "backup@users.noreply.github.com"
+          git add "dnevno/$BACKUP_FILE"
+          git commit -m "Kopija $BACKUP_FILE" || { echo "Kopija za danas već postoji."; exit 0; }
+          git push
+
+      - name: Sažetak
+        run: |
+          echo "### Kopija napravljena" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- fajl: \`$BACKUP_FILE\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- veličina pre šifrovanja: $DUMP_BYTES B" >> "$GITHUB_STEP_SUMMARY"
+          if [ -n "$R2_ACCOUNT_ID" ]; then
+            echo "- odredišta: privatni repo i Cloudflare R2" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- odredište: privatni repo (R2 još nije podešen)" >> "$GITHUB_STEP_SUMMARY"
+          fi
