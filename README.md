@@ -122,11 +122,12 @@ Supabase odbija da pošalje link za prijavu.
 
 ### Potvrda vlasništva domena kod Google-a
 
-Ruta `[tenantSlug]` hvata svaku adresu koju ne prepozna i na nju odgovara
-stranicom salona sa statusom 200. Zato fajl za potvrdu vlasništva
-(`google<token>.html`) ide u **`public/`** — odatle ga Next servira pre
-rutiranja, kao `sw.js` i ikone — a nikako u `app/`, gde bi ga dinamički
-segment progutao i vratio pogrešan sadržaj.
+Fajl za potvrdu (`google<token>.html`) ide u **`public/`**, nikako u `app/`:
+`[tenantSlug]` hvata svaku adresu koju ne prepozna, pa bi iz `app/` umesto
+očekivanog sadržaja stigla strana salona. `public/` se razrešava pre rutiranja,
+isto kao `sw.js` i ikone.
 
-Potvrda preko DNS zapisa (TXT) zaobilazi ovo pitanje i ne traži novu verziju
-sajta, pa je jednostavnija kad domenu ionako pristupaš.
+Spisak iz `public/` se pravi u toku build-a, pa fajl počne da se servira tek sa
+sledećom verzijom — mora biti commit-ovan da bi ga Vercel uopšte video.
+
+Potvrda preko DNS zapisa (TXT) zaobilazi sve ovo i ne traži novu verziju sajta.
