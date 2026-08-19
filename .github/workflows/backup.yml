@@ -97,8 +97,60 @@ jobs:
           tail -5 dump.sql | grep -q "PostgreSQL database dump complete" \
             || { echo "Kopija nije zatvorena kako treba — pg_dump je prekinut"; exit 1; }
 
-          rm -f dump.sql
           echo "Kopija ima $DUMP_BYTES B i sve očekivane tabele."
+
+      # Kopija koja se nikad nije vratila nije kopija nego fajl kome se nadamo.
+      # Ovde se diže prazan Postgres iste verzije, kopija se uvozi u njega, i
+      # broji se da li je svaki red iz fajla stvarno završio u bazi.
+      #
+      # Proba ide nad nešifrovanim fajlom, jer CI nema čime da dešifruje — i ne
+      # sme da ima. Time se proverava ono što jedino i može da bude pokvareno:
+      # da li je sadržaj dumpa pun i da li se uvozi bez gubitka.
+      - name: Proba vraćanja
+        run: |
+          set -euo pipefail
+
+          docker run -d --name proba -e POSTGRES_PASSWORD=proba postgres:17-alpine
+          for i in $(seq 1 30); do
+            docker exec proba pg_isready -U postgres -q && break
+            sleep 2
+          done
+
+          # Vraćanje u prazan Postgres uvek nešto prijavi: dump nosi i `auth`
+          # šemu, koja se oslanja na Supabase-ove role i proširenja kojih ovde
+          # nema. To se ne prećutkuje nego broji, a presuđuje poređenje redova.
+          docker exec -i proba psql -U postgres -d postgres -q -v ON_ERROR_STOP=0 \
+            < dump.sql 2> greske.txt || true
+          echo "Prijava pri uvozu: $(wc -l < greske.txt) redova."
+
+          # Koliko redova fajl nosi za datu tabelu — broji se blok između
+          # `COPY ... FROM stdin;` i završnog `\.`.
+          u_fajlu() {
+            awk -v t="$1" '
+              $0 ~ "^COPY \"public\".\""t"\" " { u=1; next }
+              u && $0 == "\\." { u=0 }
+              u { n++ }
+              END { print n+0 }
+            ' dump.sql
+          }
+
+          greska=0
+          for t in tenants clients appointments appointment_events services working_hours; do
+            fajl=$(u_fajlu "$t")
+            baza=$(docker exec proba psql -U postgres -d postgres -tAc \
+              "select count(*) from public.\"$t\"" 2>/dev/null || echo "NEMA")
+            if [ "$fajl" = "$baza" ]; then
+              echo "  $t: $baza ✓"
+            else
+              echo "  $t: u fajlu $fajl, u vraćenoj bazi $baza ✗"
+              greska=1
+            fi
+          done
+
+          docker rm -f proba > /dev/null
+          rm -f dump.sql greske.txt
+          test "$greska" -eq 0 || { echo "Vraćanje nije verno — kopija se ne sme smatrati ispravnom."; exit 1; }
+          echo "Vraćanje provereno: svaki red iz kopije je u bazi."
 
       - name: Šifrovanje
         run: |
