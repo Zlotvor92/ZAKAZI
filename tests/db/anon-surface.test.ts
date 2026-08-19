@@ -62,6 +62,10 @@ describe("površina za neprijavljene", () => {
       expect(result.rows.map((row) => row.proname)).toEqual([
         // Čisti računski pomoćnik nad minutima, bez pristupa ijednoj tabeli.
         "add_minutes",
+        // Kalendar salona za telefon vlasnice. Kalendar aplikacija ne ume da
+        // se prijavi, pa je token u adresi jedini dokaz — netačan vraća
+        // prazan spisak, isto kao tačan token salona bez termina.
+        "calendar_feed",
         // Spisak termina za dati broj, na strani za otkazivanje.
         "public_appointments_for_phone",
         "public_book",

@@ -105,6 +105,10 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
   const [date, setDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
   const [state, setState] = useState<BookingState>({ status: "idle" });
+  // Uputstvo se drži skriveno dok se dugme ne dodirne. Pre dodira je samo
+  // buka ispod dugmeta koje treba pritisnuti; posle dodira je jedino što
+  // pomaže kad se fajl preuzeo a ništa se nije otvorilo.
+  const [calendarTapped, setCalendarTapped] = useState(false);
   const submitRef = useRef<HTMLButtonElement>(null);
 
   const timeZone = data.tenant.timezone;
@@ -233,6 +237,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                 usluga: state.appointment.serviceName,
                 salon: data.tenant.name,
               }).toString()}`}
+              onClick={() => setCalendarTapped(true)}
               className="border-primary bg-primary text-primary-foreground hover:bg-primary/90 relative inline-flex h-12 w-full items-center justify-center rounded-xl border text-sm font-medium transition-colors"
             >
               {sr.booking.addToCalendar}
@@ -241,12 +246,14 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           <p className="text-muted-foreground text-xs">
             {sr.booking.addToCalendarHint}
           </p>
-          <p className="text-muted-foreground text-xs">
-            <span className="font-medium">
-              {sr.booking.addToCalendarStepsTitle}
-            </span>{" "}
-            {addToCalendarSteps()}
-          </p>
+          {calendarTapped ? (
+            <p className="border-border rounded-lg border p-3 text-sm">
+              <span className="font-medium">
+                {sr.booking.addToCalendarStepsTitle}
+              </span>{" "}
+              {addToCalendarSteps()}
+            </p>
+          ) : null}
         </div>
 
         {/* Link ka otkazivanju je već u podnožju strane, ispod ovog toka —

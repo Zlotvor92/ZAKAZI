@@ -255,6 +255,25 @@ export const sr = {
     brandInvalid: "Boja nije ispravna.",
     brandIncomplete: "Postavi i pozadinu i osnovnu boju, ili isključi svoje boje.",
 
+    calendarTitle: "Termini u tvom kalendaru",
+    calendarHint:
+      "Zakači salon za kalendar na telefonu i termini se pojavljuju sami, čim ih neko zakaže. Ne moraš da otvaraš aplikaciju.",
+    calendarEnable: "Uključi",
+    calendarEnabling: "Uključujem…",
+    calendarDisable: "Isključi",
+    calendarRotate: "Napravi novu adresu",
+    calendarCopy: "Kopiraj adresu",
+    calendarCopied: "Kopirano",
+    calendarSubscribe: "Otvori u kalendaru",
+    calendarStepsTitle: "Kako se zakači:",
+    calendarStepsIphone:
+      "iPhone: dodirni „Otvori u kalendaru“ i potvrdi pretplatu. Ako ne uspe — Podešavanja › Aplikacije › Kalendar › Nalozi › Dodaj nalog › Drugo › Dodaj pretplaćeni kalendar, pa nalepi adresu.",
+    calendarStepsAndroid:
+      "Android: kopiraj adresu, otvori calendar.google.com u pregledaču (ne aplikaciju), pa Drugi kalendari › + › Sa URL adrese. Termini stižu u Google kalendar na telefonu za nekoliko sati.",
+    calendarSecretWarning:
+      "Adresa je i lozinka — ko je ima, vidi tvoje termine sa imenima i brojevima klijentkinja. Ne deli je i ne stavljaj je nigde javno. Ako procuri, napravi novu i stara istog trena prestaje da radi.",
+    calendarDelay:
+      "Kalendar sam povlači na nekoliko sati, pa nov termin ume da se pojavi sa zakašnjenjem. U aplikaciji je odmah.",
     pushTitle: "Obaveštenja o zakazivanju",
     pushHint:
       "Kad neko zakaže preko interneta, telefon ti odmah javi. Ne košta ništa.",

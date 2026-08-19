@@ -14,18 +14,23 @@ import {
   BlockedNumbers,
   BookingRulesForm,
   BrandForm,
+  CalendarFeed,
   ServicesSection,
   TimeOffSection,
   WorkingHoursForm,
 } from "./settings-forms";
 import { disableNotifications, enableNotifications } from "./actions";
 
-async function publicUrl(slug: string): Promise<string> {
+async function siteOrigin(): Promise<string> {
   const incoming = await headers();
   const host = incoming.get("host") ?? "";
   const protocol = incoming.get("x-forwarded-proto") ?? "https";
 
-  return `${protocol}://${host}/${slug}`;
+  return `${protocol}://${host}`;
+}
+
+async function publicUrl(slug: string): Promise<string> {
+  return `${await siteOrigin()}/${slug}`;
 }
 
 function Section({
@@ -127,6 +132,13 @@ export default async function SettingsPage() {
           entries={timeOff}
           timeZone={tenant.timezone}
           today={currentDateInTimeZone(new Date(), tenant.timezone)}
+        />
+      </Section>
+
+      <Section title={sr.settings.calendarTitle}>
+        <CalendarFeed
+          token={tenant.calendar_token}
+          origin={await siteOrigin()}
         />
       </Section>
 

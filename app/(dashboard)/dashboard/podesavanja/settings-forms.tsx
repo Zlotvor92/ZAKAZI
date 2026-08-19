@@ -2,7 +2,7 @@
 
 import { formatInTimeZone } from "date-fns-tz";
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TimeSelect } from "@/components/ui/time-select";
 import type { BlockedNumber } from "@/lib/db/blocklist";
@@ -17,6 +17,8 @@ import {
 import { sr } from "@/lib/i18n/sr";
 import { brandVariables } from "@/lib/domain/brand";
 import {
+  disableCalendarFeed,
+  enableCalendarFeed,
   addBlockedNumber,
   deleteServiceEntry,
   deleteTimeOff,
@@ -841,6 +843,125 @@ export function ServicesSection({ services }: { services: Service[] }) {
       </form>
 
       <Feedback state={state} />
+    </div>
+  );
+}
+
+
+/**
+ * Adresa kalendara i uputstvo kako se zakači.
+ *
+ * Adresa se prikazuje cela, i namerno: vlasnica je nalepljuje u kalendar
+ * aplikaciju, pa mora da se vidi i kad kopiranje ne uspe. `webcal://` je isti
+ * put, samo shema koju telefon prepozna kao „pretplati me na ovo“ umesto kao
+ * „preuzmi fajl“.
+ */
+export function CalendarFeed({
+  token,
+  origin,
+}: {
+  token: string | null;
+  origin: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [copied, setCopied] = useState(false);
+
+  const httpUrl = token ? `${origin}/api/kalendar/salon/${token}` : null;
+  const webcalUrl = httpUrl
+    ? httpUrl.replace(/^https?:\/\//, "webcal://")
+    : null;
+
+  if (!token || !httpUrl || !webcalUrl) {
+    return (
+      <div className="space-y-3">
+        <p className="text-muted-foreground text-sm">
+          {sr.settings.calendarHint}
+        </p>
+        <Button
+          type="button"
+          disabled={pending}
+          onClick={() => {
+            startTransition(async () => {
+              await enableCalendarFeed();
+            });
+          }}
+        >
+          {pending ? sr.settings.calendarEnabling : sr.settings.calendarEnable}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-muted-foreground text-sm">{sr.settings.calendarHint}</p>
+
+      <p className="bg-accent rounded-md p-3 font-mono text-xs break-all">
+        {httpUrl}
+      </p>
+
+      <div className="flex flex-wrap gap-2">
+        {/* Sidro, ne dugme: `webcal://` predaje telefon kalendar aplikaciji,
+            a to ume samo prava veza. Stil je isti kao kod dugmeta pored. */}
+        <a href={webcalUrl} className={buttonVariants({ size: "sm" })}>
+          {sr.settings.calendarSubscribe}
+        </a>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => {
+            void navigator.clipboard.writeText(httpUrl).then(() => {
+              setCopied(true);
+              setTimeout(() => setCopied(false), 2000);
+            });
+          }}
+        >
+          {copied ? sr.settings.calendarCopied : sr.settings.calendarCopy}
+        </Button>
+      </div>
+
+      <div className="text-muted-foreground space-y-2 pt-1 text-xs">
+        <p className="font-medium">{sr.settings.calendarStepsTitle}</p>
+        <p>{sr.settings.calendarStepsIphone}</p>
+        <p>{sr.settings.calendarStepsAndroid}</p>
+        <p>{sr.settings.calendarDelay}</p>
+        <p className="text-destructive">
+          {sr.settings.calendarSecretWarning}
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 pt-1">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={pending}
+          onClick={() => {
+            startTransition(async () => {
+              await enableCalendarFeed();
+            });
+          }}
+        >
+          {sr.settings.calendarRotate}
+        </Button>
+
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={pending}
+          className="text-destructive hover:text-destructive"
+          onClick={() => {
+            startTransition(async () => {
+              await disableCalendarFeed();
+            });
+          }}
+        >
+          {sr.settings.calendarDisable}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { blockNumber, unblockNumber } from "@/lib/db/blocklist";
+import { clearCalendarToken, rotateCalendarToken } from "@/lib/db/calendar";
 import {
   pushSubscriptionSchema,
   removePushSubscription,
@@ -67,6 +68,46 @@ function readWeek(formData: FormData): DayShape[] | null {
   }
 
   return days;
+}
+
+/**
+ * Uključuje kalendar salona, ili pravi novu adresu umesto procurele.
+ *
+ * Pravo se proverava u bazi, nad salonom koji je stvarno izabran — kolačić
+ * sa uređaja ovde ne odlučuje ništa.
+ */
+export async function enableCalendarFeed(): Promise<SettingsState> {
+  const tenant = await getCurrentTenant(await selectedTenantId());
+
+  if (!tenant) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  const result = await rotateCalendarToken(tenant.id);
+
+  if (!result.ok) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  revalidatePath("/dashboard/podesavanja");
+  return { status: "saved" };
+}
+
+export async function disableCalendarFeed(): Promise<SettingsState> {
+  const tenant = await getCurrentTenant(await selectedTenantId());
+
+  if (!tenant) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  const result = await clearCalendarToken(tenant.id);
+
+  if (!result.ok) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  revalidatePath("/dashboard/podesavanja");
+  return { status: "saved" };
 }
 
 export async function saveWorkingHours(

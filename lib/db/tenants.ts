@@ -12,6 +12,7 @@ export type Tenant = {
   brand_background: string | null;
   brand_primary: string | null;
   brand_accent: string | null;
+  calendar_token: string | null;
 };
 
 export const tenantSummaryListSchema = z.array(
@@ -50,7 +51,7 @@ export async function getCurrentTenant(
   const query = supabase
     .from("tenants")
     .select(
-      "id, slug, name, timezone, booking_horizon_days, min_lead_minutes, public_booking_enabled, brand_background, brand_primary, brand_accent",
+      "id, slug, name, timezone, booking_horizon_days, min_lead_minutes, public_booking_enabled, brand_background, brand_primary, brand_accent, calendar_token",
     );
 
   const { data, error } = await (tenantId === null

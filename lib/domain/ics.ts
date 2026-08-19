@@ -70,13 +70,10 @@ function fold(line: string): string {
   return parts.join("\r\n ");
 }
 
-export function buildCalendarEvent(event: CalendarEvent): string {
+type EventLinesInput = CalendarEvent & { reminders: boolean };
+
+function eventLines(event: EventLinesInput): string[] {
   const lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
-    "PRODID:-//Doteraj Me//sr",
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
     "BEGIN:VEVENT",
     `UID:${event.uid}`,
     `DTSTAMP:${stamp(event.createdAt)}`,
@@ -86,21 +83,74 @@ export function buildCalendarEvent(event: CalendarEvent): string {
     `LOCATION:${escapeText(event.location)}`,
     `DESCRIPTION:${escapeText(event.description)}`,
     "STATUS:CONFIRMED",
+  ];
+
+  if (event.reminders) {
     // Dva podsetnika: veče pre, da stigne da otkaže ako ne može, i dva sata
     // pre, da stigne da dođe.
-    "BEGIN:VALARM",
-    "TRIGGER:-P1D",
-    "ACTION:DISPLAY",
-    `DESCRIPTION:${escapeText(event.title)}`,
-    "END:VALARM",
-    "BEGIN:VALARM",
-    "TRIGGER:-PT2H",
-    "ACTION:DISPLAY",
-    `DESCRIPTION:${escapeText(event.title)}`,
-    "END:VALARM",
-    "END:VEVENT",
+    lines.push(
+      "BEGIN:VALARM",
+      "TRIGGER:-P1D",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:${escapeText(event.title)}`,
+      "END:VALARM",
+      "BEGIN:VALARM",
+      "TRIGGER:-PT2H",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:${escapeText(event.title)}`,
+      "END:VALARM",
+    );
+  }
+
+  lines.push("END:VEVENT");
+
+  return lines;
+}
+
+function wrap(lines: string[]): string {
+  const all = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//Doteraj Me//sr",
+    "CALSCALE:GREGORIAN",
+    "METHOD:PUBLISH",
+    ...lines,
     "END:VCALENDAR",
   ];
 
-  return `${lines.map(fold).join("\r\n")}\r\n`;
+  return `${all.map(fold).join("\r\n")}\r\n`;
+}
+
+export function buildCalendarEvent(event: CalendarEvent): string {
+  return wrap(eventLines({ ...event, reminders: true }));
+}
+
+/**
+ * Ceo kalendar salona, za vlasnicu koja ga je zakačila na svoj telefon.
+ *
+ * Bez alarma, za razliku od pojedinačnog termina: dan sa deset termina bi
+ * inače dao dvadeset zvonjava. Njoj treba pregled, ne budilnik — a podsetnik
+ * za svaki termin ionako ima klijentkinja.
+ *
+ * `X-WR-CALNAME` je jedini način da kalendar aplikacija prikaže ime umesto
+ * adrese, a `REFRESH-INTERVAL` je molba koliko često da povlači. Google i
+ * Apple je uzimaju kao predlog, ne kao obavezu — Google ume da povlači i na
+ * nekoliko sati bez obzira šta ovde piše.
+ */
+export function buildCalendarFeed(input: {
+  name: string;
+  createdAt: Date;
+  events: Omit<CalendarEvent, "createdAt">[];
+}): string {
+  const header = [
+    `X-WR-CALNAME:${escapeText(input.name)}`,
+    "REFRESH-INTERVAL;VALUE=DURATION:PT1H",
+    "X-PUBLISHED-TTL:PT1H",
+  ];
+
+  const body = input.events.flatMap((event) =>
+    eventLines({ ...event, createdAt: input.createdAt, reminders: false }),
+  );
+
+  return wrap([...header, ...body]);
 }
