@@ -167,3 +167,49 @@ jobs:
           echo "--- lanci zavisnosti ---"
           npm ls postcss || true
           npm ls sharp || true
+
+  migracije:
+    name: Migracije na produkciji
+    # Samo `main`, i tek pošto su provere i baza prošle. Grana i PR ne diraju
+    # produkciju ni slučajno.
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [checks, database]
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Bez ovoga bi nedostajuća tajna napravila neispravnu adresu, a CLI bi
+      # se žalio na nešto sasvim deseto.
+      - name: Provera da tajna postoji
+        env:
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          test -n "$DB_PASSWORD" || {
+            echo "Nedostaje tajna SUPABASE_DB_PASSWORD."
+            echo "Settings → Secrets and variables → Actions."
+            exit 1
+          }
+
+      # `db push` primenjuje samo migracije kojih nema u `schema_migrations` na
+      # serveru, i upisuje ih tamo. Kad nema novih, ne radi ništa i izlazi sa
+      # nulom — pa svaki push na `main` sme da ga pozove.
+      #
+      # Pooler na 6543 radi u transaction režimu, u kome migracije ne mogu da
+      # drže transakciju preko više naredbi. Session režim je na 5432, isti
+      # host koji već koristi noćna kopija.
+      #
+      # Lozinka se procentno kodira jer `--db-url` to izričito traži: znak
+      # `@` ili `#` u lozinci bi inače presekao adresu.
+      - name: Primena migracija
+        env:
+          DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          encoded=$(python3 -c 'import os, urllib.parse; print(urllib.parse.quote(os.environ["DB_PASSWORD"], safe=""))')
+          supabase db push --skip-vault --db-url \
+            "postgresql://postgres.onoaympwuewxoqtkeguz:${encoded}@aws-0-eu-central-1.pooler.supabase.com:5432/postgres"

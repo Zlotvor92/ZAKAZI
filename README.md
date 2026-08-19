@@ -120,6 +120,28 @@ U Supabase projektu, pod **Authentication → URL Configuration**, adresa sajta 
 dozvoljene adrese za povratak moraju pokazivati na objavljeni domen, inače
 Supabase odbija da pošalje link za prijavu.
 
+### Migracije baze
+
+Kod i baza se objavljuju odvojeno. Vercel sam pokupi novi kod, ali migracije
+je do sada trebalo pustiti ručno — i to je bio jedini korak koji je zavisio od
+toga da ga se neko seti.
+
+Posao `Migracije na produkciji` u `ci.yml` to radi sam: na svaki push u `main`,
+pošto prođu provere i testovi baze, pusti `supabase db push`. Primenjuju se
+samo migracije kojih nema u `schema_migrations` na serveru; kad novih nema,
+posao ne uradi ništa i izađe sa nulom.
+
+Traži jednu tajnu, `SUPABASE_DB_PASSWORD`, koju noćna kopija ionako već
+koristi. Adresa ide preko poolera na portu 5432 — na 6543 je transaction
+režim, u kome migracije ne mogu da drže transakciju preko više naredbi.
+
+**Migracije pišu se tako da stara verzija koda preživi novu bazu.** Vercel i
+CI kreću u istom trenutku i ne čekaju jedan drugog, pa nekoliko minuta ume da
+prođe u kojima je novi kod već objavljen a migracija još nije stigla — ili
+obrnuto. Dodavanje tabele, kolone ili funkcije to podnosi. Brisanje kolone
+koju stari kod još čita ne podnosi: takva izmena ide u dva koraka, kroz dva
+objavljivanja, ili ručno uz nadzor.
+
 ### Potvrda vlasništva domena kod Google-a
 
 Fajl za potvrdu (`google<token>.html`) ide u **`public/`**, nikako u `app/`:
