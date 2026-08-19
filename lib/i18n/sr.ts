@@ -6,11 +6,11 @@ export const sr = {
   home: {
     tagline: "Zakazivanje termina za male salone lepote u Srbiji.",
     intro:
-      "Klijentkinja otvori link tvog salona, izabere uslugu i slobodan termin — i to je to. Bez dopisivanja i bez čekanja da joj odgovoriš.",
+      "Klijent otvori link tvog salona, izabere uslugu i slobodan termin — i to je to. Bez dopisivanja i bez čekanja na tvoj odgovor.",
     points: [
       {
-        title: "Klijentkinja zakazuje sama",
-        body: "Podeliš link u opisu profila na Instagramu. Ona bira uslugu, dan i sat iz tvog radnog vremena — i onda kada ti ne stigneš do telefona.",
+        title: "Zakazivanje bez dopisivanja",
+        body: "Podeliš link u opisu profila na Instagramu. Usluga, dan i sat biraju se iz tvog radnog vremena — i onda kada ti ne stigneš do telefona.",
       },
       {
         title: "Ceo dan ti je u telefonu",
@@ -18,18 +18,18 @@ export const sr = {
       },
       {
         title: "Isti sat ne može dvaput",
-        body: "Zauzet termin se više nikome ne nudi — ni kada dve klijentkinje kliknu u istoj sekundi.",
+        body: "Zauzet termin se više nikome ne nudi — ni kada dvoje kliknu u istoj sekundi.",
       },
     ],
     forWho:
       "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
     dataTitle: "Prijava preko Google naloga",
     dataBody:
-      "Vlasnica salona ulazi svojim Google nalogom. Tom prilikom čitamo samo njeno ime i mejl adresu — taman koliko treba da prepoznamo čiji je salon. Ništa drugo sa Google naloga ne tražimo i ne čuvamo: ni kontakte, ni poštu, ni kalendar, ni fotografije.",
+      "U salon se ulazi Google nalogom. Tom prilikom čitamo samo ime i mejl adresu — taman koliko treba da prepoznamo čiji je salon. Ništa drugo sa Google naloga ne tražimo i ne čuvamo: ni kontakte, ni poštu, ni kalendar, ni fotografije.",
     dataMore: "Detaljnije u politici privatnosti",
-    clientsTitle: "Klijentkinje se ne prijavljuju",
+    clientsTitle: "Bez naloga za klijente",
     clientsBody:
-      "Za zakazivanje termina nije potreban nalog. Klijentkinja ostavlja samo ime i broj telefona, da bi salon mogao da je pozove ako nešto iskrsne.",
+      "Za zakazivanje termina nije potreban nalog. Ostavlja se samo ime i broj telefona, da bi salon mogao da pozove ako nešto iskrsne.",
     signIn: "Prijava za salone",
     signInHint: "Registracija je za sada zatvorena.",
   },
@@ -77,11 +77,11 @@ export const sr = {
     suspend: "Pauziraj",
     resume: "Vrati u rad",
     suspendConfirm: "Pauziraj salon? Link za zakazivanje prestaje da radi.",
-    ownerUnknown: "bez vlasnice",
+    ownerUnknown: "bez vlasnika",
     remove: "Obriši",
     /** `{ime}` se zamenjuje pre prikaza. */
     removeConfirm:
-      "Briše se salon „{ime}“ i sve što mu pripada: termini, klijentkinje, usluge, radno vreme. Ovo se ne može vratiti.\n\nPrekucaj adresu salona da potvrdiš:",
+      "Briše se salon „{ime}“ i sve što mu pripada: termini, klijenti, usluge, radno vreme. Ovo se ne može vratiti.\n\nPrekucaj adresu salona da potvrdiš:",
     removeProblem: {
       not_allowed: "Nemaš pravo da brišeš salone.",
       not_found: "Taj salon više ne postoji.",
@@ -146,12 +146,12 @@ export const sr = {
 
     newTitle: "Novi salon",
     newHint:
-      "Napravi salon i nalog vlasnice. Ona se prijavljuje svojim mejlom i vidi samo svoj salon.",
+      "Napravi salon i nalog vlasnika. Prijavljuje se svojim mejlom i vidi samo svoj salon.",
     nameLabel: "Ime salona",
     namePlaceholder: "Salon Smiley",
     slugLabel: "Adresa za zakazivanje",
     slugHint: "Ovo ide u Instagram bio. Samo mala slova, brojevi i crtica.",
-    ownerEmailLabel: "Mejl vlasnice",
+    ownerEmailLabel: "Mejl vlasnika",
     ownerEmailPlaceholder: "ime@primer.rs",
     ownerEmailHint:
       "Ako nalog ne postoji, napravićemo ga. Prijava ide linkom na taj mejl.",
@@ -163,7 +163,7 @@ export const sr = {
       invalid_name: "Upiši ime salona.",
       invalid_slug:
         "Adresa sme da ima samo mala slova, brojeve i crticu, najmanje tri znaka.",
-      invalid_email: "Mejl vlasnice nije ispravan.",
+      invalid_email: "Mejl vlasnika nije ispravan.",
       invalid_timezone: "Tajmzona nije ispravna.",
       slug_taken: "Ta adresa je zauzeta. Izaberi drugu.",
       no_such_user: "Nalog za taj mejl nije napravljen. Pokušaj ponovo.",
@@ -181,11 +181,11 @@ export const sr = {
       "Kad istekne, link za zakazivanje prestaje da radi dok se ne obnovi. Tvoji termini i klijenti ostaju.",
     subscriptionOverdueTitle: "Pretplata je istekla",
     subscriptionOverdueBody:
-      "Link za zakazivanje je ugašen — klijentkinje ne mogu da zakažu nov termin. Tvoj kalendar i već zakazani termini rade normalno, a klijentkinja koja je sprečena i dalje može da otkaže. Javi se da obnoviš.",
+      "Link za zakazivanje je ugašen — klijenti ne mogu da zakažu nov termin. Tvoj kalendar i već zakazani termini rade normalno, a klijent koji je sprečen i dalje može da otkaže. Javi se da obnoviš.",
 
     suspendedTitle: "Salon je pauziran",
     suspendedBody:
-      "Link za zakazivanje trenutno ne radi, pa klijentkinje ne mogu same da zakažu. Tvoji termini i klijenti su tu i možeš da radiš normalno.",
+      "Link za zakazivanje trenutno ne radi, pa klijenti ne mogu sami da zakažu. Tvoji termini i klijenti su tu i možeš da radiš normalno.",
     today: "Danas",
     previousWeek: "Prethodna nedelja",
     nextWeek: "Sledeća nedelja",
@@ -195,8 +195,8 @@ export const sr = {
     addAppointment: "Dodaj termin",
     call: "Pozovi",
     confirm: "Potvrdi",
-    arrived: "Došla",
-    noShow: "Nije došla",
+    arrived: "Obavljeno",
+    noShow: "Izostanak",
     cancel: "Otkaži",
     block: "Blokiraj broj",
     blockConfirm: "Sigurno blokiraj?",
@@ -264,7 +264,7 @@ export const sr = {
 
     brandTitle: "Boje tvoje stranice",
     brandHint:
-      "Boje se vide na stranici za zakazivanje koju deliš klijentkinjama. Boju slova biramo sami, prema pozadini, da tekst uvek ostane čitljiv.",
+      "Boje se vide na stranici za zakazivanje koju deliš klijentima. Boju slova biramo sami, prema pozadini, da tekst uvek ostane čitljiv.",
     brandUseOwn: "Koristi svoje boje",
     brandBackground: "Pozadina",
     brandPrimary: "Osnovna boja",
@@ -293,7 +293,7 @@ export const sr = {
     calendarStepsAndroid:
       "Android: kopiraj adresu, otvori calendar.google.com u pregledaču (ne aplikaciju), pa Drugi kalendari › + › Sa URL adrese. Termini stižu u Google kalendar na telefonu za nekoliko sati.",
     calendarSecretWarning:
-      "Adresa je i lozinka — ko je ima, vidi tvoje termine sa imenima i brojevima klijentkinja. Ne deli je i ne stavljaj je nigde javno. Ako procuri, napravi novu i stara istog trena prestaje da radi.",
+      "Adresa je i lozinka — ko je ima, vidi tvoje termine sa imenima i brojevima klijenata. Ne deli je i ne stavljaj je nigde javno. Ako procuri, napravi novu i stara istog trena prestaje da radi.",
     calendarDelay:
       "Kalendar sam povlači na nekoliko sati, pa nov termin ume da se pojavi sa zakašnjenjem. U aplikaciji je odmah.",
     pushTitle: "Obaveštenja o zakazivanju",
@@ -353,7 +353,7 @@ export const sr = {
     timeLabel: "Vreme",
     serviceLabel: "Usluga",
     durationLabel: "Termin traje (min)",
-    nameLabel: "Ime klijentkinje",
+    nameLabel: "Ime klijenta",
     namePlaceholder: "Jelena Petrović",
     phoneLabel: "Broj telefona",
     phonePlaceholder: "064 512 3480",
@@ -363,7 +363,7 @@ export const sr = {
     hint: "Termin van radnog vremena je dozvoljen — kalendar je tvoj.",
     failed: "Upis nije uspeo. Pokušaj ponovo.",
     rejected: {
-      invalid_name: "Upiši ime klijentkinje.",
+      invalid_name: "Upiši ime klijenta.",
       invalid_phone: "Broj telefona nije ispravan.",
       unknown_service: "Ta usluga više ne postoji.",
       no_staff: "Salon nema nijednog aktivnog izvođača.",
@@ -377,14 +377,14 @@ export const sr = {
     newBookingBody: "{klijent} — {usluga}, {vreme}",
     clientCancelledTitle: "Termin otkazan",
     /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
-    clientCancelledBody: "{klijent} je otkazala — {usluga}, {vreme}",
+    clientCancelledBody: "{klijent} — {usluga}, {vreme}",
   },
   appointmentStatus: {
     pending: "Čeka",
     confirmed: "Potvrđen",
-    completed: "Došla",
-    no_show: "Nije došla",
-    cancelled_by_client: "Otkazala klijentkinja",
+    completed: "Obavljeno",
+    no_show: "Izostanak",
+    cancelled_by_client: "Otkazao klijent",
     cancelled_by_salon: "Otkazao salon",
   },
   history: {
@@ -398,7 +398,7 @@ export const sr = {
     /** Ko je izazvao promenu. */
     actor: {
       user: "salon",
-      client: "klijentkinja",
+      client: "klijent",
       system: "sistem",
     },
   },

@@ -49,8 +49,8 @@ export default function TermsOfServicePage() {
           <p>
             {sr.app.name} je alat za zakazivanje termina namenjen solo beauty
             profesionalcima — nokat-tehničarkama, kozmetičarkama, majstorima
-            za trepavice i obrve, brijačima. Vlasnica salona vodi svoj
-            kalendar, radno vreme i usluge; klijentkinje preko javne stranice
+            za trepavice i obrve, berberima. Vlasnik salona vodi svoj
+            kalendar, radno vreme i usluge; klijenti preko javne stranice
             njenog salona same biraju slobodan termin.
           </p>
           <p>
@@ -60,7 +60,7 @@ export default function TermsOfServicePage() {
           </p>
         </Section>
 
-        <Section title="2. Nalog vlasnice salona">
+        <Section title="2. Nalog vlasnika salona">
           <p>
             Nalog otvara isključivo vlasnik platforme, na osnovu dogovora sa
             salonom. Prijavljuješ se linkom na mejl ili preko Google naloga,
@@ -113,8 +113,8 @@ export default function TermsOfServicePage() {
           <p>
             {sr.app.name} se pruža „kakav jeste&rdquo;. Trudimo se da radi
             pouzdano, ali ne garantujemo da će raditi bez prekida ili grešaka.
-            Nismo odgovorni za štetu nastalu zbog nedolaska klijentkinje,
-            pogrešno unetih podataka od strane salona ili klijentkinje, ni za
+            Nismo odgovorni za štetu nastalu zbog nedolaska klijenta,
+            pogrešno unetih podataka od strane salona ili klijenta, ni za
             posrednu štetu (izgubljenu zaradu i slično) nastalu korišćenjem ili
             nemogućnošću korišćenja platforme, u meri u kojoj to zakon
             dozvoljava.
@@ -123,7 +123,7 @@ export default function TermsOfServicePage() {
 
         <Section title="7. Prekid korišćenja">
           <p>
-            Vlasnica salona može u svakom trenutku zatražiti gašenje svog
+            Vlasnik salona može u svakom trenutku zatražiti gašenje svog
             naloga. Nalog koji krši tačku 5, ili salon koji ne izmiri
             pretplatu kad naplata bude uvedena, može biti suspendovan — to
             gasi javno zakazivanje, ne i pristup postojećem kalendaru i
@@ -134,7 +134,7 @@ export default function TermsOfServicePage() {
         <Section title="8. Izmene ovih uslova">
           <p>
             Ako izmenimo ove uslove, datum na vrhu stranice će se promeniti.
-            O bitnim izmenama obavestićemo vlasnice salona i pre nego što
+            O bitnim izmenama obavestićemo vlasnike salona i pre nego što
             stupe na snagu.
           </p>
         </Section>

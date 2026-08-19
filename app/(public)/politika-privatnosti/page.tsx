@@ -40,7 +40,7 @@ export default function PrivacyPolicyPage() {
       <p className="text-sm leading-relaxed">
         Ova politika objašnjava koje podatke {sr.app.name} prikuplja, zašto,
         koliko dugo ih čuva i koja prava imaš u vezi sa njima — bilo da si
-        vlasnica salona koja koristi aplikaciju, bilo da si klijentkinja koja
+        vlasnik salona koji koristi aplikaciju, bilo da si klijent koji
         preko nje zakazuje termin. Pisana je da se razume bez pravničkog
         rečnika, u skladu sa Zakonom o zaštiti podataka o ličnosti
         („Sl. glasnik RS&rdquo;, br. 87/2018).
@@ -60,7 +60,7 @@ export default function PrivacyPolicyPage() {
           <p>
             Kad zakazuješ termin preko javne stranice salona, salon je taj koji
             odlučuje kako se tvoji podaci koriste u svom poslovanju — on je
-            rukovalac tvojih podataka kao klijentkinje, a {sr.app.name} mu
+            rukovalac tvojih podataka kao klijenta, a {sr.app.name} mu
             pruža tehničku platformu preko koje to radi (obrađivač). Ovaj
             dokument opisuje kako {sr.app.name} tehnički obrađuje podatke u
             oba slučaja.
@@ -70,12 +70,12 @@ export default function PrivacyPolicyPage() {
         <Section title="2. Koje podatke prikupljamo">
           <p>
             <span className="text-foreground font-medium">
-              Ako si vlasnica salona:
+              Ako si vlasnik salona:
             </span>{" "}
             mejl adresu kojom se prijavljuješ (i podatke sa Google naloga ako
             se prijaviš preko njega), ime salona i adresu za zakazivanje koju
             izabereš, radno vreme i usluge koje uneseš, i podatke o tvojim
-            klijentkinjama koje uneseš ili koje stignu preko javnog
+            klijentima koje uneseš ili koji stignu preko javnog
             zakazivanja.
           </p>
           <p>
@@ -107,7 +107,7 @@ export default function PrivacyPolicyPage() {
             </li>
             <li>
               Da bi salon vodio svoj kalendar, istoriju termina i kontaktirao
-              klijentkinje o njihovim terminima.
+              klijente o njihovim terminima.
             </li>
             <li>
               Da bismo sprečili zloupotrebu — lažna zakazivanja, blokiranje
@@ -116,7 +116,7 @@ export default function PrivacyPolicyPage() {
               termina za sve.
             </li>
             <li>
-              Da bismo poslali push obaveštenje vlasnici salona o novom
+              Da bismo poslali push obaveštenje vlasniku salona o novom
               zakazivanju ili otkazivanju, ako je za to dala pristanak sa svog
               telefona.
             </li>
@@ -141,10 +141,10 @@ export default function PrivacyPolicyPage() {
 
         <Section title="5. Koliko dugo čuvamo podatke">
           <p>
-            Podatke o terminima i klijentkinjama salon čuva dok aktivno koristi
+            Podatke o terminima i klijentima salon čuva dok aktivno koristi
             {` ${sr.app.name}`}, jer mu služe kao istorija poslovanja i, u
             slučaju spora oko otkazivanja, kao dokaz. Ako želiš da tvoji
-            podaci kao klijentkinje budu obrisani, javi se direktno salonu kod
+            podaci kao klijenta budu obrisani, javi se direktno salonu kod
             kog si zakazivala, ili nama na kontakt iz tačke 1 — prosledićemo
             zahtev.
           </p>
@@ -155,7 +155,7 @@ export default function PrivacyPolicyPage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>
               <span className="text-foreground font-medium">
-                Prijava vlasnice salona
+                Prijava vlasnika salona
               </span>{" "}
               — kolačić koji Supabase koristi da zna da si prijavljena. Nestaje
               kad se odjaviš ili istekne.
