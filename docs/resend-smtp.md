@@ -147,30 +147,63 @@ i drži `RESEND_API_KEY` u `.env.local`, koji je u `.gitignore`. Vrati na
 
 ---
 
-## Opciono — šablon mejla na srpskom
+## Šablon mejla
 
-Supabase-ov podrazumevani šablon je na engleskom. **Authentication → Email
-Templates → Magic Link**:
+Postavljen kroz **Authentication → Email Templates → Magic Link**.
 
-```html
-<h2>Prijava na Doteraj Me</h2>
-<p>Klikni na dugme da uđeš u svoj kalendar. Link važi 1 sat.</p>
-<p><a href="{{ .SiteURL }}/auth/callback?token_hash={{ .TokenHash }}&type=magiclink">Uđi u kalendar</a></p>
-<p>Ako nisi ti tražio/la prijavu, samo obriši ovu poruku.</p>
+Naslov: `Tvoj link za prijavu`. Telo nosi logo sa `https://doterajme.rs/icon-192.png`
+(fajl je u `public/`, pa se servira bez ičega dodatnog).
+
+Tri stvari u njemu su namerne:
+
+**Adresa je ukucana, ne `{{ .SiteURL }}`.** `site_url` je `https://doterajme.rs/`
+sa kosom crtom na kraju, pa bi šablon sastavio `doterajme.rs//auth/callback` —
+dupla crta, i link puca.
+
+**`token_hash` umesto `{{ .ConfirmationURL }}`.** `ConfirmationURL` nosi PKCE
+kod koji važi samo u pregledaču koji je prijavu započeo, pa puca kad se mejl
+otvori na telefonu a prijava započela na računaru — ili kad mejl klijent
+unapred „poseti" link i potroši ga. Ruta `app/auth/callback/route.ts` već ume
+oba oblika, pa ovaj izbor ne traži nikakvu promenu koda.
+
+**`alt` tekst na slici.** Gmail podrazumevano blokira slike kod nepoznatog
+pošiljaoca, pa prvi put stiže poruka bez logoa. Mora da radi i tako.
+
+## Logo u ikonici pošiljaoca — ne
+
+Sivi krug pored imena pošiljaoca menja se jedino kroz **BIMI**, a Gmail BIMI
+logo ne prikazuje bez **VMC ili CMC sertifikata**: 1.000–1.500 USD godišnje,
+uz registrovan žig. Uz pretplatu od 990–3.900 RSD mesečno to je trošak veći
+od dvadeset godišnjih pretplata, za jednu ikonicu. Ne radi se.
+
+Ono što se besplatno kontroliše je ime pošiljaoca (`smtp_sender_name`) i logo
+u telu poruke.
+
+## DMARC
+
+Domen ima SPF (`send.doterajme.rs`) i DKIM (`resend._domainkey`), ali **nema
+DMARC**. Gmail ga od 2024. traži od svakoga ko šalje u količini, a bez njega
+bilo ko može slati poruke koje izgledaju kao da dolaze sa `doterajme.rs`.
+
+Jedan TXT zapis na `_dmarc.doterajme.rs`:
+
+```
+v=DMARC1; p=none; rua=mailto:zakazii.rs@gmail.com
 ```
 
-Oblik sa `token_hash` je namerno izabran umesto `{{ .ConfirmationURL }}`:
-`ConfirmationURL` nosi PKCE kod koji važi samo u pregledaču koji je prijavu i
-započeo, pa puca kad korisnica otvori mejl na telefonu a prijavu započela na
-računaru — ili kad mejl klijent unapred „poseti" link i potroši ga.
-Ruta `app/auth/callback/route.ts` već ume oba oblika, pa ova izmena ne traži
-nikakvu promenu koda.
+`p=none` ništa ne blokira — samo šalje izveštaj ko šalje u tvoje ime. Kad
+mesec dana pokaže samo Resend, prelazi se na `p=quarantine`.
 
-`{{ .SiteURL }}` mora biti podešen na produkcijski domen pod
-**Authentication → URL Configuration**, zajedno sa `/auth/callback` u
-dozvoljenim adresama za povratak.
+## Ograničenje slanja se resetuje
 
----
+Kad se custom SMTP isključi pa ponovo uključi, `rate_limit_email_sent` se
+vraća na podrazumevanih 30 na sat. Trideset je sasvim dovoljno za prijave u
+salon; ako ikad zatreba više, menja se u **Authentication → Rate Limits**.
+
+Preko Management API-ja se ne dira: to polje Supabase validira zajedno sa
+celim SMTP blokom, pa parcijalan `PATCH` obriše SMTP podešavanja i ugasi
+custom SMTP. Lozinka se kroz API ne može pročitati, pa se posle toga blok
+mora ponovo uneti ručno. Za bilo koju izmenu SMTP grupe koristi konzolu.
 
 ## Zašto ne Resend API direktno iz aplikacije
 
