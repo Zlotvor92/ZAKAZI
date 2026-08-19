@@ -70,6 +70,10 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<AdminState>({ status: "idle" });
   const logoLabel = salon.logo_url ? sr.admin.logoReplace : sr.admin.logoChoose;
+  // Salon kome je pretplata istekla ne prima termine isto kao pauziran, samo
+  // ga je zaustavio datum a ne potez. Traka koja bi za oba pisala „Radi" bila
+  // bi neistinita upravo u trenutku kad je odgovor najvažniji.
+  const expired = subscriptionState(salon.paid_until, today) === "overdue";
 
   return (
     <li className="border-border rounded-xl border p-4">
@@ -93,7 +97,11 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
               aria-hidden
               className={cn(
                 "size-2 shrink-0 rounded-full",
-                salon.suspended ? "bg-destructive" : "bg-emerald-500",
+                salon.suspended
+                  ? "bg-destructive"
+                  : expired
+                    ? "bg-amber-500"
+                    : "bg-emerald-500",
               )}
             />
             <h2 className="truncate font-semibold">{salon.name}</h2>
@@ -109,10 +117,16 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
             "shrink-0 rounded-full px-2 py-1 text-xs font-medium",
             salon.suspended
               ? "bg-destructive/10 text-destructive"
-              : "bg-accent text-accent-foreground",
+              : expired
+                ? "bg-amber-500/10 text-amber-700"
+                : "bg-accent text-accent-foreground",
           )}
         >
-          {salon.suspended ? sr.admin.suspended : sr.admin.active}
+          {salon.suspended
+            ? sr.admin.suspended
+            : expired
+              ? sr.admin.expired
+              : sr.admin.active}
         </span>
       </div>
 

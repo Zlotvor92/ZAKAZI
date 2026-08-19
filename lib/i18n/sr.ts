@@ -73,6 +73,7 @@ export const sr = {
     enter: "Uđi u salon",
     active: "Radi",
     suspended: "Pauziran",
+    expired: "Isteklo",
     suspend: "Pauziraj",
     resume: "Vrati u rad",
     suspendConfirm: "Pauziraj salon? Link za zakazivanje prestaje da radi.",
@@ -180,7 +181,7 @@ export const sr = {
       "Kad istekne, link za zakazivanje prestaje da radi dok se ne obnovi. Tvoji termini i klijenti ostaju.",
     subscriptionOverdueTitle: "Pretplata je istekla",
     subscriptionOverdueBody:
-      "Javi se da obnoviš pretplatu. Dok je ne obnoviš, link za zakazivanje može biti ugašen.",
+      "Link za zakazivanje je ugašen — klijentkinje ne mogu da zakažu nov termin. Tvoj kalendar i već zakazani termini rade normalno, a klijentkinja koja je sprečena i dalje može da otkaže. Javi se da obnoviš.",
 
     suspendedTitle: "Salon je pauziran",
     suspendedBody:
