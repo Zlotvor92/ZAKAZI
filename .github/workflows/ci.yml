@@ -102,8 +102,20 @@ jobs:
           version: latest
 
       # `supabase start` sam primeni migracije i pusti seed.
+      #
+      # Digao bi i ceo ostatak lokalnog steka, a svaka od tih usluga je slika
+      # koja se povlači. Testu treba samo put do baze: Kong kao ulaz na 54321,
+      # PostgREST za `rpc` pozive, i `gotrue` jer ga middleware dodiruje.
+      # Studio, storage, realtime, sandučić za poštu i ostalo javna strana ne
+      # otvara nijednom.
+      #
+      # Ovo je isključivo lokalni stek za testove; produkcijski Supabase se
+      # ovim ne dodiruje, a RLS i površina za neprijavljenog se ionako
+      # proveravaju u poslu „Baza", nad čistim Postgresom.
       - name: Podizanje Supabase-a
-        run: supabase start
+        run: >-
+          supabase start
+          -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
 
       - name: Anon ključ u okruženje
         run: |
