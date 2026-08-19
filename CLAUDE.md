@@ -2,7 +2,7 @@
 
 ## Šta gradimo
 
-SaaS aplikacija za zakazivanje termina namenjena **solo beauty profesionalcima u Srbiji** — nokat-tehničarke, kozmetičarke, majstori za trepavice i obrve, brijači. Tipičan korisnik radi sam ili u dvoje, iz iznajmljene stolice ili od kuće, klijente prima preko Instagram poruka, a termine vodi u papirnoj svesci.
+SaaS aplikacija za zakazivanje termina namenjena **solo beauty profesionalcima u Srbiji** — nokat-tehničarke, kozmetičarke, majstori za trepavice i obrve, berberi. Tipičan korisnik radi sam ili u dvoje, iz iznajmljene stolice ili od kuće, klijente prima preko Instagram poruka, a termine vodi u papirnoj svesci.
 
 Cena proizvoda je 990–3.900 RSD mesečno. To znači da korisnik nema strpljenja ni za kakvu složenost i da svaki suvišan klik košta pretplatu.
 
