@@ -70,6 +70,26 @@ export async function signInWithGoogle(): Promise<SignInState> {
   redirect(data.url);
 }
 
+/**
+ * Supabase drži HTTP zahtev otvorenim dok SMTP server ne primi poruku. Kad je
+ * SMTP pogrešno podešen, ta veza visi duže nego što Vercel daje funkciji — pa
+ * odgovor akcije pukne u pola, a forma bez granice greške iznad sebe sruši
+ * celu stranu. Kraći rok ovde pretvara ćutanje u urednu poruku.
+ */
+const SEND_TIMEOUT_MS = 8_000;
+
+function withTimeout<T>(work: Promise<T>): Promise<T> {
+  return Promise.race([
+    work,
+    new Promise<never>((_, reject) => {
+      setTimeout(
+        () => reject(new Error(`nema odgovora za ${SEND_TIMEOUT_MS} ms`)),
+        SEND_TIMEOUT_MS,
+      );
+    }),
+  ]);
+}
+
 export async function requestMagicLink(
   _previous: SignInState,
   formData: FormData,
@@ -79,26 +99,33 @@ export async function requestMagicLink(
     return { status: "error", message: sr.signIn.invalidEmail };
   }
 
-  const supabase = await createClient();
-  const redirectTo = `${await siteOrigin()}/auth/callback`;
+  try {
+    const supabase = await createClient();
+    const redirectTo = `${await siteOrigin()}/auth/callback`;
 
-  const { error } = await supabase.auth.signInWithOtp({
-    email: parsed.data.email,
-    options: {
-      // Registracija je isključena u ovoj fazi; naloge pravi seed skripta.
-      shouldCreateUser: false,
-      emailRedirectTo: redirectTo,
-    },
-  });
-
-  if (error) {
-    // Korisniku namerno ide ista poruka bez obzira na razlog — inače bi se
-    // sa forme moglo saznati koje adrese postoje u sistemu. Pravi razlog
-    // ide u log servera.
-    console.error(
-      `signInWithOtp nije uspeo: ${error.message} (status ${error.status ?? "?"}), ` +
-        `emailRedirectTo=${redirectTo}`,
+    const { error } = await withTimeout(
+      supabase.auth.signInWithOtp({
+        email: parsed.data.email,
+        options: {
+          // Registracija je isključena u ovoj fazi; naloge pravi seed skripta.
+          shouldCreateUser: false,
+          emailRedirectTo: redirectTo,
+        },
+      }),
     );
+
+    if (error) {
+      // Korisniku namerno ide ista poruka bez obzira na razlog — inače bi se
+      // sa forme moglo saznati koje adrese postoje u sistemu. Pravi razlog
+      // ide u log servera.
+      console.error(
+        `signInWithOtp nije uspeo: ${error.message} (status ${error.status ?? "?"}), ` +
+          `emailRedirectTo=${redirectTo}`,
+      );
+      return { status: "error", message: sr.signIn.failed };
+    }
+  } catch (cause) {
+    console.error(`Slanje linka za prijavu je puklo: ${String(cause)}`);
     return { status: "error", message: sr.signIn.failed };
   }
 
