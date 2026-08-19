@@ -43,12 +43,27 @@ na `_dmarc.doteraj.me` sa `v=DMARC1; p=none; rua=mailto:...`, da vidiš izvešta
 
 ## Korak 2 — API ključ
 
-1. **API Keys → Create API Key**.
-2. Ime: `supabase-auth`. Dozvola: **Sending access**. Domen: onaj verifikovani.
-3. Kopiraj ključ (`re_...`) — prikazuje se samo jednom.
+**API Keys → Create API Key**. Prozorčić ima tri polja, i redosled je bitan.
 
-Ključ ide **samo u Supabase konzolu**, nikad u repozitorijum, nikad u
-`.env.local`, nikad u `NEXT_PUBLIC_` promenljivu.
+**Name** — `supabase-auth`. Ime nema tehnički značaj (max 50 karaktera), ali kad
+naraste broj ključeva po imenu se zna koji sme da se obriše.
+
+**Permission** — `Sending access`, **ne** `Full access`. Ključ sa punim pravom
+može da obriše domen, napravi nove ključeve i pročita sadržaj poslatih poruka.
+Supabase samo predaje poruku SMTP serveru i ništa od toga mu ne treba, pa
+ključ koji iscuri u najgorem slučaju može samo da šalje.
+
+**Domain** — izaberi verifikovani domen, ne `All domains`. Polje je zaključano
+dok se ne izabere `Sending access`; ako je sivo, permission još nije promenjen.
+Ako domen stoji kao `Pending`, vrati se na Korak 1 — ključ vezan za
+neverifikovan domen ne šalje ništa.
+
+Ključ (`re_...`) se prikazuje **samo jednom**, odmah po pravljenju; u listi
+posle ostaju vidljiva samo prva četiri karaktera. Nema oporavka — izgubljen
+ključ se briše i pravi novi.
+
+Ide **pravo u Supabase konzolu**, nikad u repozitorijum, nikad u `.env.local`,
+nikad u `NEXT_PUBLIC_` promenljivu.
 
 ## Korak 3 — Supabase: Custom SMTP
 
@@ -64,6 +79,14 @@ U Supabase konzoli, na produkcijskom projektu:
 | Password | Resend API ključ (`re_...`) |
 | Sender email | `prijava@doteraj.me` (adresa na verifikovanom domenu) |
 | Sender name | `Doteraj Me` |
+
+Dve stvari koje se lako promaše:
+
+- **Username je doslovno `resend`** — ista reč za svakoga, nije tvoja adresa
+  ni ime naloga.
+- **Sender email ne mora da postoji kao sanduče.** `prijava@doteraj.me` je samo
+  adresa sa koje poruka izlazi; ne otvara se nikakav mejl nalog za nju. Mora
+  jedino biti na verifikovanom domenu.
 
 Port `465` je implicitni TLS i radi bez dodatnog podešavanja. Alternative su
 `587` i `2587` (STARTTLS) ako bi 465 negde bio blokiran. Port `25` ne koristi —
