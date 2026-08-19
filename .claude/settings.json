@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -sS https://api.supabase.com/*)",
+      "Bash(curl -sS https://onoaympwuewxoqtkeguz.supabase.co/*)"
+    ]
+  }
+}
