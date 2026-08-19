@@ -45,9 +45,9 @@ Mejl vlasnika je na vrhu seed fajla; promeni ga u svoj pre prvog pokretanja.
 npm run dev
 ```
 
-Otvori `http://localhost:3000`. Preusmerava na `/prijava`. Upiši mejl vlasnika;
-lokalno poruka ne odlazi na internet nego stiže u Supabase-ov sandučić na
-`http://127.0.0.1:54324`.
+Otvori `http://localhost:3000`. Tu je javna početna strana; prijava je na
+`/prijava`. Upiši mejl vlasnika; lokalno poruka ne odlazi na internet nego
+stiže u Supabase-ov sandučić na `http://127.0.0.1:54324`.
 
 Javna stranica salona iz seed-a je `http://localhost:3000/studio-milica`. Ona
 ne traži prijavu — otvori je u prozoru bez istorije da bi videla ono što vidi
@@ -119,3 +119,15 @@ promeni regiju, ovo se menja sa njom.
 U Supabase projektu, pod **Authentication → URL Configuration**, adresa sajta i
 dozvoljene adrese za povratak moraju pokazivati na objavljeni domen, inače
 Supabase odbija da pošalje link za prijavu.
+
+### Potvrda vlasništva domena kod Google-a
+
+Fajl za potvrdu (`google<token>.html`) ide u **`public/`**, nikako u `app/`:
+`[tenantSlug]` hvata svaku adresu koju ne prepozna, pa bi iz `app/` umesto
+očekivanog sadržaja stigla strana salona. `public/` se razrešava pre rutiranja,
+isto kao `sw.js` i ikone.
+
+Spisak iz `public/` se pravi u toku build-a, pa fajl počne da se servira tek sa
+sledećom verzijom — mora biti commit-ovan da bi ga Vercel uopšte video.
+
+Potvrda preko DNS zapisa (TXT) zaobilazi sve ovo i ne traži novu verziju sajta.

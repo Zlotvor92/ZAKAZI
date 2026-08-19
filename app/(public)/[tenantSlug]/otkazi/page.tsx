@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getSalonSummary } from "@/lib/db/public-cancel";
 import { sr } from "@/lib/i18n/sr";
@@ -27,17 +28,11 @@ export default async function CancelPage({ params }: PageProps) {
   const { tenantSlug } = await params;
   const data = await salonSummary(tenantSlug);
 
-  // Isti nedostatak razlike kao na strani za zakazivanje: nepostojeći salon i
-  // suspendovan salon ne smeju da se razlikuju za posetioca.
+  // Isto kao na strani za zakazivanje: nepostojeći i suspendovan salon ne smeju
+  // da se razlikuju za posetioca, pa oba idu na `not-found.tsx` segmenta — ista
+  // poruka kao ranije, sada sa statusom 404.
   if (!data) {
-    return (
-      <main className="mx-auto min-h-dvh w-full max-w-md p-4">
-        <h1 className="pt-8 text-lg font-semibold">{sr.app.name}</h1>
-        <p className="text-muted-foreground pt-2 text-sm">
-          {sr.booking.closed}
-        </p>
-      </main>
-    );
+    notFound();
   }
 
   return (

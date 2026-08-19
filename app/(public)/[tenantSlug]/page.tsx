@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getPublicBookingData } from "@/lib/db/public-booking";
 import { brandVariables } from "@/lib/domain/brand";
@@ -62,7 +63,7 @@ export function Brand({
   );
 }
 
-function Notice({ title, message }: { title: string; message: string }) {
+export function Notice({ title, message }: { title: string; message: string }) {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-md p-4">
       <h1 className="pt-8 text-lg font-semibold">{title}</h1>
@@ -75,10 +76,13 @@ export default async function PublicBookingPage({ params }: PageProps) {
   const { tenantSlug } = await params;
   const data = await bookingData(tenantSlug);
 
-  // Nepoznat salon i ugašeno zakazivanje se namerno ne razlikuju: iz javne
-  // stranice se ne saznaje koji slugovi postoje.
+  // Nepoznat salon, ugašeno zakazivanje i suspendovan salon se i dalje namerno
+  // ne razlikuju: iz javne stranice se ne saznaje koji slugovi postoje. Sva tri
+  // vode na `not-found.tsx` ovog segmenta, koji nosi istu poruku kao ranije —
+  // razlika je samo u statusu 404, da pogrešno prepisana adresa prestane da se
+  // predstavlja kao postojeća strana.
   if (!data) {
-    return <Notice title={sr.app.name} message={sr.booking.closed} />;
+    notFound();
   }
 
   if (data.services.length === 0) {
