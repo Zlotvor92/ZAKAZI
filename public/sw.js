@@ -21,7 +21,11 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(title, {
       body: data.body || "",
       icon: "/icon-192.png",
-      badge: "/icon-192.png",
+      // `badge` se ne crta kao slika: sistem uzme samo alfa kanal i njime
+      // maskira jednu boju. `icon-192.png` je neprozirna, bez alfe, pa je od
+      // nje ispadao pun beli kvadrat umesto znaka. Ovde stoji silueta na
+      // providnoj pozadini, koja je jedino što tu i može da se prikaže.
+      badge: "/badge-96.png",
       // Vibracija je jedini deo koji radi i kad je telefon u džepu.
       vibrate: [80, 40, 80],
       // Isti termin ne sme da napravi dva obaveštenja jedno preko drugog.
