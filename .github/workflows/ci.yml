@@ -2,8 +2,19 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main]
   pull_request:
+
+# `push: ["**"]` uz `pull_request` je isti commit slao u dva odvojena kruga, pa
+# je svaki PR plaćao sve dvaput. Grana se sada proverava kroz svoj PR, a `push`
+# ostaje samo za `main`, gde PR-a nema.
+#
+# Grupa uz to prekida krug koji je novi push pregazio. Na `main` se pušta do
+# kraja: tamo se beleži da je istorija zelena, a ne daje povratna informacija
+# na granu koje više nema.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
   checks:
@@ -98,8 +109,21 @@ jobs:
         run: |
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
 
+      # `--with-deps` je preko `apt`-a instalirao sistemske biblioteke i fontove
+      # i na to trošio četiri minuta, dok samo preuzimanje pregledača traje
+      # devet sekundi. Slika `ubuntu-latest` već nosi Chrome i Edge, pa su te
+      # biblioteke tu — a da nisu, pregledač se ne bi ni pokrenuo i posao bi
+      # pao odmah, glasno.
+      - name: Keš pregledača
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
       - name: Instalacija pregledača
-        run: npx playwright install --with-deps chromium
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
 
       - name: Playwright
         run: npm run test:e2e
