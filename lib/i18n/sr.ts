@@ -70,6 +70,16 @@ export const sr = {
     resume: "Vrati u rad",
     suspendConfirm: "Pauziraj salon? Link za zakazivanje prestaje da radi.",
     ownerUnknown: "bez vlasnice",
+    remove: "Obriši",
+    /** `{ime}` se zamenjuje pre prikaza. */
+    removeConfirm:
+      "Briše se salon „{ime}“ i sve što mu pripada: termini, klijentkinje, usluge, radno vreme. Ovo se ne može vratiti.\n\nPrekucaj adresu salona da potvrdiš:",
+    removeProblem: {
+      not_allowed: "Nemaš pravo da brišeš salone.",
+      not_found: "Taj salon više ne postoji.",
+      slug_mismatch: "Adresa se ne poklapa. Salon nije obrisan.",
+    },
+
     /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
     servicesCount: ["usluga", "usluge", "usluga"],
     upcomingCount: ["termin uskoro", "termina uskoro", "termina uskoro"],

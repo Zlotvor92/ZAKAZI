@@ -5,12 +5,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
   createSalon,
+  deleteSalon as deleteSalonRow,
   isPlatformOwner,
   setSalonLogo,
   setSalonPaidUntil,
   setSalonSuspended,
 } from "@/lib/db/admin";
-import { uploadLogo } from "@/lib/db/logo";
+import { removeLogoFiles, uploadLogo } from "@/lib/db/logo";
 import { sr } from "@/lib/i18n/sr";
 import { ensureUser } from "@/lib/supabase/admin";
 import { switchTenant } from "../dashboard/actions";
@@ -159,6 +160,49 @@ export async function toggleSalon(
   }
 
   revalidatePath("/admin");
+  revalidatePath("/dashboard", "layout");
+  return { status: "idle" };
+}
+
+/**
+ * Briše salon zauvek, zajedno sa svime što mu pripada.
+ *
+ * Pravo i prekucanu potvrdu proverava `delete_tenant` u bazi — ovde se gleda
+ * samo oblik, da se u upit ne pošalje smeće.
+ */
+export async function deleteSalon(
+  tenantId: string,
+  typedSlug: string,
+): Promise<AdminState> {
+  const id = z.uuid().safeParse(tenantId);
+  const slug = z.string().trim().max(40).safeParse(typedSlug);
+
+  if (!id.success || !slug.success) {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
+  const result = await deleteSalonRow({
+    tenantId: id.data,
+    slug: slug.data.toLowerCase(),
+  });
+
+  if (!result.ok) {
+    const known = sr.admin.removeProblem;
+    return {
+      status: "error",
+      message:
+        result.reason in known
+          ? known[result.reason as keyof typeof known]
+          : sr.admin.actionFailed,
+    };
+  }
+
+  // Slike tek pošto je baza pristala. Obrnut redosled bi na odbijenom
+  // brisanju uništio logo salona koji ostaje da radi.
+  await removeLogoFiles(id.data);
+
+  revalidatePath("/admin");
+  // Vlasnica je mogla biti u tom salonu; njen izbor više ne postoji.
   revalidatePath("/dashboard", "layout");
   return { status: "idle" };
 }

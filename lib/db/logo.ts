@@ -54,3 +54,26 @@ export async function uploadLogo(input: {
 
   return { ok: true, url: data.publicUrl };
 }
+
+/**
+ * Briše sve logoe jednog salona iz skladišta.
+ *
+ * Skladište ne zna za strane ključeve, pa brisanje salona iz baze ostavlja
+ * slike za sobom. Svaka promena logoa je dodala novu datoteku pod istim
+ * prefiksom, pa ih ume biti i nekoliko.
+ */
+export async function removeLogoFiles(tenantId: string): Promise<void> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.storage
+    .from(LOGO_BUCKET)
+    .list(tenantId);
+
+  if (error || !data || data.length === 0) {
+    return;
+  }
+
+  await supabase.storage
+    .from(LOGO_BUCKET)
+    .remove(data.map((file) => `${tenantId}/${file.name}`));
+}

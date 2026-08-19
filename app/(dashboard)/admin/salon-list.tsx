@@ -9,6 +9,7 @@ import { subscriptionState } from "@/lib/domain/subscription";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import {
+  deleteSalon,
   enterSalon,
   removeLogo,
   savePaidUntil,
@@ -242,6 +243,32 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
             {sr.admin.logoRemove}
           </Button>
         ) : null}
+
+        {/* Odvojeno od ostalih dugmadi: brisanje je jedini potez ovde koji se
+            ne može poništiti. Potvrda traži prekucanu adresu salona, jer je
+            u spisku od deset redova lako promašiti red. */}
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={pending}
+          className="text-destructive hover:text-destructive ml-auto"
+          onClick={() => {
+            const typed = window.prompt(
+              sr.admin.removeConfirm.replace("{ime}", salon.name),
+            );
+
+            if (typed === null) {
+              return;
+            }
+
+            startTransition(async () => {
+              setState(await deleteSalon(salon.id, typed));
+            });
+          }}
+        >
+          {sr.admin.remove}
+        </Button>
       </div>
 
       {state.status === "error" ? (

@@ -125,6 +125,37 @@ export async function createSalon(input: {
   return createResultSchema.parse(data);
 }
 
+const deleteResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true), name: z.string() }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+export type SalonDeleteResult = z.infer<typeof deleteResultSchema>;
+
+/**
+ * Briše salon i sve što visi o njemu. Nepovratno.
+ *
+ * `slug` je prekucana potvrda; baza odbija poziv u kome se ne poklapa sa
+ * salonom koji se briše, pa promašen red u spisku ne može da prođe.
+ */
+export async function deleteSalon(input: {
+  tenantId: string;
+  slug: string;
+}): Promise<SalonDeleteResult> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("delete_tenant", {
+    p_tenant_id: input.tenantId,
+    p_slug: input.slug,
+  });
+
+  if (error) {
+    throw new Error(`Brisanje salona nije uspelo: ${error.message}`);
+  }
+
+  return deleteResultSchema.parse(data);
+}
+
 const logoResultSchema = z.discriminatedUnion("ok", [
   z.object({ ok: z.literal(true) }),
   z.object({ ok: z.literal(false), reason: z.string() }),
