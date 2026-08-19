@@ -77,6 +77,19 @@ export const sr = {
     lastBooking: "poslednje zakazivanje",
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
 
+    backup: {
+      failedTitle: "Noćna kopija baze nije uspela",
+      failedBody:
+        "Poslednji pokušaj je pao. Dok se ne popravi, nove kopije nema.",
+      /** `{sati}` se zamenjuje pre prikaza. */
+      staleTitle: "Kopije baze nema već {sati} h",
+      staleBody:
+        "Posao se nije oglasio duže nego što bi trebalo. Proveri da nije ugašen.",
+      unknownTitle: "Ne mogu da proverim kopiju baze",
+      unknownBody: "Stanje posla se trenutno ne čita. Pogledaj ručno.",
+      link: "Otvori posao",
+    },
+
     paidUntilLabel: "Plaćeno do",
     paidUntilNone: "ne naplaćuje se",
     /** `{datum}` se zamenjuje pre prikaza. */
