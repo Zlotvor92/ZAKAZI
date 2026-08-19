@@ -45,9 +45,9 @@ Mejl vlasnika je na vrhu seed fajla; promeni ga u svoj pre prvog pokretanja.
 npm run dev
 ```
 
-Otvori `http://localhost:3000`. Preusmerava na `/prijava`. Upiši mejl vlasnika;
-lokalno poruka ne odlazi na internet nego stiže u Supabase-ov sandučić na
-`http://127.0.0.1:54324`.
+Otvori `http://localhost:3000`. Tu je javna početna strana; prijava je na
+`/prijava`. Upiši mejl vlasnika; lokalno poruka ne odlazi na internet nego
+stiže u Supabase-ov sandučić na `http://127.0.0.1:54324`.
 
 Javna stranica salona iz seed-a je `http://localhost:3000/studio-milica`. Ona
 ne traži prijavu — otvori je u prozoru bez istorije da bi videla ono što vidi
@@ -119,3 +119,14 @@ promeni regiju, ovo se menja sa njom.
 U Supabase projektu, pod **Authentication → URL Configuration**, adresa sajta i
 dozvoljene adrese za povratak moraju pokazivati na objavljeni domen, inače
 Supabase odbija da pošalje link za prijavu.
+
+### Potvrda vlasništva domena kod Google-a
+
+Ruta `[tenantSlug]` hvata svaku adresu koju ne prepozna i na nju odgovara
+stranicom salona sa statusom 200. Zato fajl za potvrdu vlasništva
+(`google<token>.html`) ide u **`public/`** — odatle ga Next servira pre
+rutiranja, kao `sw.js` i ikone — a nikako u `app/`, gde bi ga dinamički
+segment progutao i vratio pogrešan sadržaj.
+
+Potvrda preko DNS zapisa (TXT) zaobilazi ovo pitanje i ne traži novu verziju
+sajta, pa je jednostavnija kad domenu ionako pristupaš.
