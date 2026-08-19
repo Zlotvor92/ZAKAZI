@@ -25,6 +25,9 @@ jobs:
   backup:
     name: Dnevna kopija
     runs-on: ubuntu-latest
+    # Bez ovoga zaglavljen korak vrti runner do šestočasovnog limita. Ceo
+    # posao traje par minuta, pa je sve preko ovoga znak da nešto ne valja.
+    timeout-minutes: 15
 
     env:
       # Javni ključ nije tajna — njime se može samo zaključati. Otključava se
@@ -35,19 +38,22 @@ jobs:
       R2_BUCKET: ${{ secrets.R2_BUCKET }}
 
     steps:
-      # Slika runnera nosi pg_dump 16, a server je 17. Stariji pg_dump odbija
-      # da čita noviji server, pa bi posao pao na prvom koraku.
-      - name: PostgreSQL klijent 17
+      # Šifrovanje ide statičkim binarnim fajlom umesto preko `apt`-a: prvi
+      # pokušaj je dovlačio PGDG repo i posao je visio jedanaest minuta bez
+      # ijednog reda ispisa, dok ga nisam prekinuo.
+      - name: Alat za šifrovanje
         run: |
-          sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
-            https://www.postgresql.org/media/keys/ACCC4CF8.asc
-          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
-            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq postgresql-client-17 age
-          pg_dump --version
+          set -euo pipefail
+          curl -fsSL --max-time 120 \
+            https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz \
+            | tar -xz -C /tmp
+          sudo install /tmp/age/age /usr/local/bin/age
+          age --version
 
+      # Runner nosi pg_dump 16, a server je 17.6 — stariji klijent odbija da
+      # čita noviji server. Zvanična slika nosi tačno 17 i povlači se sa
+      # Docker Hub-a, pa se sistemski paketi ne diraju.
+      #
       # Pooler na 6543 radi u transaction režimu, u kom pg_dump ne može da drži
       # konzistentan snimak. Session režim je na 5432, na istom hostu.
       - name: Kopija baze
@@ -55,16 +61,17 @@ jobs:
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -euo pipefail
-          pg_dump \
-            --host=aws-0-eu-central-1.pooler.supabase.com \
-            --port=5432 \
-            --username=postgres.onoaympwuewxoqtkeguz \
-            --dbname=postgres \
-            --schema=public \
-            --schema=auth \
-            --no-owner \
-            --no-privileges \
-            --quote-all-identifiers \
+          docker run --rm -e PGPASSWORD postgres:17-alpine \
+            pg_dump \
+              --host=aws-0-eu-central-1.pooler.supabase.com \
+              --port=5432 \
+              --username=postgres.onoaympwuewxoqtkeguz \
+              --dbname=postgres \
+              --schema=public \
+              --schema=auth \
+              --no-owner \
+              --no-privileges \
+              --quote-all-identifiers \
             | gzip -9 > dump.sql.gz
           echo "DUMP_BYTES=$(stat -c%s dump.sql.gz)" >> "$GITHUB_ENV"
 
@@ -74,12 +81,23 @@ jobs:
         run: |
           set -euo pipefail
           test "$DUMP_BYTES" -gt 10000 || { echo "Kopija je sumnjivo mala: $DUMP_BYTES B"; exit 1; }
+
+          # Raspakuje se u fajl, pa se traži po njemu. Kroz cev ovo ne radi:
+          # `grep -q` prestane da čita na prvom pogotku, `gzip` dobije slomljenu
+          # cev i vrati grešku, a `pipefail` onda obori red iako je pogodak
+          # nađen — provera je padala na ispravnoj kopiji.
+          gzip -dc dump.sql.gz > dump.sql
+
           for t in appointments clients tenants appointment_events; do
-            gzip -dc dump.sql.gz | grep -q "CREATE TABLE \"public\".\"$t\"" \
+            grep -q "CREATE TABLE \"public\".\"$t\"" dump.sql \
               || { echo "U kopiji nema tabele $t"; exit 1; }
           done
-          gzip -dc dump.sql.gz | tail -1 | grep -q "PostgreSQL database dump complete" \
+
+          # Poslednji red je prazan ili `--`, sam natpis stoji koji red iznad.
+          tail -5 dump.sql | grep -q "PostgreSQL database dump complete" \
             || { echo "Kopija nije zatvorena kako treba — pg_dump je prekinut"; exit 1; }
+
+          rm -f dump.sql
           echo "Kopija ima $DUMP_BYTES B i sve očekivane tabele."
 
       - name: Šifrovanje
