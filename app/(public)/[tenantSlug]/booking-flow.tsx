@@ -104,6 +104,10 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
   );
   const [date, setDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
+  // `null` znači „još nije birano" ili „svejedno mi je"; razliku nosi
+  // `staffPicked`, jer i jedno i drugo daju prazan izbor osobe.
+  const [staffId, setStaffId] = useState<string | null>(null);
+  const [staffPicked, setStaffPicked] = useState(false);
   const [state, setState] = useState<BookingState>({ status: "idle" });
   // Uputstvo se drži skriveno dok se dugme ne dodirne. Pre dodira je samo
   // buka ispod dugmeta koje treba pritisnuti; posle dodira je jedino što
@@ -130,6 +134,8 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     setService(data.services.length === 1 ? data.services[0]! : null);
     setDate(null);
     setSlot(null);
+    setStaffId(null);
+    setStaffPicked(false);
   }
 
   function onSubmit(formData: FormData) {
@@ -144,31 +150,74 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     });
   }
 
+  // Uslugu ne mora da radi svako; osoba koja je ne radi ne sme ni da se ponudi.
+  const eligibleStaff = useMemo(
+    () =>
+      service
+        ? data.staff.filter((person) =>
+            person.service_ids.includes(service.id),
+          )
+        : [],
+    [service, data.staff],
+  );
+
   // Termini zavise od usluge: duža usluga ne staje svuda gde staje kraća.
   const days: DayAvailability[] = useMemo(() => {
     if (!service) {
       return [];
     }
 
-    return buildAvailability({
-      timeZone,
-      fromDate: data.from_date,
-      toDate: data.to_date,
-      blocks: data.blocks.map((block) => ({
-        weekday: block.weekday,
-        startMinute: block.start_minute,
-        endMinute: block.end_minute,
-        slotMinutes: block.slot_minutes,
-      })),
-      busy: data.busy.map((range) => ({
-        startAt: new Date(range.start_at),
-        endAt: new Date(range.end_at),
-      })),
-      serviceMinutes: service.duration_min,
-      now: new Date(data.now),
-      minLeadMin: data.tenant.min_lead_minutes,
-    });
-  }, [service, data, timeZone]);
+    // Bez izabrane osobe termin je slobodan ako je slobodan bilo kome ko tu
+    // uslugu radi — spajaju se rasporedi, ne preseca se.
+    const forWhom = staffId
+      ? eligibleStaff.filter((person) => person.id === staffId)
+      : eligibleStaff;
+
+    const perPerson = forWhom.map((person) =>
+      buildAvailability({
+        timeZone,
+        fromDate: data.from_date,
+        toDate: data.to_date,
+        blocks: person.blocks.map((block) => ({
+          weekday: block.weekday,
+          startMinute: block.start_minute,
+          endMinute: block.end_minute,
+          slotMinutes: block.slot_minutes,
+        })),
+        busy: person.busy.map((range) => ({
+          startAt: new Date(range.start_at),
+          endAt: new Date(range.end_at),
+        })),
+        serviceMinutes: service.duration_min,
+        now: new Date(data.now),
+        minLeadMin: data.tenant.min_lead_minutes,
+      }),
+    );
+
+    if (perPerson.length <= 1) {
+      return perPerson[0] ?? [];
+    }
+
+    const byDate = new Map<string, Map<number, Slot>>();
+    for (const days of perPerson) {
+      for (const day of days) {
+        const slots = byDate.get(day.date) ?? new Map<number, Slot>();
+        for (const one of day.slots) {
+          slots.set(one.startAt.getTime(), one);
+        }
+        byDate.set(day.date, slots);
+      }
+    }
+
+    return [...byDate.entries()]
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, slots]) => ({
+        date,
+        slots: [...slots.values()].sort(
+          (a, b) => a.startAt.getTime() - b.startAt.getTime(),
+        ),
+      }));
+  }, [service, data, timeZone, staffId, eligibleStaff]);
 
   const openDays = useMemo(
     () => days.filter((day) => day.slots.length > 0),
@@ -303,6 +352,52 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     );
   }
 
+  // Osoba se bira samo kad ima između koga. Salon sa jednom osobom nikad ne
+  // vidi ovaj korak, pa mu se tok zakazivanja nije produžio ni za jedan dodir.
+  if (eligibleStaff.length > 1 && !staffPicked) {
+    return (
+      <section className="space-y-3 py-4">
+        <h2 className="text-base font-semibold">{sr.booking.chooseStaff}</h2>
+        <ul className="space-y-2">
+          {eligibleStaff.map((person) => (
+            <li key={person.id}>
+              <button
+                type="button"
+                data-testid="staff-option"
+                onClick={() => {
+                  setStaffId(person.id);
+                  setStaffPicked(true);
+                }}
+                className="border-border hover:border-primary hover:bg-accent flex min-h-16 w-full items-center rounded-xl border px-4 py-3 text-left text-sm font-medium transition-colors"
+              >
+                {person.name}
+              </button>
+            </li>
+          ))}
+          <li>
+            <button
+              type="button"
+              onClick={() => {
+                setStaffId(null);
+                setStaffPicked(true);
+              }}
+              className="border-border hover:border-primary hover:bg-accent flex min-h-16 w-full flex-col items-start justify-center rounded-xl border px-4 py-3 text-left transition-colors"
+            >
+              <span className="text-sm font-medium">{sr.booking.anyStaff}</span>
+              <span className="text-muted-foreground text-xs">
+                {sr.booking.anyStaffHint}
+              </span>
+            </button>
+          </li>
+        </ul>
+      </section>
+    );
+  }
+
+  const staffSummary =
+    eligibleStaff.find((person) => person.id === staffId)?.name ??
+    sr.booking.anyStaff;
+
   const serviceSummary = [
     service.name,
     formatDuration(service.duration_min),
@@ -321,11 +416,25 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             setService(null);
             setDate(null);
             setSlot(null);
+            setStaffId(null);
+            setStaffPicked(false);
           }}
         />
       ) : (
         <div className="py-2 text-sm font-medium">{serviceSummary}</div>
       )}
+
+      {eligibleStaff.length > 1 ? (
+        <ChosenRow
+          label={sr.booking.chooseStaff}
+          value={staffSummary}
+          onChange={() => {
+            setStaffPicked(false);
+            setDate(null);
+            setSlot(null);
+          }}
+        />
+      ) : null}
 
       {date && slot ? (
         <ChosenRow
@@ -403,6 +512,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
 
           <input type="hidden" name="slug" value={data.tenant.slug} />
           <input type="hidden" name="serviceId" value={service.id} />
+          <input type="hidden" name="staffId" value={staffId ?? ""} />
           <input type="hidden" name="startAt" value={slot} />
 
           <div className="space-y-2">

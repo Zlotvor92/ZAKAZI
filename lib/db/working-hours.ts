@@ -16,13 +16,24 @@ const rowSchema = z.object({
  */
 export async function getWorkingBlocks(
   tenantId: string,
+  staffId: string | null,
 ): Promise<WorkingBlock[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  // Salon bez ijedne osobe nema ni radnog vremena, pa upit bez filtera po
+  // osobi svejedno vraća prazno — a prazan `staff_id` bi u Postgresu bio
+  // neispravan uuid i oborio ceo ekran podešavanja.
+  const rows = supabase
     .from("working_hours")
     .select("weekday, start_time, end_time, slot_minutes")
-    .eq("tenant_id", tenantId)
+    .eq("tenant_id", tenantId);
+
+  // Dve osobe imaju dva rasporeda; bez ovog filtera bi se prikazali oba
+  // pomešana, kao da salon radi dva puta u istom danu.
+  const { data, error } = await (staffId === null
+    ? rows
+    : rows.eq("staff_id", staffId)
+  )
     .order("weekday", { ascending: true })
     .order("start_time", { ascending: true });
 
@@ -52,6 +63,7 @@ export type WorkingHoursWriteResult = z.infer<typeof writeResultSchema>;
 export async function setWorkingBlocks(
   blocks: WorkingBlock[],
   tenantId: string | null,
+  staffId: string | null,
 ): Promise<WorkingHoursWriteResult> {
   const supabase = await createClient();
 
@@ -63,6 +75,7 @@ export async function setWorkingBlocks(
       slot_minutes: block.slotMinutes,
     })),
     p_tenant_id: tenantId,
+    p_staff_id: staffId,
   });
 
   if (error) {

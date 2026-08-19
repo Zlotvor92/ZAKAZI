@@ -27,18 +27,30 @@ export const bookingDataSchema = z.object({
       price_rsd: z.number().int(),
     }),
   ),
-  blocks: z.array(
+  /**
+   * Radno vreme i zauzetost više ne stoje uz salon nego uz osobu — dve osobe
+   * imaju dva različita rasporeda. Salon sa jednom osobom dobije niz od jednog
+   * reda, pa se strana ponaša isto kao pre.
+   */
+  staff: z.array(
     z.object({
-      weekday: z.number().int(),
-      start_minute: z.number().int(),
-      end_minute: z.number().int(),
-      slot_minutes: z.number().int(),
-    }),
-  ),
-  busy: z.array(
-    z.object({
-      start_at: z.string(),
-      end_at: z.string(),
+      id: z.uuid(),
+      name: z.string(),
+      service_ids: z.array(z.uuid()),
+      blocks: z.array(
+        z.object({
+          weekday: z.number().int(),
+          start_minute: z.number().int(),
+          end_minute: z.number().int(),
+          slot_minutes: z.number().int(),
+        }),
+      ),
+      busy: z.array(
+        z.object({
+          start_at: z.string(),
+          end_at: z.string(),
+        }),
+      ),
     }),
   ),
 });
@@ -64,6 +76,7 @@ export const bookResultSchema = z.discriminatedUnion("ok", [
 
 export type PublicBookingData = z.infer<typeof bookingDataSchema>;
 export type PublicService = PublicBookingData["services"][number];
+export type PublicStaff = PublicBookingData["staff"][number];
 export type BookResult = z.infer<typeof bookResultSchema>;
 
 /** Sve što javnoj stranici treba, u jednom pozivu. `null` kad salona nema. */
@@ -95,6 +108,8 @@ export async function bookPublicAppointment(input: {
   phoneE164: string;
   deviceId: string | null;
   networkHash: string | null;
+  /** `null` znači „svejedno mi je" — bazi ostaje da nađe ko je slobodan. */
+  staffId: string | null;
 }): Promise<BookResult> {
   const supabase = await createClient();
 
@@ -106,6 +121,7 @@ export async function bookPublicAppointment(input: {
     p_phone_e164: input.phoneE164,
     p_device_id: input.deviceId,
     p_network_hash: input.networkHash,
+    p_staff_id: input.staffId,
   });
 
   if (error) {

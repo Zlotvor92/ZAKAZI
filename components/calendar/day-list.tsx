@@ -151,9 +151,11 @@ function History({
 
 function Row({
   appointment,
+  showStaff,
   timeZone,
 }: {
   appointment: DashboardAppointment;
+  showStaff: boolean;
   timeZone: string;
 }) {
   const [pending, startTransition] = useTransition();
@@ -196,6 +198,9 @@ function Row({
           </span>
           <span className="text-muted-foreground block truncate text-xs">
             {appointment.service_name}
+            {/* Ime izvođača se pojavljuje tek kad ih ima dvoje: salonu sa
+                jednom osobom to je isto ime u svakom redu. */}
+            {showStaff ? ` · ${appointment.staff_name}` : ""}
             {appointment.source === "public"
               ? ` · ${sr.dashboard.fromPublicPage}`
               : ""}
@@ -260,10 +265,12 @@ function Row({
 export function DayList({
   appointments,
   cancelled,
+  showStaff,
   timeZone,
 }: {
   appointments: DashboardAppointment[];
   cancelled: DashboardAppointment[];
+  showStaff: boolean;
   timeZone: string;
 }) {
   const [showCancelled, setShowCancelled] = useState(false);
@@ -275,6 +282,7 @@ export function DayList({
           <Row
             key={appointment.id}
             appointment={appointment}
+            showStaff={showStaff}
             timeZone={timeZone}
           />
         ))}
@@ -301,6 +309,7 @@ export function DayList({
                 <Row
                   key={appointment.id}
                   appointment={appointment}
+                  showStaff={showStaff}
                   timeZone={timeZone}
                 />
               ))}

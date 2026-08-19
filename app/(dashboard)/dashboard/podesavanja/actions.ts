@@ -15,6 +15,7 @@ import {
   updateBookingSettings,
 } from "@/lib/db/tenants";
 import { removeService, saveService } from "@/lib/db/services";
+import { removeStaff, saveStaff } from "@/lib/db/staff";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
 import { setWorkingBlocks } from "@/lib/db/working-hours";
 import { selectedTenantId } from "@/lib/tenant";
@@ -126,7 +127,14 @@ export async function saveWorkingHours(
     }
   }
 
-  const result = await setWorkingBlocks(toBlocks(week), await selectedTenantId());
+  // Koja osoba — forma nosi izbor; salon sa jednom osobom šalje prazno.
+  const staffId = z.uuid().safeParse(formData.get("staffId"));
+
+  const result = await setWorkingBlocks(
+    toBlocks(week),
+    await selectedTenantId(),
+    staffId.success ? staffId.data : null,
+  );
 
   if (!result.ok) {
     const known = sr.settings.hoursProblem;
@@ -355,12 +363,14 @@ export async function saveTimeOff(formData: FormData): Promise<SettingsState> {
           tenant.timezone,
         );
 
+  const staffId = z.uuid().safeParse(formData.get("staffId"));
   const reason = parsed.data.reason.trim();
   const result = await addTimeOff({
     startAt,
     endAt,
     reason: reason === "" ? null : reason,
     tenantId: tenant.id,
+    staffId: staffId.success ? staffId.data : null,
   });
 
   if (!result.ok) {
@@ -464,5 +474,87 @@ export async function deleteServiceEntry(id: string): Promise<SettingsState> {
 
   revalidatePath("/dashboard/podesavanja");
   revalidatePath("/dashboard/termin/novi");
+  return { status: "saved" };
+}
+
+function staffProblem(reason: string): SettingsState {
+  const known = sr.settings.staffProblem;
+
+  return {
+    status: "error",
+    message:
+      reason in known
+        ? known[reason as keyof typeof known]
+        : sr.settings.failed,
+  };
+}
+
+/**
+ * Osoba se vidi svuda gde se bira izvođač: u kalendaru, u ručnom upisu i na
+ * javnoj strani. Zato se osvežava i ona — inače se nova osoba pojavi u
+ * podešavanjima, a klijent je ne vidi dok se stranica ne izgradi ponovo.
+ */
+function revalidateStaff(slug: string): void {
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/podesavanja");
+  revalidatePath("/dashboard/termin/novi");
+  revalidatePath(`/${slug}`);
+}
+
+const staffSchema = z.object({
+  id: z.union([z.uuid(), z.literal("")]),
+  name: z.string(),
+});
+
+export async function saveStaffMember(
+  formData: FormData,
+): Promise<SettingsState> {
+  const parsed = staffSchema.safeParse({
+    id: formData.get("id") ?? "",
+    name: formData.get("name"),
+  });
+
+  if (!parsed.success) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  const tenant = await getCurrentTenant(await selectedTenantId());
+  if (!tenant) {
+    return { status: "error", message: sr.dashboard.noTenant };
+  }
+
+  const result = await saveStaff({
+    tenantId: tenant.id,
+    staffId: parsed.data.id === "" ? null : parsed.data.id,
+    name: parsed.data.name,
+  });
+
+  if (!result.ok) {
+    return staffProblem(result.reason);
+  }
+
+  revalidateStaff(tenant.slug);
+  return { status: "saved" };
+}
+
+export async function removeStaffMember(id: string): Promise<SettingsState> {
+  const parsed = z.uuid().safeParse(id);
+
+  if (!parsed.success) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  const tenant = await getCurrentTenant(await selectedTenantId());
+  if (!tenant) {
+    return { status: "error", message: sr.dashboard.noTenant };
+  }
+
+  const result = await removeStaff({ tenantId: tenant.id, staffId: parsed.data });
+
+  if (!result.ok) {
+    return staffProblem(result.reason);
+  }
+
+  revalidateStaff(tenant.slug);
   return { status: "saved" };
 }

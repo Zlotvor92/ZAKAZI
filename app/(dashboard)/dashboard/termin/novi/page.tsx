@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getActiveServices } from "@/lib/db/services";
+import { getStaff } from "@/lib/db/staff";
 import { getCurrentTenant } from "@/lib/db/tenants";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
@@ -31,7 +32,10 @@ export default async function NewAppointmentPage({ searchParams }: PageProps) {
     );
   }
 
-  const services = await getActiveServices(tenant.id);
+  const [services, staff] = await Promise.all([
+    getActiveServices(tenant.id),
+    getStaff(tenant.id),
+  ]);
 
   // Predlaže se trajanje prve usluge; vlasnica ga svejedno menja kako hoće.
   const defaultDuration = services[0]?.duration_min ?? 60;
@@ -62,6 +66,7 @@ export default async function NewAppointmentPage({ searchParams }: PageProps) {
       ) : (
         <AppointmentForm
           services={services}
+          staff={staff.filter((person) => person.active)}
           date={date}
           defaultDuration={defaultDuration}
         />

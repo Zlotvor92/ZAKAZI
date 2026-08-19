@@ -31,13 +31,18 @@ type BookingData = {
   from_date: string;
   to_date: string;
   services: { id: string; name: string; price_rsd: number }[];
-  blocks: {
-    weekday: number;
-    start_minute: number;
-    end_minute: number;
-    slot_minutes: number;
+  staff: {
+    id: string;
+    name: string;
+    service_ids: string[];
+    blocks: {
+      weekday: number;
+      start_minute: number;
+      end_minute: number;
+      slot_minutes: number;
+    }[];
+    busy: { start_at: string; end_at: string }[];
   }[];
-  busy: { start_at: string; end_at: string }[];
 };
 
 type BookResult =
@@ -294,7 +299,7 @@ describe("public_booking_data", () => {
       expect(data!.tenant.timezone).toBe("Europe/Belgrade");
       expect(data!.services).toHaveLength(1);
       expect(data!.services[0]).toMatchObject({ name: "Gel nokti" });
-      expect(data!.blocks).toEqual([
+      expect(data!.staff[0]!.blocks).toEqual([
         {
           weekday: 1,
           start_minute: 540,
@@ -336,13 +341,13 @@ describe("public_booking_data", () => {
 
       const data = await asAnon(db, async () => bookingData(db, salon.slug));
 
-      expect(data!.busy).toHaveLength(1);
-      expect(Object.keys(data!.busy[0]!).sort()).toEqual(["end_at", "start_at"]);
+      expect(data!.staff[0]!.busy).toHaveLength(1);
+      expect(Object.keys(data!.staff[0]!.busy[0]!).sort()).toEqual(["end_at", "start_at"]);
 
       // Zauzeto traje tačno koliko i termin.
       const busyMinutes =
-        (new Date(data!.busy[0]!.end_at).getTime() -
-          new Date(data!.busy[0]!.start_at).getTime()) /
+        (new Date(data!.staff[0]!.busy[0]!.end_at).getTime() -
+          new Date(data!.staff[0]!.busy[0]!.start_at).getTime()) /
         60_000;
       expect(busyMinutes).toBe(90);
     });
@@ -362,7 +367,7 @@ describe("public_booking_data", () => {
 
       const data = await asAnon(db, async () => bookingData(db, salon.slug));
 
-      expect(data!.busy).toHaveLength(1);
+      expect(data!.staff[0]!.busy).toHaveLength(1);
     });
   });
 
@@ -383,7 +388,7 @@ describe("public_booking_data", () => {
 
       const data = await asAnon(db, async () => bookingData(db, salon.slug));
 
-      expect(data!.busy).toEqual([]);
+      expect(data!.staff[0]!.busy).toEqual([]);
     });
   });
 
@@ -406,7 +411,7 @@ describe("public_booking_data", () => {
       expect(data!.services.map((service) => service.id)).not.toContain(
         theirs.serviceId,
       );
-      expect(data!.busy).toEqual([]);
+      expect(data!.staff[0]!.busy).toEqual([]);
     });
   });
 

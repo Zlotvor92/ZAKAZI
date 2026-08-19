@@ -13,6 +13,8 @@ import { networkHash } from "@/lib/network";
 const bookingSchema = z.object({
   slug: z.string().min(1),
   serviceId: z.uuid(),
+  // Prazno polje znači „svejedno mi je"; bazi ostaje da nađe ko je slobodan.
+  staffId: z.union([z.uuid(), z.literal("")]).optional(),
   startAt: z.iso.datetime({ offset: true }),
   name: z.string(),
   phone: z.string(),
@@ -45,6 +47,7 @@ export async function submitBooking(
   const parsed = bookingSchema.safeParse({
     slug: formData.get("slug"),
     serviceId: formData.get("serviceId"),
+    staffId: formData.get("staffId") ?? undefined,
     startAt: formData.get("startAt"),
     name: formData.get("name"),
     phone: formData.get("phone"),
@@ -67,6 +70,7 @@ export async function submitBooking(
   const result = await bookPublicAppointment({
     slug: parsed.data.slug,
     serviceId: parsed.data.serviceId,
+    staffId: parsed.data.staffId ? parsed.data.staffId : null,
     startAt: parsed.data.startAt,
     clientName: name,
     phoneE164: phone.e164,

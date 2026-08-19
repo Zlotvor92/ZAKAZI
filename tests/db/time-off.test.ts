@@ -173,14 +173,13 @@ describe("odsustvo zatvara javno zakazivanje", () => {
       await asUser(db, base.userId, () => add(db, start, end, "lekar"));
 
       const data = await asAnon(db, async () => {
-        const result = await db.query<{ data: { busy: unknown[] } }>(
-          "select public_booking_data($1) as data",
-          [base.slug],
-        );
+        const result = await db.query<{
+          data: { staff: { busy: unknown[] }[] };
+        }>("select public_booking_data($1) as data", [base.slug]);
         return result.rows[0]!.data;
       });
 
-      expect(data.busy).toHaveLength(1);
+      expect(data.staff[0]!.busy).toHaveLength(1);
 
       const booked = await asAnon(db, async () => {
         const result = await db.query<{ result: { ok: boolean; reason?: string } }>(

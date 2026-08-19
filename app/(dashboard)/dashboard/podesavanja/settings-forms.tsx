@@ -1,12 +1,14 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TimeSelect } from "@/components/ui/time-select";
 import type { BlockedNumber } from "@/lib/db/blocklist";
 import type { Service } from "@/lib/db/services";
+import type { Staff } from "@/lib/db/staff";
 import type { TimeOff } from "@/lib/db/time-off";
 import {
   defaultWeek,
@@ -26,6 +28,8 @@ import {
   saveBookingRules,
   saveBrand,
   saveServiceEntry,
+  saveStaffMember,
+  removeStaffMember,
   saveTimeOff,
   saveWorkingHours,
   type SettingsState,
@@ -107,7 +111,13 @@ function slotSummary(day: DayShape): string {
   );
 }
 
-export function WorkingHoursForm({ week }: { week: DayShape[] }) {
+export function WorkingHoursForm({
+  week,
+  staffId,
+}: {
+  week: DayShape[];
+  staffId: string | null;
+}) {
   const { pending, state, submit, reset } = useSettingsAction();
   const [days, setDays] = useState(week);
   const [mode, setMode] = useState<SlotMode>("minutes");
@@ -135,6 +145,10 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
       className="space-y-3"
     >
       <p className="text-muted-foreground text-xs">{sr.settings.hoursHint}</p>
+
+      {/* Čije se radno vreme čuva. Salon sa jednom osobom šalje prazno i baza
+          sama uzme jedinu koju ima. */}
+      <input type="hidden" name="staffId" value={staffId ?? ""} />
 
       {/* Oba načina upisuju isti podatak; prekidač menja samo šta se kuca. */}
       <fieldset className="flex items-center gap-2">
@@ -600,10 +614,12 @@ export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
 
 export function TimeOffSection({
   entries,
+  staffId,
   timeZone,
   today,
 }: {
   entries: TimeOff[];
+  staffId: string | null;
   timeZone: string;
   today: string;
 }) {
@@ -653,6 +669,8 @@ export function TimeOffSection({
       )}
 
       <form action={submit(saveTimeOff)} className="space-y-2">
+        <input type="hidden" name="staffId" value={staffId ?? ""} />
+
         <div className="grid grid-cols-2 gap-2">
           <label className="space-y-1">
             <span className="text-muted-foreground block text-xs">
@@ -847,6 +865,133 @@ export function ServicesSection({ services }: { services: Service[] }) {
   );
 }
 
+
+/**
+ * Ko radi u salonu.
+ *
+ * Uklonjena osoba ostaje u bazi zbog istorije termina, ali se ovde ne prikazuje
+ * — spisak je za odlučivanje ko sada radi, ne za arhivu.
+ */
+export function StaffSection({ staff }: { staff: Staff[] }) {
+  const { pending, state, submit, call, reset } = useSettingsAction();
+  const active = staff.filter((person) => person.active);
+
+  return (
+    <div className="space-y-3" onChange={reset}>
+      <p className="text-muted-foreground text-xs">{sr.settings.staffHint}</p>
+
+      {active.map((person) => (
+        <form
+          key={person.id}
+          action={submit(saveStaffMember)}
+          className="border-border flex flex-wrap items-center gap-2 rounded-lg border p-3"
+        >
+          <input type="hidden" name="id" value={person.id} />
+
+          <Input
+            name="name"
+            defaultValue={person.name}
+            maxLength={60}
+            required
+            aria-label={sr.settings.staffName}
+            className="min-w-40 flex-1"
+          />
+
+          <Button type="submit" size="sm" variant="outline" disabled={pending}>
+            {sr.settings.saveStaff}
+          </Button>
+
+          {/* Poslednja osoba nema dugme za uklanjanje: baza bi ga ionako
+              odbila, a dugme koje uvek javlja grešku je samo zamka. */}
+          {active.length > 1 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="text-destructive hover:text-destructive"
+              disabled={pending}
+              onClick={() => {
+                if (!window.confirm(sr.settings.removeStaffConfirm)) {
+                  return;
+                }
+                call(() => removeStaffMember(person.id));
+              }}
+            >
+              {sr.settings.removeStaff}
+            </Button>
+          ) : null}
+        </form>
+      ))}
+
+      {active.length < 2 ? (
+        <form
+          action={submit(saveStaffMember)}
+          className="border-border flex flex-wrap items-center gap-2 rounded-lg border border-dashed p-3"
+        >
+          <input type="hidden" name="id" value="" />
+
+          <Input
+            name="name"
+            placeholder={sr.settings.staffNamePlaceholder}
+            maxLength={60}
+            required
+            aria-label={sr.settings.staffName}
+            className="min-w-40 flex-1"
+          />
+
+          <Button type="submit" size="sm" disabled={pending}>
+            {sr.settings.addStaff}
+          </Button>
+        </form>
+      ) : null}
+
+      <Feedback state={state} />
+    </div>
+  );
+}
+
+/**
+ * Izbor čije se radno vreme, odnosno odsustva, podešavaju.
+ *
+ * Salon sa jednom osobom ne vidi ništa — nema šta da bira. Veza nosi i sidro,
+ * da posle osvežavanja strana ostane na istom mestu umesto da skoči na vrh.
+ */
+export function StaffSwitcher({
+  staff,
+  selectedId,
+  anchor,
+}: {
+  staff: Staff[];
+  selectedId: string | null;
+  anchor: string;
+}) {
+  const active = staff.filter((person) => person.active);
+
+  if (active.length < 2) {
+    return null;
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 pb-3">
+      <span className="text-muted-foreground text-xs">
+        {sr.settings.staffFor}
+      </span>
+      {active.map((person) => (
+        <Link
+          key={person.id}
+          href={`/dashboard/podesavanja?izvodjac=${person.id}#${anchor}`}
+          aria-current={person.id === selectedId ? "true" : undefined}
+          className={buttonVariants({
+            size: "sm",
+            variant: person.id === selectedId ? "default" : "outline",
+          })}
+        >
+          {person.name}
+        </Link>
+      ))}
+    </div>
+  );
+}
 
 /**
  * Adresa kalendara i uputstvo kako se zakači.

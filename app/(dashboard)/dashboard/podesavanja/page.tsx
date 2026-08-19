@@ -2,6 +2,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { PushToggle } from "@/components/dashboard/push-toggle";
 import { getBlockedNumbers } from "@/lib/db/blocklist";
+import { getStaff } from "@/lib/db/staff";
 import { getActiveServices } from "@/lib/db/services";
 import { getCurrentTenant } from "@/lib/db/tenants";
 import { getUpcomingTimeOff } from "@/lib/db/time-off";
@@ -12,6 +13,8 @@ import { sr } from "@/lib/i18n/sr";
 import { selectedTenantId } from "@/lib/tenant";
 import {
   BlockedNumbers,
+  StaffSection,
+  StaffSwitcher,
   BookingRulesForm,
   BrandForm,
   CalendarFeed,
@@ -34,21 +37,27 @@ async function publicUrl(slug: string): Promise<string> {
 }
 
 function Section({
+  id,
   title,
   children,
 }: {
+  id?: string;
   title: string;
   children: React.ReactNode;
 }) {
   return (
-    <section className="border-border border-t py-5">
+    <section id={id} className="border-border scroll-mt-4 border-t py-5">
       <h2 className="pb-3 text-base font-semibold">{title}</h2>
       {children}
     </section>
   );
 }
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ izvodjac?: string }>;
+}) {
   const tenant = await getCurrentTenant(await selectedTenantId());
 
   if (!tenant) {
@@ -69,11 +78,20 @@ export default async function SettingsPage() {
     );
   }
 
-  // Ostalo zavisi samo od salona, pa ide odjednom umesto u redu.
+  // Radno vreme i odsustva su lični, pa se prvo mora znati čiji se gledaju.
+  // Bez izbora u adresi uzima se prva osoba — salon sa jednom je nikad ni ne
+  // vidi.
+  const staff = await getStaff(tenant.id);
+  const { izvodjac } = await searchParams;
+  const selectedStaff =
+    staff.find((person) => person.id === izvodjac && person.active) ??
+    staff.find((person) => person.active) ??
+    null;
+
   const [blocks, services, timeOff, blocked] = await Promise.all([
-    getWorkingBlocks(tenant.id),
+    getWorkingBlocks(tenant.id, selectedStaff?.id ?? null),
     getActiveServices(tenant.id),
-    getUpcomingTimeOff(tenant.id),
+    getUpcomingTimeOff(tenant.id, selectedStaff?.id ?? null),
     getBlockedNumbers(tenant.id),
   ]);
 
@@ -107,8 +125,23 @@ export default async function SettingsPage() {
         <ServicesSection services={services} />
       </Section>
 
-      <Section title={sr.settings.hoursTitle}>
-        <WorkingHoursForm week={toDayShapes(blocks)} />
+      <Section title={sr.settings.staffTitle}>
+        <StaffSection staff={staff} />
+      </Section>
+
+      <Section id="radno" title={sr.settings.hoursTitle}>
+        <StaffSwitcher
+          staff={staff}
+          selectedId={selectedStaff?.id ?? null}
+          anchor="radno"
+        />
+        {/* Forma drži nedelju u svom stanju, pa promena osobe mora da je
+            postavi iznova — bez ključa bi ostalo radno vreme prethodne. */}
+        <WorkingHoursForm
+          key={selectedStaff?.id ?? "sam"}
+          week={toDayShapes(blocks)}
+          staffId={selectedStaff?.id ?? null}
+        />
       </Section>
 
       <Section title={sr.settings.rulesTitle}>
@@ -127,8 +160,14 @@ export default async function SettingsPage() {
         />
       </Section>
 
-      <Section title={sr.settings.timeOffTitle}>
+      <Section id="odsustva" title={sr.settings.timeOffTitle}>
+        <StaffSwitcher
+          staff={staff}
+          selectedId={selectedStaff?.id ?? null}
+          anchor="odsustva"
+        />
         <TimeOffSection
+          staffId={selectedStaff?.id ?? null}
           entries={timeOff}
           timeZone={tenant.timezone}
           today={currentDateInTimeZone(new Date(), tenant.timezone)}

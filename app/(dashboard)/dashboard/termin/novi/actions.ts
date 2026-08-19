@@ -18,6 +18,8 @@ const formSchema = z.object({
   durationMin: z.coerce.number().int().min(5).max(1440),
   name: z.string(),
   phone: z.string(),
+  /** Prazno kad salon ima jednu osobu — forma tada i ne pita. */
+  staffId: z.union([z.uuid(), z.literal("")]),
 });
 
 export type NewAppointmentState =
@@ -42,6 +44,7 @@ export async function saveAppointment(
     durationMin: formData.get("durationMin"),
     name: formData.get("name"),
     phone: formData.get("phone"),
+    staffId: formData.get("staffId") ?? "",
   });
 
   if (!parsed.success) {
@@ -77,6 +80,7 @@ export async function saveAppointment(
     clientName: name,
     phoneE164: phone.e164,
     deviceId: await deviceId(),
+    staffId: parsed.data.staffId === "" ? null : parsed.data.staffId,
   });
 
   if (!result.ok) {

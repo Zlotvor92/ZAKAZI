@@ -268,6 +268,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           <DayList
             appointments={ofDay}
             cancelled={cancelledOfDay}
+            showStaff={week.staff.length > 1}
             timeZone={tenant.timezone}
           />
         ) : null}

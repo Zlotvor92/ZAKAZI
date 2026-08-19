@@ -20,13 +20,22 @@ export type TimeOffWriteResult = z.infer<typeof writeResultSchema>;
 /** Odsustva koja tek dolaze. Prošla se ne prikazuju jer se ne mogu promeniti. */
 export async function getUpcomingTimeOff(
   tenantId: string,
+  staffId: string | null,
 ): Promise<TimeOff[]> {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  // Isto kao kod radnog vremena: bez ijedne osobe nema ni odsustava, a prazan
+  // `staff_id` bi bio neispravan uuid.
+  const rows = supabase
     .from("time_off")
     .select("id, start_at, end_at, reason")
-    .eq("tenant_id", tenantId)
+    .eq("tenant_id", tenantId);
+
+  // Odsustvo je lično: godišnji jedne osobe ne zatvara termine drugoj.
+  const { data, error } = await (staffId === null
+    ? rows
+    : rows.eq("staff_id", staffId)
+  )
     .gte("end_at", new Date().toISOString())
     .order("start_at", { ascending: true });
 
@@ -42,6 +51,7 @@ export async function addTimeOff(input: {
   endAt: Date;
   reason: string | null;
   tenantId: string | null;
+  staffId: string | null;
 }): Promise<TimeOffWriteResult> {
   const supabase = await createClient();
 
@@ -50,6 +60,7 @@ export async function addTimeOff(input: {
     p_end_at: input.endAt.toISOString(),
     p_reason: input.reason,
     p_tenant_id: input.tenantId,
+    p_staff_id: input.staffId,
   });
 
   if (error) {

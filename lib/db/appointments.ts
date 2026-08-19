@@ -19,6 +19,8 @@ const appointmentSchema = z.object({
   client_name: z.string(),
   client_phone: z.string(),
   service_name: z.string(),
+  staff_id: z.uuid(),
+  staff_name: z.string(),
 });
 
 export const appointmentListSchema = z.array(appointmentSchema);
@@ -60,6 +62,7 @@ export const dashboardWeekSchema = z.object({
       slot_minutes: z.number().int(),
     }),
   ),
+  staff: z.array(z.object({ id: z.uuid(), name: z.string() })),
   appointments: appointmentListSchema,
 });
 
@@ -101,6 +104,7 @@ export async function createAppointment(input: {
   clientName: string;
   phoneE164: string;
   deviceId: string;
+  staffId: string | null;
 }): Promise<AppointmentWriteResult> {
   const supabase = await createClient();
 
@@ -111,6 +115,7 @@ export async function createAppointment(input: {
     p_client_name: input.clientName,
     p_phone_e164: input.phoneE164,
     p_device_id: input.deviceId,
+    p_staff_id: input.staffId,
   });
 
   if (error) {

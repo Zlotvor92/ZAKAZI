@@ -262,6 +262,25 @@ export const sr = {
       not_found: "Ta usluga više ne postoji.",
     },
 
+    staffTitle: "Ko radi u salonu",
+    staffHint:
+      "Ako radiš sam, ovde ne moraš ništa. Druga osoba dobija svoje radno vreme i svoja odsustva, a klijent pri zakazivanju bira kod koga dolazi.",
+    staffName: "Ime",
+    staffNamePlaceholder: "Milica",
+    saveStaff: "Sačuvaj",
+    addStaff: "Dodaj osobu",
+    removeStaff: "Ukloni",
+    removeStaffConfirm:
+      "Ukloni ovu osobu? Nestaje iz izbora pri zakazivanju. Već zakazani termini i istorija ostaju.",
+    staffFor: "Čije podešavaš",
+    staffProblem: {
+      invalid_name: "Upiši ime.",
+      not_found: "Ta osoba više ne postoji.",
+      too_many: "Za sada mogu dve osobe u salonu.",
+      last_one: "Poslednja osoba ne može da se ukloni — salon bez nje ne prima termine.",
+      not_allowed: "Nemaš pravo na ovaj salon.",
+    },
+
     brandTitle: "Boje tvoje stranice",
     brandHint:
       "Boje se vide na stranici za zakazivanje koju deliš klijentima. Boju slova biramo sami, prema pozadini, da tekst uvek ostane čitljiv.",
@@ -352,6 +371,7 @@ export const sr = {
     dateLabel: "Datum",
     timeLabel: "Vreme",
     serviceLabel: "Usluga",
+    staffLabel: "Kod koga",
     durationLabel: "Termin traje (min)",
     nameLabel: "Ime klijenta",
     namePlaceholder: "Jelena Petrović",
@@ -437,6 +457,9 @@ export const sr = {
     closed: "Ovaj salon trenutno ne prima zakazivanje preko interneta.",
     noServices: "Salon još nije uneo usluge koje nudi.",
     chooseService: "Šta zakazuješ?",
+    chooseStaff: "Kod koga?",
+    anyStaff: "Svejedno mi je",
+    anyStaffHint: "Zakazujemo kod onoga ko je slobodan.",
     chooseDay: "Kog dana?",
     chooseTime: "U koliko sati?",
     yourDetails: "Ko dolazi?",

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Service } from "@/lib/db/services";
+import type { Staff } from "@/lib/db/staff";
 import { sr } from "@/lib/i18n/sr";
 import { saveAppointment, type NewAppointmentState } from "./actions";
 
@@ -12,10 +13,12 @@ const DURATIONS = [30, 45, 60, 90, 120, 150, 180, 240];
 
 export function AppointmentForm({
   services,
+  staff,
   date,
   defaultDuration,
 }: {
   services: Service[];
+  staff: Staff[];
   date: string;
   defaultDuration: number;
 }) {
@@ -82,6 +85,28 @@ export function AppointmentForm({
           ))}
         </select>
       </div>
+
+      {/* Salon sa jednom osobom ne bira ništa — baza sama uzme jedinu koju
+          ima, a jedna stavka u spisku je pitanje bez izbora. */}
+      {staff.length > 1 ? (
+        <div className="space-y-2">
+          <label htmlFor="staffId" className="text-sm font-medium">
+            {sr.newAppointment.staffLabel}
+          </label>
+          <select
+            id="staffId"
+            name="staffId"
+            required
+            className="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
+          >
+            {staff.map((person) => (
+              <option key={person.id} value={person.id}>
+                {person.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
       <div className="space-y-2">
         <label htmlFor="name" className="text-sm font-medium">
