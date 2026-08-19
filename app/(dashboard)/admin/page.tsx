@@ -2,10 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getLastBackupRun } from "@/lib/backup/status";
 import { getAdminSalons, isPlatformOwner } from "@/lib/db/admin";
+import { getErrorCountLastDay, getRecentErrors } from "@/lib/db/errors";
 import { backupState, hoursSince } from "@/lib/domain/backup-health";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
 import { BackupBanner } from "./backup-banner";
+import { ErrorBanner, ErrorLog } from "./error-log";
 import { NewSalonForm } from "./new-salon-form";
 import { SalonList } from "./salon-list";
 
@@ -21,7 +23,11 @@ export default async function AdminPage() {
   // Kopija baze nema gde drugde da se javi: posao je na GitHub-u, a jedini ko
   // treba da zna da je stao je onaj ko ovu stranu i otvara.
   const now = new Date();
-  const lastRun = await getLastBackupRun();
+  const [lastRun, errorCount, errors] = await Promise.all([
+    getLastBackupRun(),
+    getErrorCountLastDay(),
+    getRecentErrors(50),
+  ]);
 
   return (
     <main className="mx-auto min-h-dvh w-full max-w-2xl p-4">
@@ -42,6 +48,8 @@ export default async function AdminPage() {
         hours={lastRun === null ? null : hoursSince(lastRun, now)}
       />
 
+      <ErrorBanner count={errorCount} />
+
       <div className="pb-5">
         <NewSalonForm />
       </div>
@@ -52,6 +60,13 @@ export default async function AdminPage() {
         salons={salons}
         today={currentDateInTimeZone(new Date(), "Europe/Belgrade")}
       />
+
+      <section className="border-border mt-6 border-t pt-5">
+        <h2 className="pb-1 text-base font-semibold">
+          {sr.admin.errors.title}
+        </h2>
+        <ErrorLog rows={errors} />
+      </section>
     </main>
   );
 }

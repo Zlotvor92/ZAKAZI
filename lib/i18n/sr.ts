@@ -50,6 +50,13 @@ export const sr = {
     googleHint:
       "Koristi isti mejl koji ti je upisan u aplikaciju. Nalog se ovim ne pravi.",
   },
+  error: {
+    title: "Nešto je puklo",
+    body:
+      "Greška nije do tebe. Zapisana je i stiže nam odmah — pokušaj ponovo za koji trenutak.",
+    retry: "Pokušaj ponovo",
+    home: "Nazad na početnu",
+  },
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
     googleFailed:
@@ -86,6 +93,20 @@ export const sr = {
     neverBooked: "još nijedno zakazivanje",
     lastBooking: "poslednje zakazivanje",
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
+
+    errors: {
+      /** `{broj}` se zamenjuje pre prikaza. */
+      bannerTitle: "{broj} u poslednja 24 sata",
+      bannerBody: "Nešto je pucalo korisnicima. Pogledaj šta.",
+      /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
+      count: ["greška", "greške", "grešaka"],
+      title: "Poslednje greške",
+      empty: "Nijedna greška nije zabeležena. Tako i treba.",
+      show: "Prikaži",
+      hide: "Sakrij",
+      client: "pregledač",
+      server: "server",
+    },
 
     backup: {
       failedTitle: "Noćna kopija baze nije uspela",

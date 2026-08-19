@@ -66,6 +66,11 @@ describe("površina za neprijavljene", () => {
         // se prijavi, pa je token u adresi jedini dokaz — netačan vraća
         // prazan spisak, isto kao tačan token salona bez termina.
         "calendar_feed",
+        // Upis greške. Zove je i neprijavljen posetilac, jer greška na javnoj
+        // strani zakazivanja pogađa upravo njega — a greška o kojoj se ne
+        // sazna je greška koja ostaje. Ništa ne vraća i ne čita, tekst seče, i
+        // preko šezdeset upisa u minutu odbacuje.
+        "log_error",
         // Spisak termina za dati broj, na strani za otkazivanje.
         "public_appointments_for_phone",
         "public_book",
