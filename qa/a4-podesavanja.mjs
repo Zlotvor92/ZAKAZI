@@ -1,0 +1,14 @@
+import { launch, shot, auditScreen, BASE, MOBILE } from "./drive.mjs";
+import { signIn } from "./prijava.mjs";
+const { browser, ctx } = await launch(MOBILE);
+const page = await ctx.newPage();
+const say = (k, v) => console.log(`${k}: ${v}`);
+await signIn(page);
+await page.goto(`${BASE}/dashboard/podesavanja`, { waitUntil: "networkidle" });
+await page.waitForTimeout(600);
+await shot(page, "mob-13-podesavanja");
+const t = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+say("PODEŠAVANJA sekcije", (await page.locator("h2").allInnerTexts()).join(" | "));
+say("audit", JSON.stringify(await auditScreen(page)).slice(0, 900));
+say("tekst (prvih 900)", t.slice(0, 900));
+await browser.close();

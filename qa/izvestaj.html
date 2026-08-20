@@ -1,0 +1,542 @@
+<title>Revizija Doteraj Me</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --papir:#fbfcfd; --povrsina:#ffffff; --uvuceno:#f3f5f8;
+  --mastilo:#16181d; --mastilo-tiho:#5b6472; --mastilo-tise:#5f6875;
+  --ivica:#dde2e9; --ivica-jaka:#c3ccd7;
+  --pecat:#2c4a6e;
+  --kriticno:#b3261e; --kriticno-tlo:#fdf0ef;
+  --ozbiljno:#9a5600; --ozbiljno-tlo:#fdf4e8;
+  --sitno:#4a6572;   --sitno-tlo:#f1f5f7;
+  --ispravno:#1f6b47; --ispravno-tlo:#eef7f2;
+  --mera:68ch;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --papir:#131519; --povrsina:#1a1d23; --uvuceno:#22262e;
+  --mastilo:#e7eaf0; --mastilo-tiho:#a3adbb; --mastilo-tise:#98a2b0;
+  --ivica:#2c313a; --ivica-jaka:#3d444f;
+  --pecat:#8fb4de;
+  --kriticno:#ff8a80; --kriticno-tlo:#2a1a19;
+  --ozbiljno:#e8ae5e; --ozbiljno-tlo:#2a2317;
+  --sitno:#9db3c0;   --sitno-tlo:#1f252a;
+  --ispravno:#6bc99b; --ispravno-tlo:#152420;
+}}
+:root[data-theme="dark"]{
+  --papir:#131519; --povrsina:#1a1d23; --uvuceno:#22262e;
+  --mastilo:#e7eaf0; --mastilo-tiho:#a3adbb; --mastilo-tise:#98a2b0;
+  --ivica:#2c313a; --ivica-jaka:#3d444f;
+  --pecat:#8fb4de;
+  --kriticno:#ff8a80; --kriticno-tlo:#2a1a19;
+  --ozbiljno:#e8ae5e; --ozbiljno-tlo:#2a2317;
+  --sitno:#9db3c0;   --sitno-tlo:#1f252a;
+  --ispravno:#6bc99b; --ispravno-tlo:#152420;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--papir); color:var(--mastilo);
+  font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:16px; line-height:1.68; -webkit-text-size-adjust:100%;
+}
+.list{max-width:var(--mera); margin:0 auto; padding:0 20px 88px}
+@media(max-width:480px){.list{padding:0 16px 64px} body{font-size:15.5px}}
+
+/* zaglavlje */
+.zaglavlje{border-bottom:2px solid var(--mastilo); padding:44px 0 22px; margin-bottom:34px}
+.nadnaslov{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.16em;
+  text-transform:uppercase; color:var(--mastilo-tise); margin:0 0 14px}
+.zaglavlje h1{font-family:"Source Serif 4",Georgia,serif; font-weight:700;
+  font-size:clamp(2rem,7vw,2.9rem); line-height:1.08; letter-spacing:-.02em;
+  margin:0 0 14px; text-wrap:balance}
+.podnaslov{color:var(--mastilo-tiho); margin:0; font-size:.95rem}
+.meta{display:flex; flex-wrap:wrap; gap:6px 18px; margin-top:18px;
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--mastilo-tise)}
+.meta span{white-space:nowrap}
+
+/* brojevi */
+.brojevi{display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+  background:var(--ivica); border:1px solid var(--ivica); margin:26px 0 8px}
+.broj{background:var(--povrsina); padding:16px 12px; text-align:center}
+.broj b{display:block; font-family:"Source Serif 4",Georgia,serif; font-size:2rem;
+  font-weight:700; line-height:1; font-variant-numeric:tabular-nums}
+.broj span{display:block; margin-top:7px; font-size:10.5px; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--mastilo-tise); font-family:"IBM Plex Mono",monospace}
+.broj.k b{color:var(--kriticno)} .broj.o b{color:var(--ozbiljno)} .broj.i b{color:var(--ispravno)}
+
+h2{font-family:"Source Serif 4",Georgia,serif; font-weight:700;
+  font-size:clamp(1.35rem,4.4vw,1.75rem); letter-spacing:-.012em; line-height:1.2;
+  margin:56px 0 6px; padding-top:20px; border-top:1px solid var(--ivica-jaka); text-wrap:balance}
+h2:first-of-type,hr+h2{border-top:none; padding-top:0}
+hr+h2{margin-top:20px}
+h3{font-family:"Source Serif 4",Georgia,serif; font-weight:600;
+  font-size:1.16rem; line-height:1.32; margin:2px 0 14px; text-wrap:balance}
+p{margin:0 0 15px}
+ul,ol{margin:0 0 16px; padding-left:1.35em}
+li{margin-bottom:8px}
+ol.nabrajanje{padding-left:1.5em}
+ol.nabrajanje>li{margin-bottom:20px}
+strong{font-weight:600}
+a{color:var(--pecat); text-decoration:underline; text-underline-offset:2px;
+  text-decoration-thickness:1px}
+a:focus-visible,summary:focus-visible{outline:2px solid var(--pecat); outline-offset:3px}
+hr{border:none; border-top:1px solid var(--ivica); margin:40px 0}
+code{font-family:"IBM Plex Mono",monospace; font-size:.855em; background:var(--uvuceno);
+  padding:.12em .36em; border-radius:2px; word-break:break-word}
+
+/* nalaz */
+.nalaz{background:var(--povrsina); border:1px solid var(--ivica);
+  border-left:3px solid var(--ivica-jaka); border-radius:3px;
+  padding:20px 20px 6px; margin:0 0 22px}
+@media(max-width:480px){.nalaz{padding:16px 15px 4px}}
+.nalaz.kriticno{border-left-color:var(--kriticno)}
+.nalaz.ozbiljno{border-left-color:var(--ozbiljno)}
+.nalaz.sitno{border-left-color:var(--sitno)}
+.nalaz.ispravno{border-left-color:var(--ispravno)}
+.nalaz-vrh{display:flex; align-items:center; gap:9px; margin-bottom:9px; flex-wrap:wrap}
+.oznaka{font-family:"IBM Plex Mono",monospace; font-weight:500; font-size:12px;
+  letter-spacing:.05em; color:var(--mastilo-tise)}
+.chip{font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.1em;
+  text-transform:uppercase; padding:3px 8px; border-radius:2px; font-weight:500}
+.chip.kriticno{color:var(--kriticno); background:var(--kriticno-tlo)}
+.chip.ozbiljno{color:var(--ozbiljno); background:var(--ozbiljno-tlo)}
+.chip.sitno{color:var(--sitno); background:var(--sitno-tlo)}
+.chip.ispravno{color:var(--ispravno); background:var(--ispravno-tlo)}
+
+.korak{margin:0 0 13px}
+.korak-ime{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.09em;
+  text-transform:uppercase; color:var(--mastilo-tise); display:inline-block;
+  margin-right:7px; font-weight:500}
+
+/* dokaz */
+.dokaz{background:var(--uvuceno); border:1px solid var(--ivica); border-radius:3px;
+  overflow-x:auto; margin:0 0 16px; -webkit-overflow-scrolling:touch}
+.dokaz pre{margin:0; padding:13px 15px}
+.dokaz code{background:none; padding:0; font-size:12.2px; line-height:1.62;
+  white-space:pre; word-break:normal; color:var(--mastilo-tiho)}
+@media(max-width:480px){.dokaz code{font-size:11.2px}}
+
+.tabela-okvir{overflow-x:auto; margin:0 0 18px; border:1px solid var(--ivica); border-radius:3px}
+table{border-collapse:collapse; width:100%; font-size:.9rem}
+th,td{text-align:left; padding:9px 13px; border-bottom:1px solid var(--ivica);
+  vertical-align:top; font-variant-numeric:tabular-nums}
+th{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--mastilo-tise); background:var(--uvuceno); font-weight:500}
+tbody tr:last-child td{border-bottom:none}
+
+.podnozje{margin-top:44px; padding-top:20px; border-top:1px solid var(--ivica);
+  font-size:.82rem; color:var(--mastilo-tise); font-style:italic}
+@media(prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+</style>
+<div class="list">
+<header class="zaglavlje">
+  <p class="nadnaslov">QA revizija · 20. avgust 2026.</p>
+  <h1>Doteraj Me pred prodaju</h1>
+  <p class="podnaslov">Funkcionalni pregled, bezbednosna provera i proba oporavka —
+     grana <code>claude/resend-free-plan-migration-2euaf4</code>, produkcija <code>doterajme.rs</code>.</p>
+  <div class="meta">
+    <span>124 provere</span><span>49 snimaka ekrana</span>
+    <span>41 migracija</span><span>464 testa pokrenuto</span>
+  </div>
+  <div class="brojevi">
+    <div class="broj k"><b>1</b><span>kritično</span></div>
+    <div class="broj o"><b>9</b><span>ozbiljno</span></div>
+    <div class="broj i"><b>100</b><span>ispravno</span></div>
+  </div>
+</header>
+<p>Revizija grane <code>claude/resend-free-plan-migration-2euaf4</code> (commit <code>e4da592</code>, „Let a salon have a second person&quot;), produkcije <code>doterajme.rs</code>, Supabase projekta <code>onoaympwuewxoqtkeguz</code>, Vercel projekta <code>zakazi</code> i posla <code>backup.yml</code>.</p>
+<p>Ništa u proizvodu nije menjano. Ništa u produkciji nije menjano — sve interaktivno testiranje išlo je na lokalnom steku (41 migracija + <code>seed.sql</code>), produkcija je samo čitana.</p>
+<hr>
+<h2 id="presuda">Presuda</h2>
+<p><strong>Sam proizvod je spreman — okruženje u kom stoji nije.</strong> Zakazivanje, izolacija između salona i nova funkcija sa drugim izvođačem rade tačno onako kako <code>CLAUDE.md</code> traži: svaki od 24 pokušaja da se iz jednog salona dođe do tuđih podataka je odbijen, unija slobodnih termina za „Svejedno mi je&quot; ispravno završi kod one osobe koja je stvarno slobodna, i baza sama odbija duplu rezervaciju. Ali <strong>svaki <code>git push</code> na granu pravi javno dostupnu kopiju aplikacije koja radi sa produkcijskim ključem i produkcijskom bazom</strong>, a jedina rezervna kopija koja postoji, kad se vrati, <strong>ostaje bez zaštite od duple rezervacije</strong> — i posao koji je proverava to ne primeti.</p>
+<p>Ne bih puštao u prodaju sutra. Ne zbog proizvoda, nego zbog dve stavke iz odeljka „Kritično&quot; i „Ozbiljno&quot; koje se obe rešavaju za jedno popodne: zaključati Vercel preview i popraviti postupak vraćanja kopije. Posle toga — da.</p>
+<hr>
+<h2 id="kriti-no-blokira-prodaju-">Kritično (blokira prodaju)</h2>
+<section class="nalaz kriticno" id="K1"><div class="nalaz-vrh"><span class="oznaka">K1</span><span class="chip kriticno">Kritično</span></div><h3>Svaki preview na Vercelu je javan i radi sa produkcijskom bazom</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Pročitao podešavanja Vercel projekta <code>zakazi</code> i pokušao da otvorim poslednju preview isporuku bez ikakve prijave.</p><p class="korak"><span class="korak-ime">Šta sam očekivao</span> Da je preview zaključan (Deployment Protection), ili bar da ne nosi produkcijske ključeve.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> Preview je otvoren svakome ko zna adresu, i radi sa istim ključevima kao produkcija.</p><p class="korak"><span class="korak-ime">Dokaz</span> </p><div class="dokaz"><pre><code>$ curl -o /dev/null -w &quot;%{http_code}&quot; https://zakazi-4r59ru4b9-zlotvor93.vercel.app/prijava
+200
+
+Vercel projekat &quot;zakazi&quot;:
+  ssoProtection:       None          ← zaštita isporuka je isključena
+  passwordProtection:  None
+  trustedIps:          None
+
+Promenljive okruženja — 6 stavki, svaka JEDNA vrednost za oba okruženja:
+  SUPABASE_SERVICE_ROLE_KEY      target=production,preview   (1 stavka za taj ključ)
+  VAPID_PRIVATE_KEY              target=production,preview   (1 stavka za taj ključ)
+  NEXT_PUBLIC_SUPABASE_URL       target=production,preview   (1 stavka za taj ključ)
+  …</code></pre></div><p>Jedna stavka po ključu znači da preview i produkcija dele <strong>istu vrednost</strong> — da preview gleda u drugu bazu, postojale bi dve odvojene stavke sa različitim vrednostima.</p><p>Uz to, Supabase Auth izričito pušta prijavu sa tih adresa:</p><div class="dokaz"><pre><code>uri_allow_list = https://doterajme.rs/auth/callback, https://www.doterajme.rs/auth/callback,
+                 https://zakazi-zlotvor93.vercel.app/**,
+                 https://zakazi-*-zlotvor93.vercel.app, https://zakazi-*-zlotvor93.vercel.app/**</code></pre></div><p>Znači magična veza poslata sa preview adrese <strong>prolazi do kraja</strong> i daje sesiju nad produkcijskim podacima.</p><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Kritično. Ključ koji zaobilazi RLS ne stiže u pregledač — to sam proverio i čist je (vidi P8) — ali preview je potpuno funkcionalna kopija aplikacije spojena na prave klijentkinje i prave brojeve telefona, dostupna svakom ko ima link. Preview adrese završavaju u komentarima na PR-ovima, a repo je javan (K1 se time množi sa O6). Sestrinski projekat <code>sub-19</code> na istom nalogu <strong>ima</strong> uključenu zaštitu (<code>ssoProtection: all_except_custom_domains</code>), pa ovo nije nepoznanica nego propust.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> </p><ol><li>Vercel → Project <code>zakazi</code> → Settings → Deployment Protection → <strong>Vercel Authentication: Standard Protection</strong> (isto što već stoji na <code>sub-19</code>). Jedan prekidač.</li><li>Skloni <code>SUPABASE_SERVICE_ROLE_KEY</code> i <code>VAPID_PRIVATE_KEY</code> sa <code>preview</code> okruženja — ostavi ih samo na <code>production</code>. Preview onda ne može da radi ono što traži te ključeve, što je i poenta.</li><li>Iz <code>uri_allow_list</code> u Supabase-u izbaci tri stavke sa <code>zakazi-*…vercel.app</code>. Kad je preview zaključan iza Vercel prijave, ne treba mu ni prijava u aplikaciju.</li><li>Ako preview ikad treba da bude upotrebljiv, napravi zaseban Supabase projekat za njega i dodaj <strong>odvojene</strong> stavke promenljivih sa <code>target=preview</code>.</li></ol></section>
+<hr>
+<h2 id="ozbiljno-popraviti-pre-ireg-pu-tanja-">Ozbiljno (popraviti pre šireg puštanja)</h2>
+<section class="nalaz ozbiljno" id="O1"><div class="nalaz-vrh"><span class="oznaka">O1</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Vraćena rezervna kopija ostaje bez zaštite od duple rezervacije</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Ponovio <code>pg_dump</code> sa tačno istim zastavicama kao <code>backup.yml</code>, pa ga vratio u prazan <code>postgres:17-alpine</code>, i drugi put u kontejner u kom sam prethodno napravio role kakve pravi Supabase (<code>anon</code>, <code>authenticated</code>, <code>service_role</code>…) — to je stvarno odredište oporavka.</p><p class="korak"><span class="korak-ime">Šta sam očekivao</span> Da vraćena baza ima sve što i original: podatke, politike, ograničenja, indekse, funkcije.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> Podaci, politike, indeksi i funkcije se vrate. <strong>Oba <code>exclude using gist</code> ograničenja se ne vrate</strong>, jer dump ne nosi <code>create extension btree_gist</code>.</p><p class="korak"><span class="korak-ime">Dokaz</span> </p><div class="dokaz"><pre><code>$ pg_dump --schema=public --schema=auth --no-owner --no-privileges --quote-all-identifiers
+  CREATE TABLE                 39
+  CREATE POLICY                39
+  CREATE INDEX                 64
+  ADD CONSTRAINT              105
+  EXCLUDE USING                 2      ← ograničenja JESU u fajlu
+  CREATE EXTENSION              0      ← ali proširenje koje im treba NIJE
+
+$ psql &lt; dump.sql        (u odredište sa Supabase rolama)
+  2 × ERROR:  data type uuid has no default operator class for access method &quot;gist&quot;
+
+                      original   vraćeno
+  tabela                    16        16
+  RLS politika              39        39
+  EXCLUDE ograničenja        2         0     ← appointments_no_overlap i
+  btree_gist                 1         0        working_hours_no_overlap NESTALI</code></pre></div><p><code>CLAUDE.md</code>, nepregovarljivo pravilo br. 3: „Dupla rezervacija se sprečava u bazi.&quot; U vraćenoj bazi se ne sprečava nigde. Aplikacija bi radila i tiho primala dva termina na isti sat kod iste osobe.</p><p>Gore od toga: <strong>posao to ne primeti.</strong> Korak „Proba vraćanja&quot; broji samo redove, prijavi 44 reda grešaka i nastavi:</p><div class="dokaz"><pre><code>Prijava pri uvozu: 44 redova.
+  tenants: 3 ✓        appointments: 26 ✓      services: 16 ✓
+  clients: 11 ✓       appointment_events: 50 ✓ working_hours: 19 ✓
+Vraćanje provereno: svaki red iz kopije je u bazi.</code></pre></div><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno. Ne gubi podatke i ne otvara ih — ali ruši jedinu garanciju zbog koje se ovaj proizvod kupuje, i to tiho, tačno u trenutku kad je salon najranjiviji.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> U koraku „Proba vraćanja&quot;, pre <code>psql &lt; dump.sql</code>, dodaj:</p><div class="dokaz"><pre><code>docker exec proba psql -U postgres -d postgres -c &#x27;create extension if not exists btree_gist;&#x27;</code></pre></div><p>pa uz brojanje redova dodaj i proveru da se sve vratilo:</p><div class="dokaz"><pre><code>for par in &quot;pg_constraint|contype=&#x27;x&#x27;|2&quot; &quot;pg_policy|true|39&quot;; do … done
+# konkretno: broj EXCLUDE ograničenja i broj politika mora da se poklopi sa originalom,
+# inače posao pada — isto kao što već pada kad se redovi ne poklope.</code></pre></div><p>U pisanom postupku oporavka (O3) prvi korak posle pravljenja projekta mora biti <code>supabase db push</code> (sve migracije), pa tek onda uvoz <strong>samo podataka</strong>.</p></section>
+<section class="nalaz ozbiljno" id="O2"><div class="nalaz-vrh"><span class="oznaka">O2</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Vraćena baza nema nijedno pravo — aplikacija nad njom ne radi</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Isto vraćanje kao u O1, pa proverio šta <code>anon</code> i <code>authenticated</code> smeju.</p><p class="korak"><span class="korak-ime">Šta sam očekivao</span> Da se prava vrate zajedno sa šemom.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> <code>--no-privileges</code> izbaci baš sve <code>grant</code> i <code>revoke</code> naredbe.</p><p class="korak"><span class="korak-ime">Dokaz</span> </p><div class="dokaz"><pre><code>$ grep -c &#x27;^GRANT&#x27;  dump.sql   →  0
+$ grep -c &#x27;^REVOKE&#x27; dump.sql   →  0
+
+Broj funkcija koje anon sme da zove (od 24 proverene):
+  original:  0
+  vraćeno:  24     ← uključujući delete_tenant, create_tenant, set_tenant_suspended</code></pre></div><p><strong>Dobra vest:</strong> proverio sam da li se to može zloupotrebiti — <strong>ne može.</strong> Sve puca zatvoreno, jer <code>is_platform_owner()</code> za <code>anon</code> vraća <code>false</code>, a tabelarnih prava nema uopšte:</p><div class="dokaz"><pre><code>admin_salons() kao ANON            →  0 salona
+create_tenant() kao ANON           →  {&quot;ok&quot;: false, &quot;reason&quot;: &quot;not_allowed&quot;}
+delete_tenant() kao ANON           →  ERROR: permission denied for table tenants
+select from clients kao ANON       →  ERROR: permission denied for table clients</code></pre></div><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno, ali kao problem <strong>oporavka</strong>, ne bezbednosti. Posle vraćanja aplikacija je mrtva dok se cela dozvolna ravan ne odsvira ponovo. Ako se to otkrije tek na dan kvara, „oporavak za pola sata&quot; postaje ceo dan.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> Isti kao O1: oporavak ide kroz <code>supabase db push</code> pa uvoz podataka. Ako se zadržava vraćanje celog dumpa, izbaci <code>--no-privileges</code> i dodaj <code>--no-owner</code> sam (prava se onda vrate, vlasništvo ne).</p></section>
+<section class="nalaz ozbiljno" id="O3"><div class="nalaz-vrh"><span class="oznaka">O3</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Jedina kopija je ona iz GitHub Actions — Supabase je na besplatnom planu</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Pitao Supabase Management API za stanje kopija i plan organizacije.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> </p><div class="dokaz"><pre><code>GET /projects/onoaympwuewxoqtkeguz/database/backups
+  {&quot;region&quot;:&quot;eu-central-1&quot;,&quot;pitr_enabled&quot;:false,&quot;walg_enabled&quot;:true,&quot;backups&quot;:[],…}
+
+GET /organizations/navyiymdkipskyssdhip
+  {&quot;name&quot;:&quot;Sub-19&quot;,&quot;plan&quot;:&quot;free&quot;}</code></pre></div><p><code>pitr_enabled: false</code>, <code>backups: []</code>, plan <code>free</code>. Na besplatnom planu Supabase ne daje kopiju koju možeš da vratiš, a Point-in-Time Recovery ne postoji ni kao opcija.</p><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno. Najgori slučaj gubitka je <strong>do 24 sata rada</strong> — a to je ceo dan zakazivanja koji salon nema gde da pročita, jer je sveska odavno bačena. Besplatan plan uz to pauzira neaktivne projekte; treći projekat na istom nalogu (<code>Sub19</code>) je već <code>INACTIVE</code>.</p><p>Dobra vest: posao <strong>jeste</strong> dvostruk. R2 nije preskočen, korak je stvarno prošao:</p><div class="dokaz"><pre><code>Slanje na Cloudflare R2   status: completed, conclusion: success
+upload: ./zakazi-2026-08-20.sql.gz.age to s3://***/zakazi-2026-08-20.sql.gz.age
+Slanje u privatni repo    status: completed, conclusion: success</code></pre></div><p class="korak"><span class="korak-ime">Predlog popravke</span> Pre prvog plaćenog korisnika: Supabase Pro (25 $/mes) uključuje dnevne kopije, a PITR je dodatnih 100 $/mes za 7 dana. Ako je 100 $ previše na početku, Pro sam po sebi svodi gubitak sa 24 h na ono što daju njihove dnevne kopije, i sklanja rizik da se projekat pauzira. Do tada, u <code>backup.yml</code> promeni <code>cron</code> na dva puta dnevno (<code>20 1,13 <em> </em> *</code>) — gubitak pada sa 24 h na 12 h besplatno.</p></section>
+<section class="nalaz ozbiljno" id="O4"><div class="nalaz-vrh"><span class="oznaka">O4</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Nijedno bezbednosno zaglavlje nije postavljeno</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> <code>curl -sI https://doterajme.rs</code> i isto nad <code>/dashboard</code>, <code>/prijava</code>, <code>/studio-milica</code>.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> <code>next.config.ts</code> je prazan, pa stiže samo ono što Vercel doda sam.</p><p class="korak"><span class="korak-ime">Dokaz</span> </p><div class="dokaz"><pre><code>$ curl -sI https://doterajme.rs | sort
+  strict-transport-security: max-age=63072000      ← jedino što postoji (Vercel)
+  access-control-allow-origin: *
+  cache-control: public, max-age=0, must-revalidate
+  …</code></pre></div><p>Nedostaju: <code>Content-Security-Policy</code>, <code>X-Frame-Options</code> / <code>frame-ancestors</code>, <code>X-Content-Type-Options</code>, <code>Referrer-Policy</code>, <code>Permissions-Policy</code>.</p><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno. Najkonkretnije: bez <code>frame-ancestors</code> bilo ko sme da uglavi <code>doterajme.rs</code> u svoj <code>&lt;iframe&gt;</code> i preko njega navede korisnicu da otkaže termin ili obriše uslugu (clickjacking). Ostalo je dubinska odbrana.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> U <code>next.config.ts</code>:</p><div class="dokaz"><pre><code>const nextConfig: NextConfig = {
+  async headers() {
+    return [{
+      source: &quot;/:path*&quot;,
+      headers: [
+        { key: &quot;X-Frame-Options&quot;, value: &quot;DENY&quot; },
+        { key: &quot;X-Content-Type-Options&quot;, value: &quot;nosniff&quot; },
+        { key: &quot;Referrer-Policy&quot;, value: &quot;strict-origin-when-cross-origin&quot; },
+        { key: &quot;Permissions-Policy&quot;, value: &quot;camera=(), microphone=(), geolocation=(), payment=()&quot; },
+        { key: &quot;Strict-Transport-Security&quot;, value: &quot;max-age=63072000; includeSubDomains; preload&quot; },
+      ],
+    }];
+  },
+};</code></pre></div><p><strong>Šta može da pukne kad se doda:</strong> ova četiri ne diraju ništa u aplikaciji — nema <code>&lt;iframe&gt;</code>-a, nema kamere ni geolokacije. <code>includeSubDomains</code> je jedina stavka koja traži pažnju: veže <strong>sve</strong> poddomene na HTTPS, uključujući <code>send.doterajme.rs</code> koji koristi Resend; proveri da tamo ništa ne ide preko HTTP-a pre nego što dodaš <code>preload</code>.</p><p>CSP ostavi za posebnu izmenu: Next.js sa <code>--turbopack</code> ubacuje inline <code>&lt;script&gt;</code>, pa CSP traži <code>nonce</code> kroz middleware. Uradi je zasebno, prvo u <code>Content-Security-Policy-Report-Only</code>.</p></section>
+<section class="nalaz ozbiljno" id="O5"><div class="nalaz-vrh"><span class="oznaka">O5</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Kad baza ne odgovara, klijent gleda belu stranu 45 sekundi</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Zaustavio PostgREST kontejner i u čistom pregledaču otvorio javnu stranu salona.</p><p class="korak"><span class="korak-ime">Šta sam očekivao</span> <code>app/error.tsx</code> — srpski tekst, dugme „Pokušaj ponovo&quot;, put nazad.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> </p><div class="dokaz"><pre><code>goto pukao posle 45.0 s: page.goto: Timeout 45000ms exceeded
+vreme do ekrana: 72.8 s
+ŠTA KORISNIK VIDI: (PRAZNA BELA STRANA)
+srpski tekst? NE
+
+$ curl http://localhost:3000/studio-milica
+curl: (28) Operation timed out after 30002 ms with 0 bytes received</code></pre></div><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno. <code>app/error.tsx</code> je dobro napisan i tačno predviđa ovaj scenario u svom komentaru — ali se nikad ne prikaže, jer server komponenta <strong>visi</strong> umesto da pukne. Nijedan poziv u <code>lib/db/</code> nema rok. Ista lekcija je već naučena u <code>prijava/actions.ts</code> (<code>SEND_TIMEOUT_MS = 8_000</code>, uz komentar da poziv koji visi „sruši celu stranu&quot;), samo nije primenjena na pristup podacima.</p><p><strong>Ograda:</strong> simulirao sam kvar gašenjem PostgREST-a, pa Kong drži vezu otvorenom. Pravi Supabase ispad bi verovatno brže vratio 5xx. Ali odsustvo roka je činjenica iz koda, ne pretpostavka.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> Jedan omotač u <code>lib/db/</code>, po uzoru na onaj koji već postoji u prijavi:</p><div class="dokaz"><pre><code>const DB_TIMEOUT_MS = 8_000;
+function withTimeout&lt;T&gt;(work: PromiseLike&lt;T&gt;): Promise&lt;T&gt; { … }</code></pre></div><p>pa ga provuci kroz svaki <code>supabase.rpc(...)</code> poziv. Kad istekne — baci grešku, i <code>app/error.tsx</code> konačno dobije priliku da se pokaže.</p></section>
+<section class="nalaz ozbiljno" id="O6"><div class="nalaz-vrh"><span class="oznaka">O6</span><span class="chip ozbiljno">Ozbiljno</span></div><h3><code>main</code> nije zaštićen, repo je javan, a migracije se primenjuju same</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Proverio vidljivost repoa i zaštitu grane.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> </p><div class="dokaz"><pre><code>GET /repos/Zlotvor92/ZAKAZI        →  &quot;private&quot;: false, &quot;visibility&quot;: &quot;public&quot;
+GET /repos/Zlotvor92/ZAKAZI/rulesets  →  []           (nema nijednog pravila)
+list_branches                      →  main, &quot;protected&quot;: false</code></pre></div><p>Uz to, iz <code>README.md</code>: Supabase-ova GitHub integracija prati <code>main</code> i <strong>na svaki push sama primeni sve migracije</strong> na produkcijsku bazu, za tridesetak sekundi.</p><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno. Jedan pogrešan push na <code>main</code> stiže do produkcijske baze pre nego što iko stigne da pogleda CI. Nema PR-a, nema provere, nema koraka unazad. Za projekat sa jednim autorom to je podnošljivo dok se ne omakne — a pravilo iz <code>README.md</code> („migracije pišu se tako da stara verzija koda preživi novu bazu&quot;) je jedina brava, i ona je u glavi, ne u alatu.</p><p><strong>Dobra vest:</strong> pretražio sam celu istoriju (51 commit) — <strong>nijedna tajna nikad nije commit-ovana.</strong> Svi pogoci su imena tajni u komentarima i <code>${{ secrets.X }}</code> izrazima:</p><div class="dokaz"><pre><code>AGE-SECRET-KEY-        commitova: 0
+eyJhbGciOiJIUzI1NiI    commitova: 0
+SUPABASE_SERVICE_ROLE_KEY=  commitova: 0</code></pre></div><p><code>.gitignore</code> ispravno isključuje <code>.env*</code> uz izuzetak <code>.env.example</code>.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> GitHub → Settings → Rules → New ruleset za <code>main</code>: „Require a pull request before merging&quot; + „Require status checks to pass&quot; (posao <code>Provere</code> i <code>Baza</code>). Sam sebi i dalje možeš da odobriš PR, ali migracija više ne može da sklizne na produkciju mimo zelenog CI-ja.</p></section>
+<section class="nalaz ozbiljno" id="O7"><div class="nalaz-vrh"><span class="oznaka">O7</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Baza je otvorena ka celom internetu</h3>
+<p class="korak"><span class="korak-ime">Dokaz</span> </p><div class="dokaz"><pre><code>GET /projects/onoaympwuewxoqtkeguz/network-restrictions
+  {&quot;entitlement&quot;:&quot;allowed&quot;,
+   &quot;config&quot;:{&quot;dbAllowedCidrs&quot;:[&quot;0.0.0.0/0&quot;],&quot;dbAllowedCidrsV6&quot;:[&quot;::/0&quot;]},
+   &quot;status&quot;:&quot;applied&quot;}</code></pre></div><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno, ali ublaženo. <code>entitlement: allowed</code> znači da se ograničenje <strong>može</strong> uključiti. Praktični rizik je pogađanje lozinke <code>postgres</code> role, jer <code>anon</code> nema nijedno pravo nad tabelama (vidi P2). Ipak, <code>SUPABASE_DB_PASSWORD</code> je jedina stvar između interneta i cele baze.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> Baza se direktno dodiruje samo iz posla za kopiju. Suzi <code>dbAllowedCidrs</code> na opsege GitHub Actions runnera (<code>https://api.github.com/meta</code>, polje <code>actions</code>), ili — jednostavnije — ostavi otvoreno ali uključi obaveznu MFA na Supabase nalogu i rotiraj lozinku baze. Aplikacija ide preko PostgREST-a i ovo ne dodiruje.</p></section>
+<section class="nalaz ozbiljno" id="O8"><div class="nalaz-vrh"><span class="oznaka">O8</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Salon koji izabere svoje boje ume da dobije nečitljiv tekst</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Postavio šest kombinacija boja salona i <strong>izmerio stvarni WCAG odnos kontrasta u pregledaču</strong>, na 390×844, preko <code>canvas</code>-a (da se <code>oklch()</code> ispravno razreši).</p><p class="korak"><span class="korak-ime">Šta se desilo</span> </p><div class="dokaz"><pre><code>pozadina                       elemenata ispod AA   najgori odnos
+#ffffff  vrlo svetla                    5              4.48
+#999999  srednji ton                   14              1.85   ✗
+#777777  srednji ton                   13              2.49   ✗
+#b8860b  zlatna                        13              1.98   ✗
+#111111  vrlo tamna                     0              —      ✓
+#ffd1dc  pastelno roze                  5              4.09</code></pre></div><p>Na <code>#999999</code>: „Studio Milica&quot; 2.66, „Šta zakazuješ?&quot; 2.66, „Gel nokti&quot; 2.66, „1 h 30 min&quot; 1.85.</p><p class="korak"><span class="korak-ime">Uzrok</span> <code>lib/domain/brand.ts:30</code> — <code>isDark()</code> koristi prag luminanse <strong>0.35</strong>. Pozadine tik ispod tog praga dobiju svetao tekst <code>#f7f7f7</code>, koji na srednjem tonu ne vredi ništa. Na <code>#999999</code> bi taman tekst dao <strong>6.64</strong> umesto 2.66 — dakle boja nije problem, izbor je.</p><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno za salone koji koriste boje (a to je razlog zbog kog se prelazi na viši plan). Podrazumevana tema je <strong>čista</strong> — izmerio sam tri strane, nula elemenata ispod AA. Pogađa samo one koji su boje postavili.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> U <code>lib/domain/brand.ts</code>, ne birati po pragu nego po tome šta stvarno daje bolji kontrast, i sa čistim belim/crnim da presek nikad ne padne ispod 4.5:</p><div class="dokaz"><pre><code>function contrast(a: string, b: string): number { /* (L1+0.05)/(L2+0.05) */ }
+
+function foregroundFor(background: string): string {
+  return contrast(background, &quot;#ffffff&quot;) &gt;= contrast(background, &quot;#000000&quot;)
+    ? &quot;#ffffff&quot;
+    : &quot;#000000&quot;;
+}</code></pre></div><p>Uz to podigni <code>--muted-foreground</code> sa <code>58%</code> na <code>72%</code> — to je zaseban nalac, vidi S2.</p></section>
+<section class="nalaz ozbiljno" id="O9"><div class="nalaz-vrh"><span class="oznaka">O9</span><span class="chip ozbiljno">Ozbiljno</span></div><h3>Test <code>subscription-expiry</code> pada dvanaest sati svakog dana</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Pokrenuo <code>npm run test:db</code>.</p><p class="korak"><span class="korak-ime">Šta se desilo</span> 316 od 317 prošlo; pao jedan.</p><div class="dokaz"><pre><code>FAIL tests/db/subscription-expiry.test.ts &gt; računanje isteka &gt; dan se meri po salonu, ne po serveru
+AssertionError: expected true to be false</code></pre></div><p class="korak"><span class="korak-ime">Uzrok</span> Test pretpostavlja da je datum na Kiritimatiju (UTC+14) <strong>uvek</strong> ispred beogradskog. To važi samo dok je UTC sat između 10 i 22:</p><div class="dokaz"><pre><code> UTC | Kiritimati | Beograd    | ishod
+   0 | 2026-08-20 | 2026-08-20 | test PADA
+   …
+   9 | 2026-08-20 | 2026-08-20 | test PADA
+  10 | 2026-08-21 | 2026-08-20 | test PROLAZI
+   …
+  21 | 2026-08-21 | 2026-08-20 | test PROLAZI
+  22 | 2026-08-21 | 2026-08-21 | test PADA
+  23 | 2026-08-21 | 2026-08-21 | test PADA</code></pre></div><p><strong>Sama funkcija je ispravna</strong> — proverio sam <code>subscription_expired</code> u bazi, meri dan po tajmzoni salona kako i treba. Greška je isključivo u testu.</p><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Ozbiljno kao proces, ne kao proizvod. CI je crven od 22:00 do 10:00 UTC — to je od ponoći do podne po Beogradu, tačno kad se radi na ovome. Crven CI koji se ignoriše prestaje da bude alarm, a <code>main</code> nema zaštitu (O6) pa je CI ionako jedina provera koja postoji.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> Zameniti „sad&quot; fiksnim trenutkom, da test ne zavisi od sata:</p><div class="dokaz"><pre><code>-- umesto now(): trenutak u kom Kiritimati i Beograd sigurno nisu isti dan
+select subscription_expired(&#x27;2026-08-20&#x27;::date, &#x27;Pacific/Kiritimati&#x27;) as ostrvo,
+       subscription_expired(&#x27;2026-08-20&#x27;::date, &#x27;Europe/Belgrade&#x27;)    as beograd
+-- uz set local &quot;time zone&quot; ili zamrznut now() kroz pg_catalog</code></pre></div></section>
+<hr>
+<h2 id="sitno-kozmetika-i-udobnost-">Sitno (kozmetika i udobnost)</h2>
+<section class="nalaz sitno" id="S1"><div class="nalaz-vrh"><span class="oznaka">S1</span><span class="chip sitno">Sitno</span></div><h3>56 meta za dodir je manje od 44×44 px — sve na ekranima vlasnice</h3>
+<p class="korak"><span class="korak-ime">Šta sam radio</span> Prošao svih 9 ekrana na 390×844 sa <code>deviceScaleFactor: 3</code> i izmerio svaku metu (<code>button</code>, <code>a</code>, <code>input</code>, <code>select</code>).</p><div class="dokaz"><pre><code>ekrana pregledano: 9 | sa vodoravnim prelivom: 0 | ukupno meta ispod 44px: 56
+
+  /dashboard/podesavanja   30      /dashboard              6
+  /admin                   15      /  (prodajna)            1
+  /studio-milica            0  ✓   /studio-milica/otkazi    0  ✓
+  /dashboard/termin/novi    0  ✓
+
+najčešće:
+   9× input[checkbox]  20×20     ← „Radim&quot; po danu u nedelji
+   5× button[submit]   78×36     ← „Sačuvaj&quot;
+   5× button[button]   66×36     ← „Ukloni&quot;
+   3× input[date]     165×36</code></pre></div><p class="korak"><span class="korak-ime">Koliko je ozbiljno</span> Sitno, ali uporno. <strong>Tok zakazivanja — onaj koji donosi novac — je čist: nula premalih meta, nula preliva.</strong> Problem je na ekranima vlasnice, najgore u podešavanjima, gde je 20×20 kvačica „Radim&quot; glavna kontrola za unos radnog vremena, na telefonu, prstom.</p><p>Nisam brojao inline veze u tekstu (mejl adrese u politici privatnosti, 18 px) — WCAG ih izuzima kad stoje unutar rečenice, i to je ovde slučaj.</p><p class="korak"><span class="korak-ime">Predlog popravke</span> Visina <code>36</code> dolazi iz <code>size=&quot;sm&quot;</code> varijante u <code>components/ui/button.tsx</code>. Na dodirnim ekranima podigni na <code>min-h-11</code> (44 px), a kvačicama dodaj <code>size-6</code> uz <code>p-2</code> na omotaču — meta postaje 44 px iako kvadratić ostaje mali.</p></section>
+<section class="nalaz sitno" id="S2"><div class="nalaz-vrh"><span class="oznaka">S2</span><span class="chip sitno">Sitno</span></div><h3>Prigušen tekst od 12 px pada ispod AA na svakoj svetloj pozadini salona</h3>
+<p>Iz istog merenja kao O8: <code>--muted-foreground</code> je <code>color-mix(in srgb, foreground 58%, background)</code>, što daje 4.48 na beloj i 4.09 na pastelno roze — oboje ispod 4.5. Pogađa trajanja („1 h 30 min&quot;), veze u podnožju i napomene ispod polja. <strong>Podrazumevana tema ovo nema</strong> — tamo je <code>oklch(0.556 0 0)</code> i prolazi.</p><p><strong>Predlog.</strong> <code>58%</code> → <code>72%</code> u <code>lib/domain/brand.ts:65</code>.</p></section>
+<section class="nalaz sitno" id="S3"><div class="nalaz-vrh"><span class="oznaka">S3</span><span class="chip sitno">Sitno</span></div><h3><code>/favicon.ico</code> vraća 404 i uz njega celu stranu „nema salona&quot;</h3>
+<div class="dokaz"><pre><code>$ curl -o /dev/null -w &quot;%{http_code} %{size_download}&quot; http://localhost:3000/favicon.ico
+404 29172</code></pre></div><p><code>[tenantSlug]</code> hvata <code>/favicon.ico</code>, pa svaki pregledač koji ga zatraži dobije 29 KB HTML-a umesto ikone. Vidi se i u dnevniku (<code>GET /favicon.ico 404 in 165ms</code>) i kao jedina konzolna greška na javnim stranama. <strong>Predlog:</strong> stavi <code>favicon.ico</code> u <code>public/</code> — tamo se razrešava pre rutiranja, isto kao <code>sw.js</code> i ostale ikone (README to već objašnjava).</p></section>
+<section class="nalaz sitno" id="S4"><div class="nalaz-vrh"><span class="oznaka">S4</span><span class="chip sitno">Sitno</span></div><h3><code>lucide-react</code> se ne koristi nigde, a nosi 41 MB</h3>
+<div class="dokaz"><pre><code>lucide-react: 0 uvoza          41M  node_modules/lucide-react</code></pre></div><p><strong>Predlog:</strong> <code>npm uninstall lucide-react</code>. (Proverio sam i <code>date-fns</code> — <strong>nije</strong> višak: <code>date-fns-tz</code> ga traži kao peer zavisnost <code>^3.0.0 || ^4.0.0</code>, pa je ispravno naveden.)</p></section>
+<section class="nalaz sitno" id="S5"><div class="nalaz-vrh"><span class="oznaka">S5</span><span class="chip sitno">Sitno</span></div><h3><code>@types/web-push</code> stoji među <code>dependencies</code></h3>
+<p>Paket sa tipovima ide u <code>devDependencies</code>; ovako se povlači i u produkcijski build.</p></section>
+<section class="nalaz sitno" id="S6"><div class="nalaz-vrh"><span class="oznaka">S6</span><span class="chip sitno">Sitno</span></div><h3>Ograničenje dnevnika grešaka je zajedničko za sve salone</h3>
+<div class="dokaz"><pre><code>if (select count(*) from error_events
+    where occurred_at &gt; now() - interval &#x27;1 minute&#x27;) &gt;= 60 then</code></pre></div><p>Nema <code>tenant_id</code> u uslovu. Poslao sam 60 grešaka zaredom — svih 60 upisano, 61. i dalje ćutke odbačene (i to je ispravno: strana koja se već raspala ne sme da dobije još jednu grešku). Ali salon koji uđe u petlju ugasi dnevnik <strong>svima ostalima</strong> na taj minut. <strong>Predlog:</strong> dodaj <code>and tenant_id = p_tenant_id</code> u brojanje, uz manji globalni krov.</p></section>
+<section class="nalaz sitno" id="S7"><div class="nalaz-vrh"><span class="oznaka">S7</span><span class="chip sitno">Sitno</span></div><h3><code>btree_gist</code> je u <code>public</code> šemi</h3>
+<p>Potvrđeno i lokalno i Supabase-ovim savetnikom (<code>extension_in_public</code>). Zbog toga se u <code>public</code> slije ~180 <code>gbt_*</code> funkcija, što je i razlog zašto spisak prava izgleda bučno. <strong>Predlog:</strong> <code>alter extension btree_gist set schema extensions;</code> u novoj migraciji — ali tek pošto se sredi O1, jer dodiruje ista ograničenja.</p></section>
+<section class="nalaz sitno" id="S8"><div class="nalaz-vrh"><span class="oznaka">S8</span><span class="chip sitno">Sitno</span></div><h3>Tri funkcije bez <code>set search_path</code></h3>
+<p><code>add_minutes</code>, <code>set_updated_at</code>, <code>appointment_status_allowed</code> (uz <code>timerange</code> / <code>timemultirange</code> iz <code>btree_gist</code>). Sve su <code>security invoker</code>, pa je rizik mali — ali <strong>nijedna <code>security definer</code> funkcija nije bez <code>search_path</code>, sve 50 su čiste</strong>, pa je šteta ostaviti ove tri da bućkaju savetnik.</p></section>
+<section class="nalaz sitno" id="S9"><div class="nalaz-vrh"><span class="oznaka">S9</span><span class="chip sitno">Sitno</span></div><h3>Lokalna prijava iz <code>README.md</code> ne radi sa trenutnim Supabase CLI-jem</h3>
+<div class="dokaz"><pre><code>$ supabase start &amp;&amp; otvori /prijava
+signInWithOtp nije uspeo: Email logins are disabled (status 422)
+
+$ docker exec supabase_auth_doterajme env | grep EMAIL
+GOTRUE_EXTERNAL_EMAIL_ENABLED=false</code></pre></div><p><code>supabase/config.toml</code> ima <code>[auth.email] enabled = true</code>, ali predložak koji CLI 2.115 sam generiše <strong>nema ključ <code>enabled</code></strong> u toj sekciji — tiho se ignoriše. <strong>U produkciji je sve u redu</strong> (<code>external_email_enabled: True</code>), ovo je isključivo lokalno.</p><p><strong>Posledica za mene:</strong> prijavu sam morao da dobijem kroz admin API (<code>/auth/v1/admin/generate_link</code>) pa da token provučem kroz pravu <code>/auth/callback</code> rutu — ista ruta, samo drugačiji izvor linka. Sandučić na <code>:54324</code> nikad nije dobio nijednu poruku.</p><p><strong>Predlog:</strong> proveriti u dokumentaciji CLI-ja koji ključ danas pali mejl provajder i uskladiti <code>config.toml</code>, ili u <code>README.md</code> dopisati kako se prijaviti dok to ne bude sređeno.</p></section>
+<section class="nalaz sitno" id="S10"><div class="nalaz-vrh"><span class="oznaka">S10</span><span class="chip sitno">Sitno</span></div><h3>Salon na pauzi ostavlja klijentkinje bez načina da otkažu</h3>
+<div class="dokaz"><pre><code>stanje salona                javna strana   strana otkazivanja
+normalno                     200            200  ✓
+javno zakazivanje isključeno  404 ✓          200  ✓   ← traženo ponašanje
+pretplata istekla             404 ✓          200  ✓   ← traženo ponašanje
+salon pauziran                404            404  ←</code></pre></div><p>Traženo ponašanje za prva dva slučaja radi tačno. Za pauziran salon je i otkazivanje zatvoreno — namerno, <code>public_cancel_appointment</code> gleda samo <code>suspended_at</code>. Ali klijentkinja sa zakazanim terminom tad nema nijedan način da javi da ne dolazi, a salon je i dalje čeka. <strong>Predlog:</strong> odluka je tvoja; ako ostaje ovako, bar zameni tekst u nešto poput „Javi se salonu direktno&quot;.</p></section>
+<section class="nalaz sitno" id="S11"><div class="nalaz-vrh"><span class="oznaka">S11</span><span class="chip sitno">Sitno</span></div><h3><code>.ics</code> kalendar salona nosi cele brojeve telefona</h3>
+<div class="dokaz"><pre><code>DESCRIPTION:+381641000002\nJovana</code></pre></div><p>Adresa je zaštićena tokenom i rotacija radi (vidi P6), i vlasnici broj treba da bi pozvala. Ali uputstvo u aplikaciji kaže da se adresa nalepi u <code>calendar.google.com</code> — posle toga spisak brojeva klijentkinja stoji na Google-ovim serverima. Vredi da bude svesna odluka, ne slučajna. <strong>Predlog:</strong> rečenica u politici privatnosti, ili prekidač „bez brojeva u kalendaru&quot;.</p></section>
+<section class="nalaz sitno" id="S12"><div class="nalaz-vrh"><span class="oznaka">S12</span><span class="chip sitno">Sitno</span></div><h3><code>npm audit</code>: tri visoke, sve iz <code>next</code>, nijedna ne dodiruje ovaj kod</h3>
+<div class="dokaz"><pre><code>postcss &lt;=8.5.22   ← next 15.5.23 nosi postcss 8.4.31 (alat za build)
+sharp   &lt;0.35.0    ← next nosi sharp 0.34.5 (obrada slika u build-u)
+fix available via `npm audit fix --force` → next@16.3.1 (prelomna izmena)</code></pre></div><p>Obe su u lancu <code>next → …</code>, obe rade u toku build-a, ne u zahtevu korisnika. <code>postcss</code> ranjivosti traže da napadač podmetne CSS koji se build-uje; <code>sharp</code>/libvips traže podmetnutu sliku. Aplikacija ne obrađuje slike koje korisnik pošalje kroz <code>next/image</code> (logo ide u Supabase Storage). <strong>Predlog:</strong> ne dizati <code>next</code> na 16 zbog ovoga; pratiti <code>15.x</code> zakrpu. CI ovo već tretira kao informativno (<code>continue-on-error: true</code>), što je tačna procena.</p></section>
+<section class="nalaz sitno" id="S13"><div class="nalaz-vrh"><span class="oznaka">S13</span><span class="chip sitno">Sitno</span></div><h3>DMARC je na <code>p=none</code></h3>
+<div class="dokaz"><pre><code>_dmarc.doterajme.rs  &quot;v=DMARC1; p=none; rua=mailto:zakazii.rs@gmail.com&quot;</code></pre></div><p>SPF i DKIM su <strong>ispravno</strong> postavljeni (<code>send.doterajme.rs</code> → <code>v=spf1 include:amazonses.com ~all</code>, <code>resend._domainkey</code> postoji), pa poravnanje prolazi preko DKIM-a. <strong>Predlog:</strong> kad izveštaji na <code>rua</code> budu dve nedelje čisti, pređi na <code>p=quarantine; pct=25</code>, pa postepeno na 100.</p></section>
+<section class="nalaz sitno" id="S14"><div class="nalaz-vrh"><span class="oznaka">S14</span><span class="chip sitno">Sitno</span></div><h3>Sitnice bez posledica</h3>
+<ul><li>Strana za prijavu kaže „Google nalogom ili linkom na mejl&quot; i kad je Google isključen (<code>sr.signIn.subtitle</code> je nepromenljiva niska, dugme je iza <code>GOOGLE_ENABLED</code>). U produkciji je Google uključen pa se ne vidi; lokalno zbunjuje.</li><li>Dugme „Svejedno mi je&quot; nema <code>data-testid</code>, za razliku od ostalih koraka toka. Sitno otežava pisanje testova baš za korak koji je nov.</li><li>Zakazan posao kopije je krenuo u 02:31 UTC iako <code>cron</code> kaže 01:20 — GitHub kasni sa zakazanim poslovima i ume da ih preskoči na neaktivnim repoima. Traka u konzoli to pokriva stanjem <code>stale</code> posle 26 h, što je dobro rešeno.</li></ul></section>
+<hr>
+<h2 id="provereno-i-ispravno">Provereno i ispravno</h2>
+<p>Ovo nisu pretpostavke — svaka stavka je proverena i ima izlaz iza sebe.</p>
+<section class="nalaz ispravno" id="P1"><div class="nalaz-vrh"><span class="oznaka">P1</span><span class="chip ispravno">Ispravno</span></div><h3>Izolacija između salona — 24 pokušaja, 24 odbijena</h3>
+<p>Napravio dva salona sa po jednim vlasnikom i iz salona A napao sve što pripada salonu B.</p><div class="dokaz"><pre><code>ČITANJE (svaki broj mora biti 0):
+  tenants_B 0 | clients_B 0 | appts_B 0 | staff_B 0 | services_B 0
+  events_B  0 | wh_B 0 | memb_B 0 | block_B 0 | push_B 0
+
+UPIS:
+  update tuđih klijenata            → UPDATE 0
+  update tuđih termina              → UPDATE 0
+  update tuđeg salona               → ERROR: permission denied for table tenants
+  insert termina u tuđi salon       → ERROR: new row violates row-level security policy
+  insert klijenta u tuđi salon      → ERROR: new row violates row-level security policy
+  ESKALACIJA: članstvo u tuđi salon → ERROR: new row violates row-level security policy
+  ESKALACIJA: sebe u platform_owners→ ERROR: new row violates row-level security policy
+
+RPC sa TUĐIM id-jem:
+  tenant_staff(B)              → PRAZNO          set_staff(…, B)        → not_allowed
+  set_staff(preimenuj tuđeg)   → not_allowed     deactivate_staff(tuđi) → not_allowed
+  dashboard_week(B)            → NULL            upsert_service(u B)    → not_found
+  upsert_service(tuđu uslugu)  → not_found       set_working_hours(tuđem) → no_staff
+  add_time_off(tuđem)          → no_staff        change_appointment_status(tuđi) → not_found
+  block_appointment_client(tuđi)→ not_found      appointment_history(tuđi) → []
+  set_calendar_token(B)        → not_allowed     clear_calendar_token(B) → not_allowed
+  set_tenant_brand(B)          → not_allowed     set_tenant_logo(B)     → not_allowed
+  delete_tenant(B)             → not_allowed     set_tenant_suspended(B)→ not_allowed
+  set_tenant_paid_until(B)     → not_allowed     create_tenant()        → not_allowed
+  admin_salons()               → 0 redova        recent_errors()        → 0 redova</code></pre></div><p>Nijedan izuzetak. Objašnjenja odbijanja su uz to pažljiva — <code>deactivate_staff</code> prvo proverava pripadnost pa tek onda „poslednja je&quot;, da poruka o grešci ne oda ništa o tuđem salonu.</p></section>
+<section class="nalaz ispravno" id="P2"><div class="nalaz-vrh"><span class="oznaka">P2</span><span class="chip ispravno">Ispravno</span></div><h3><code>anon</code> ne vidi nijednu tabelu</h3>
+<p>Svih 16 tabela u <code>public</code>, kao <code>anon</code>:</p><div class="dokaz"><pre><code>tenants, memberships, staff, services, staff_services, working_hours, time_off, clients,
+appointments, appointment_events, blocklist, messages, push_subscriptions, error_events,
+platform_owners, phone_lookup_attempts
+   → svih 16: ERROR: permission denied for table …</code></pre></div><p>Provera prava potvrđuje: <code>anon</code> nema <strong>nijedno</strong> tabelarno pravo. <code>authenticated</code> ima prava na 15 tabela, ali svaka od njih ima RLS i politike. <code>error_events</code>, <code>phone_lookup_attempts</code> i <code>platform_owners</code> namerno imaju RLS bez ijedne politike — pristup ide isključivo kroz <code>security definer</code> funkcije. Supabase savetnik to prijavljuje kao <code>INFO</code>, što je tačno: to je najstroža moguća postavka, ne propust.</p></section>
+<section class="nalaz ispravno" id="P3"><div class="nalaz-vrh"><span class="oznaka">P3</span><span class="chip ispravno">Ispravno</span></div><h3>RLS je uključen svuda, <code>security definer</code> funkcije su čiste</h3>
+<div class="dokaz"><pre><code>tabela sa RLS: 16/16 uključeno
+security definer funkcija bez set search_path: 0        ← nijedna
+funkcije koje anon sme da zove (aplikacijske): 7
+   calendar_feed, log_error, public_appointments_for_phone, public_book,
+   public_booking_data, public_cancel_appointment, public_salon_summary</code></pre></div><p>Tačno javna površina koju <code>CLAUDE.md</code> predviđa — zakazivanje, otkazivanje, javni podaci salona, prijava greške, i kalendar (koji ne može da se prijavi). Ništa preko toga.</p></section>
+<section class="nalaz ispravno" id="P4"><div class="nalaz-vrh"><span class="oznaka">P4</span><span class="chip ispravno">Ispravno</span></div><h3>Dupla rezervacija se sprečava u bazi</h3>
+<div class="dokaz"><pre><code>appointments_no_overlap  EXCLUDE USING gist (staff_id WITH =, blocked_range WITH &amp;&amp;)
+                         WHERE (status = ANY (ARRAY[&#x27;pending&#x27;,&#x27;confirmed&#x27;]))
+working_hours_no_overlap EXCLUDE USING gist (staff_id WITH =, weekday WITH =,
+                         timerange(start_time, end_time, &#x27;[)&#x27;) WITH &amp;&amp;)
+btree_gist: uključen</code></pre></div><p>Ograničenje je <strong>po osobi</strong>, ne po salonu — što je i tačno otkad ih ima dvoje. Provereno kroz oba puta upisa: javni (<code>public_book</code> → <code>slot_taken</code>) i ručni (<code>create_appointment</code> → „To vreme je već zauzeto.&quot;).</p></section>
+<section class="nalaz ispravno" id="P5"><div class="nalaz-vrh"><span class="oznaka">P5</span><span class="chip ispravno">Ispravno</span></div><h3>Drugi izvođač — najvažnija provera u aplikaciji, prolazi u celini</h3>
+<p>Ovo je nova funkcija i testirao sam je najtemeljnije.</p><div class="dokaz"><pre><code>Sa JEDNIM izvođačem:  broj staff-option dugmadi: 0   → koraka „Kod koga?&quot; nema, tok
+                                                       nepromenjen, nijedan dodir više ✓
+Sa DVOJE:             „Kod koga? Milica | Jovana | Svejedno mi je&quot; ✓
+
+Zauzmem Milici 10:30, pa kao nov klijent:
+  A. „Svejedno mi je&quot; nudi:  10:30 17:00 18:30    → 10:30 JE i dalje u ponudi ✓ (unija)
+     zakazujem 10:30         → BAZA: izvođač = JOVANA ✓ (ode kod one koja je slobodna)
+  B. izričito „Milica&quot; nudi:  17:00 18:30         → 10:30 sklonjen ✓
+  C. „Svejedno&quot; posle toga:   17:00 18:30         → 10:30 nestao ✓ (oboje zauzeti)</code></pre></div><p>Provereno i preko izmenjenog zahteva, mimo interfejsa:</p><div class="dokaz"><pre><code>p_staff_id = Milica na zauzet 10:30   → slot_taken      ← ne prebacuje tiho na drugu ✓
+p_staff_id = izvođač iz TUĐEG salona  → unknown_service ← adresa se ne da prepraviti ✓</code></pre></div><p>Nova osoba nasleđuje sve od prve, kao što opis kaže:</p><div class="dokaz"><pre><code>  Milica  aktivna  3 usluge  11 radnih dana
+  Jovana  aktivna  3 usluge  11 radnih dana      ← identično nasleđeno</code></pre></div><p>Treća osoba se ne nudi uopšte — kad ih je dvoje, polje i dugme „Dodaj osobu&quot; nestanu. To je bolje od poruke o grešci, a baza svejedno drži branu (<code>too_many</code>).</p><p>U kalendaru se ime izvođača prikazuje <strong>tek kad ih ima dvoje</strong>: <code>10:30 Ana Anić Gel nokti · Milica · preko sajta</code>.</p><p>U formi za ručni unos izbor takođe radi:</p><div class="dokaz"><pre><code>izabrana Jovana → BAZA: izvođač Jovana, staff_id 8e9630ca-… ✓
+isti sat kod Jovane opet → „To vreme je već zauzeto.&quot; ✓
+isti sat kod Milice      → prolazi ✓ (zauzetost je po osobi)</code></pre></div></section>
+<section class="nalaz ispravno" id="P6"><div class="nalaz-vrh"><span class="oznaka">P6</span><span class="chip ispravno">Ispravno</span></div><h3>Svaki razlog odbijanja ima svoju srpsku poruku</h3>
+<p>Izvukao sam <strong>sve</strong> razloge koje baza ume da vrati i uporedio ih sa <code>lib/i18n/sr.ts</code> mehanički:</p><div class="dokaz"><pre><code>razloga u bazi (15): blocked, booking_closed, invalid_name, invalid_phone, outside_window,
+  outside_working_hours, slot_taken, time_off, too_fast, too_many_from_device,
+  too_many_from_network, too_many_this_week, too_many_upcoming, too_soon, unknown_service
+ključeva u sr.ts (18): … + no_staff, off_grid, invalid_duration
+
+BEZ PREVODA: (prazno) ✓</code></pre></div><p>I svaki razlog je zaista <strong>svoj</strong>, ne skupno „zauzeto&quot;:</p><div class="dokaz"><pre><code>u pauzi (sutra 15:00)          → outside_working_hours
+posle radnog vremena (22:00)   → outside_working_hours
+sat koji nije početak (09:20)  → outside_working_hours
+odsustvo oboje                 → time_off
+iza horizonta (+400 dana)      → outside_window
+u prošlosti                    → outside_window
+blokiran broj                  → blocked
+neispravan telefon             → invalid_phone
+prazno ime / ime od 200 znakova→ invalid_name</code></pre></div><p>U pregledaču se to i vidi kao ljudska rečenica — treći termin iste nedelje daje: „Već imaš dva termina te nedelje. Izaberi drugi datum ili otkaži jedan.&quot;</p><p>(Jedina sitnica: termin u <strong>prošlosti isti dan</strong> vrati <code>too_soon</code> umesto <code>outside_working_hours</code>, jer se rok proverava pre radnog vremena. Poruka je i tako tačna.)</p></section>
+<section class="nalaz ispravno" id="P7"><div class="nalaz-vrh"><span class="oznaka">P7</span><span class="chip ispravno">Ispravno</span></div><h3>Audit log — svaka promena ostavlja trag</h3>
+<div class="dokaz"><pre><code>zakazivanje:  from_status null → confirmed,  actor_type client, device_id postoji
+„Obavljeno&quot;:  confirmed → completed,          actor_type user,   device_id postoji
+otkazivanje:  confirmed → cancelled_by_client, actor_type client, device_id postoji</code></pre></div><p>Matrica prelaza je tačno ona iz specifikacije, i zabranjeni prelazi se odbijaju:</p><div class="dokaz"><pre><code>pending             → cancelled_by_client, cancelled_by_salon, confirmed
+confirmed           → cancelled_by_client, cancelled_by_salon, completed, no_show
+completed           → no_show                    (ispravka greške)
+no_show             → completed                  (ispravka greške)
+cancelled_by_client → (ništa)                    cancelled_by_salon → (ništa)
+
+completed → confirmed  → {&quot;ok&quot;: false, &quot;reason&quot;: &quot;invalid_transition&quot;} ✓
+completed → pending    → {&quot;ok&quot;: false, &quot;reason&quot;: &quot;invalid_transition&quot;} ✓</code></pre></div><p><code>appointment_events</code> nema <code>update</code> ni <code>delete</code> politiku — dopisuje se i čita, nikad se ne menja. To je jedino zbog čega dokaz „ja to nisam otkazala&quot; nešto vredi.</p></section>
+<section class="nalaz ispravno" id="P8"><div class="nalaz-vrh"><span class="oznaka">P8</span><span class="chip ispravno">Ispravno</span></div><h3>Nijedna tajna ne stiže u pregledač</h3>
+<p>Nad izgrađenim <code>.next/static</code>:</p><div class="dokaz"><pre><code>doslovni service_role ključ  → 0 pogodaka
+niska &quot;service_role&quot;         → 0 pogodaka
+SUPABASE_SERVICE_ROLE_KEY    → 0 pogodaka
+VAPID_PRIVATE_KEY            → 0 pogodaka
+bilo koji JWT                → 0 pogodaka</code></pre></div><p>Isto i u 620 KB JS-a povučenog sa žive preview isporuke. Build prolazi čist.</p></section>
+<section class="nalaz ispravno" id="P9"><div class="nalaz-vrh"><span class="oznaka">P9</span><span class="chip ispravno">Ispravno</span></div><h3>Zod stoji na svakoj granici — 10 od 10</h3>
+<div class="dokaz"><pre><code>app/(auth)/prijava/actions.ts                   zod ✓
+app/(dashboard)/admin/actions.ts                zod ✓
+app/(dashboard)/dashboard/actions.ts            zod ✓
+app/(dashboard)/dashboard/termin/novi/actions.ts zod ✓
+app/(dashboard)/dashboard/podesavanja/actions.ts zod ✓
+app/(public)/[tenantSlug]/actions.ts            zod ✓
+app/(public)/[tenantSlug]/otkazi/actions.ts     zod ✓
+app/api/kalendar/route.ts                       zod ✓
+app/api/kalendar/salon/[token]/route.ts         zod ✓
+app/api/greske/route.ts                         zod ✓</code></pre></div></section>
+<section class="nalaz ispravno" id="P10"><div class="nalaz-vrh"><span class="oznaka">P10</span><span class="chip ispravno">Ispravno</span></div><h3>Pravilo „bez sirovih upita u komponentama&quot; se poštuje</h3>
+<p>Nijedan <code>.tsx</code> fajl ne pominje Supabase. Tri server akcije uvoze <code>createClient</code>, ali isključivo za <code>supabase.auth.*</code> (<code>signInWithOAuth</code>, <code>signOut</code>, <code>getUser</code>) — nijedan <code>.from()</code> ni <code>.rpc()</code> van <code>lib/db/</code>.</p></section>
+<section class="nalaz ispravno" id="P11"><div class="nalaz-vrh"><span class="oznaka">P11</span><span class="chip ispravno">Ispravno</span></div><h3>Prijava, preusmeravanja i granice sesije</h3>
+<div class="dokaz"><pre><code>neprijavljen /dashboard              → /prijava ✓
+neprijavljen /admin                  → /prijava ✓
+neprijavljen /dashboard/podesavanja  → /prijava ✓
+neprijavljen /dashboard/termin/novi  → /prijava ✓
+prijavljen /                         → /dashboard ✓
+prijavljen /prijava                  → /dashboard ✓
+
+istrošena veza (bez sesije)  → /prijava?greska=1  „Link nije važeći ili je istekao.&quot;
+izmenjena veza               → /prijava?greska=1  ista poruka
+bez parametara               → /prijava?greska=1  ista poruka
+provajder odbio              → /prijava?greska=google „Prijava preko Google naloga nije uspela.&quot;</code></pre></div><p>Nijedna ne obara stranu u belo. <strong>Otvoreno preusmerenje ne postoji</strong> — <code>redirect_to</code> na tuđi domen se ignoriše, ruta uvek vodi na <code>/dashboard</code>:</p><div class="dokaz"><pre><code>/auth/callback?token_hash=x&amp;type=magiclink&amp;redirect_to=https://zlo.example/
+   → http://localhost:3000/prijava?greska=1</code></pre></div><p>U produkciji middleware radi isto (<code>/dashboard</code> bez prijave → <code>307 → /prijava</code>), i strane koje ne smeju u keš to i poštuju (<code>cache-control: private, no-cache, no-store</code>).</p></section>
+<section class="nalaz ispravno" id="P12"><div class="nalaz-vrh"><span class="oznaka">P12</span><span class="chip ispravno">Ispravno</span></div><h3>Konzola platforme je nevidljiva za ostale</h3>
+<div class="dokaz"><pre><code>običan vlasnik na /admin → HTTP 404, „Ove stranice nema&quot;</code></pre></div><p>Pravi 404, ne „zabranjeno&quot; — nema šta da se sazna da postoji. Kao vlasnik platforme radi sve: spisak salona, pravljenje, pauziranje, brisanje, dnevnik grešaka.</p><p>Traka za kopiju baze je rešena tačno kako treba — kad ne može da pročita stanje, kaže „ne znam&quot;, ne „sve je u redu&quot;:</p><div class="dokaz"><pre><code>„Ne mogu da proverim kopiju baze — Stanje posla se trenutno ne čita. Pogledaj ručno.&quot;</code></pre></div><p><code>backup-health.ts</code> uz to razlikuje <code>stale</code> od <code>failed</code>, sa komentarom koji objašnjava zašto: GitHub sam gasi zakazane poslove na mirnim repoima, i to ćutanje je opasnije od pada.</p></section>
+<section class="nalaz ispravno" id="P13"><div class="nalaz-vrh"><span class="oznaka">P13</span><span class="chip ispravno">Ispravno</span></div><h3>Otkazivanje od strane klijenta</h3>
+<div class="dokaz"><pre><code>nepoznat broj → „Nema zakazanih termina za taj broj.&quot;
+poznat broj   → spisak termina sa dugmetom „Otkaži&quot;
+prvi dodir    → „Sigurno otkazujem?&quot;            ← potvrda u dva koraka
+drugi dodir   → status cancelled_by_client, event confirmed → cancelled_by_client ✓
+                „Javi se salonu ako se predomisliš.&quot;</code></pre></div><p>Otkazani termin nestaje sa spiska, preostali ostaje. Pretraga po broju je uz to ograničena (<code>phone_lookup_attempts</code> + <code>phone_lookup_limit_reason</code>), pa se spisak brojeva ne može prečešljati.</p></section>
+<section class="nalaz ispravno" id="P14"><div class="nalaz-vrh"><span class="oznaka">P14</span><span class="chip ispravno">Ispravno</span></div><h3><code>.ics</code> fajlovi su ispravni do slova</h3>
+<div class="dokaz"><pre><code>CRLF prelomi ✓ | charset=utf-8 ✓ | stabilan UID ✓ | dva VALARM-a ✓
+DTSTART 09:00+02:00 → 20260821T070000Z ✓
+najduži red bez preloma: 75 okteta (RFC 5545 granica 75) ✓</code></pre></div><p>Sa dugim srpskim imenom salona, posle odmotavanja:</p><div class="dokaz"><pre><code>UTF-8 dekodiranje: OK ✓        ← prelamanje ne seče višebajtne znake
+SUMMARY:  TAČNO ✓              ← „Nadogradnja … — Salon Čarobnica Lepote Đurđevdanska
+LOCATION: TAČNO ✓                 Šišanje i Šminkanje Beograd Vračar&quot;</code></pre></div><p>Naši znaci (č, ć, š, ž, đ) prolaze i kroz interfejs i kroz <code>.ics</code>. Neispravni parametri daju 400.</p></section>
+<section class="nalaz ispravno" id="P15"><div class="nalaz-vrh"><span class="oznaka">P15</span><span class="chip ispravno">Ispravno</span></div><h3>Kalendar salona i rotacija tokena</h3>
+<div class="dokaz"><pre><code>ispravan token   → HTTP 200, 3 termina
+izmišljen token  → HTTP 200, 0 termina    ← prazan kalendar, ne greška: ne odaje se
+                                             koji tokeni postoje
+smeće umesto UUID-a → 200, prazno
+
+posle rotacije:  stari token → 0 termina ✓   novi token → 3 termina ✓</code></pre></div><p>Stara adresa prestaje da radi <strong>istog trena</strong>.</p></section>
+<section class="nalaz ispravno" id="P16"><div class="nalaz-vrh"><span class="oznaka">P16</span><span class="chip ispravno">Ispravno</span></div><h3>Zatvaranje salona i istek pretplate</h3>
+<p>Vidi tabelu u S10 — javna strana se zatvara, <strong>otkazivanje nastavlja da radi</strong>, tačno kako je traženo. Nepostojeći salon ne odaje da ne postoji:</p><div class="dokaz"><pre><code>/nema-ovakvog-salona → HTTP 404
+  „Doteraj Me — Ovaj salon trenutno ne prima zakazivanje preko interneta.&quot;
+  &lt;title&gt;Zakazivanje nije dostupno&lt;/title&gt;</code></pre></div><p>Isti tekst za nepostojeći, isključen i pauziran salon — tri stanja se namerno ne razlikuju, i naslov je tačan za sva tri (vidi komentar uz <code>sr.booking.unavailableTitle</code>).</p></section>
+<section class="nalaz ispravno" id="P17"><div class="nalaz-vrh"><span class="oznaka">P17</span><span class="chip ispravno">Ispravno</span></div><h3>Ništa ne izlazi iz ekrana telefona</h3>
+<div class="dokaz"><pre><code>9 ekrana na 390×844 → sa vodoravnim prelivom: 0
+gust dan (30 termina u danu) → preliv 0px, 37 redova, visina 2073px</code></pre></div><p>Uključujući duga imena, duge nazive usluga i dug link za zakazivanje.</p></section>
+<section class="nalaz ispravno" id="P18"><div class="nalaz-vrh"><span class="oznaka">P18</span><span class="chip ispravno">Ispravno</span></div><h3>Statične datoteke i PWA</h3>
+<div class="dokaz"><pre><code>/robots.txt              200  text/plain            (Disallow: /prijava /dashboard /admin
+                                                     /auth /api /*/otkazi)
+/manifest.webmanifest    200  application/manifest+json
+/icon.png                200  image/png   39997 B
+/apple-icon.png          200  image/png   18777 B
+/icon-192.png            200  /icon-512.png 200  /icon-maskable-512.png 200
+/sw.js                   200  application/javascript</code></pre></div><p>Sve ikone iz manifesta se stvarno razrešavaju.</p></section>
+<section class="nalaz ispravno" id="P19"><div class="nalaz-vrh"><span class="oznaka">P19</span><span class="chip ispravno">Ispravno</span></div><h3>Ograničenja protiv zloupotrebe rade i ne daju se lako zaobići</h3>
+<p><code>booking_limit_reason</code> drži: 2 termina nedeljno po broju, 4 nadolazeća za novog klijenta (6 za poznatog), 6 po uređaju, 8 po mreži u sat vremena, 30 s hlađenja po uređaju. Provereno u pregledaču — treći termin istog broja odbijen sa tačnom porukom. Uređaj se vodi kroz <code>httpOnly</code> kolačić, mreža kroz heš <strong>zasoljen salonom</strong> (<code>sha256(slug:adresa)</code>), pa se ista osoba u dva salona ne može povezati ni sa pristupom bazi.</p></section>
+<section class="nalaz ispravno" id="P20"><div class="nalaz-vrh"><span class="oznaka">P20</span><span class="chip ispravno">Ispravno</span></div><h3>Ostalo provereno</h3>
+<ul><li><code>npm test</code> — <strong>147 testova, svih 147 prolazi</strong></li><li><code>npm run test:db</code> — 317 testova, 316 prolazi (jedini pad je O9, greška u testu)</li><li><code>npm run build</code> — prolazi čisto</li><li><code>npx playwright test</code> — oba kritična toka prolaze</li><li><code>/api/greske</code> — 60 upisano, 61. tiho odbačen; poruka od 20 000 znakova odbijena Zod-om (<code>max 500</code>) i <strong>nije</strong> stigla u bazu; neispravan JSON i prazno telo → 204</li><li>Funkcije rade u Frankfurtu: <code>x-vercel-id: iad1::fra1::…</code>, baza <code>eu-central-1</code> — isti region, GDPR i kašnjenje u redu</li><li>HTTP → HTTPS 308 ✓, <code>www</code> → apex 308 ✓</li><li>Postgres 17.6.1.155 — nema čekajućih nadogradnji (<code>eligible: false</code>, već je najnovija)</li><li>Podrazumevana tema prolazi WCAG AA na sve tri merene strane (0 elemenata ispod praga)</li><li>Termin van radnog vremena kroz ručni unos je <strong>dozvoljen</strong>, uz napomenu „Termin van radnog vremena je dozvoljen — kalendar je tvoj.&quot; ✓</li><li>Sav interfejs je na srpskoj latinici, sav kod na engleskom — nijedno odstupanje nađeno</li><li>Supabase Performance Advisor: 13 neindeksiranih stranih ključeva i 2 neiskorišćena indeksa. Na ovoj veličini podataka bez posledica; vredi pogledati kad <code>appointments</code> pređe ~100 000 redova.</li></ul></section>
+<hr>
+<h2 id="nije-provereno-i-za-to">Nije provereno — i zašto</h2>
+<ol class="nabrajanje"><li><strong>Dešifrovanje prave produkcijske kopije.</strong> Privatni <code>age</code> ključ nije nigde u GitHub-u i nemam ga — to je namerno i tako treba da ostane. <strong>Umesto toga</strong> sam ponovio isti <code>pg_dump</code> nad lokalnom bazom sa identičnim zastavicama i vratio ga u <code>postgres:17-alpine</code> dva puta (prazan, pa sa Supabase rolama) — odatle O1 i O2. To pokriva pitanje „šta dump nosi&quot;, ali <strong>ne</strong> pokriva „da li se baš taj fajl na R2/GitHub-u dešifruje&quot;. <strong>Komande da to uradiš sam</strong> (traje par minuta):<div class="dokaz"><pre><code># 1. uzmi poslednju kopiju iz privatnog repoa
+git clone --depth 1 https://github.com/Zlotvor92/zakazi-backup.git
+cd zakazi-backup/dnevno &amp;&amp; ls -la | tail -5
+
+# 2. dešifruj (traži tvoj privatni ključ)
+age --decrypt -i ~/putanja/do/age-kljuca.txt \
+    -o dump.sql.gz zakazi-2026-08-20.sql.gz.age
+gzip -dc dump.sql.gz &gt; dump.sql &amp;&amp; wc -c dump.sql
+
+# 3. vrati u prazan Postgres — SA proširenjem, što posao trenutno ne radi
+docker run -d --name proba -e POSTGRES_PASSWORD=proba postgres:17-alpine
+sleep 10
+docker exec proba psql -U postgres -d postgres -c \
+  &#x27;create extension if not exists btree_gist;&#x27;
+docker exec -i proba psql -U postgres -d postgres -v ON_ERROR_STOP=0 &lt; dump.sql 2&gt; greske.txt
+
+# 4. ono što je ovde bitno — da li se ograničenja stvarno vrate
+docker exec proba psql -U postgres -d postgres -c \
+  &quot;select conname from pg_constraint where contype=&#x27;x&#x27;;&quot;
+#    OČEKUJ: appointments_no_overlap i working_hours_no_overlap
+#    Bez koraka 3 ovaj spisak je PRAZAN — to je nalaz O1.
+docker exec proba psql -U postgres -d postgres -c &quot;select count(*) from pg_policy;&quot;
+docker rm -f proba</code></pre></div> Pošalji mi izlaz koraka 4 i zatvaram O1 kao potvrđen ili oboren nad pravim fajlom.</li></ol>
+<ol class="nabrajanje"><li><strong>Sadržaj repoa <code>Zlotvor92/zakazi-backup</code>.</strong> Pokušao sam da ga dodam u sesiju; zahtev je odbijen (repo nije u opsegu ove sesije). Zato <strong>nisam prebrojao fajlove u <code>dnevno/</code></strong> niti uporedio njihov broj sa brojem uspešnih prolaza. Iz dnevnika posla znam samo da je poslednji upis prošao (<code>Kopija zakazi-2026-08-20.sql.gz.age</code>).</li></ol>
+<ol class="nabrajanje"><li><strong>Sadržaj R2 kante.</strong> Nemam pristup Cloudflare nalogu. Znam da je korak izvršen i uspeo (<code>upload: … to s3://***/…</code>), ali nisam video fajl sa druge strane niti proverio politiku zadržavanja.</li></ol>
+<ol class="nabrajanje"><li><strong>Broj prolaza posla za kopiju je premali za ocenu.</strong> Zatraženo je „poslednjih 30 prolaza&quot;; postoji ih <strong>6 ukupno</strong>, i samo <strong>jedan</strong> zakazan:<div class="dokaz"><pre><code>2026-08-20 02:31  success    schedule            #6   ← jedini zakazani
+2026-08-19 08:10  success    workflow_dispatch   #5
+2026-08-19 07:20  success    workflow_dispatch   #4
+2026-08-19 06:56  success    workflow_dispatch   #3
+2026-08-19 06:54  failure    workflow_dispatch   #2
+2026-08-19 06:41  cancelled  workflow_dispatch   #1</code></pre></div> Posao je star dva dana. „Ima li rupa od više dana&quot; se ne može odgovoriti — nema još istorije. Vredi pogledati ponovo za dve nedelje.</li></ol>
+<ol class="nabrajanje"><li><strong>Zaštita grane <code>main</code>, detaljno.</strong> API je vratio <code>403 Resource not accessible by integration</code> (token nema admin opseg). Zaključak u O6 se oslanja na <code>&quot;protected&quot;: false</code> iz spiska grana i prazan spisak <code>rulesets</code> — to je dovoljno da se tvrdi da zaštite nema, ali nisam video ekran sa podešavanjima.</li></ol>
+<ol class="nabrajanje"><li><strong>GitHub secret scanning.</strong> Put ka tom API-ju je blokiran kroz posrednika (<code>Access to this GitHub API path is not permitted through this proxy</code>). Pretragu istorije sam uradio sam, ručno, po obrascima (vidi O6) — ali GitHub-ov sopstveni skener nije pokrenut.</li></ol>
+<ol class="nabrajanje"><li><strong>Obaveštenja na uređaju (push).</strong> Lokalni stek nema VAPID ključeve, pa ni tok uključivanja ni samo slanje nisu prošli kroz pregledač. Nije provereno ni ponašanje „bez VAPID ključa — poruka umesto slomljenog dugmeta&quot;.</li></ol>
+<ol class="nabrajanje"><li><strong>Prijava preko Google naloga.</strong> Lokalno isključena (<code>NEXT_PUBLIC_GOOGLE_SIGN_IN=false</code>, i mejl provajder pao na S9), a u produkciji je nisam dirao jer bi to napravilo sesiju nad pravim podacima. Proverio sam samo da je uključena u podešavanjima (<code>external_google_enabled: True</code>) i da greška provajdera daje urednu poruku.</li></ol>
+<ol class="nabrajanje"><li><strong>Spora mreža i rad bez mreže.</strong> Nisam prigušivao na 3G. Ponašanje pri <strong>potpunom</strong> otkazu baze jesam izmerio (O5) i tamo je nalaz jasan; „dugme zauvek u Šaljem…&quot; pri sporoj-ali-živoj mreži nije provereno.</li></ol>
+<ol class="nabrajanje"><li><strong>Tastatura na pravom telefonu.</strong> Emulacija na 390×844 ne otvara pravu tastaturu. Kod za to postoji i izgleda tačno (<code>revealSubmit()</code> sa 300 ms odlaganja i <code>scrollIntoView</code>, uz komentar koji opisuje baš taj problem na 375×812), ali nije potvrđeno na uređaju.</li></ol>
+<ol class="nabrajanje"><li><strong>SMTP blok u Supabase-u.</strong> Pročitao sam ga (Resend, <code>smtp.resend.com</code>, korisnik <code>resend</code>, pošiljalac <code>prijava@doterajme.rs</code>, lozinka postavljena) i <strong>ništa nisam dirao</strong>, kako <code>docs/resend-smtp.md</code> izričito traži — delimičan <code>PATCH</code> briše lozinku. Da li poruke stvarno stižu do pravih sandučića nisam mogao da proverim bez slanja.</li></ol>
+<ol class="nabrajanje"><li><strong>Poređenje prava <code>anon</code> u produkciji sa lokalnim.</strong> Tražilo je izvršavanje upita nad produkcijskom bazom. Umesto toga sam uporedio ono što Security Advisor prijavljuje sa lokalnim stanjem — spisak <code>security definer</code> funkcija dostupnih <code>anon</code>-u je <strong>isti</strong> u oba (7 aplikacijskih), pa nema znaka da je neko nešto menjao ručno. Produkcija još nema <code>p_staff_id</code> u <code>public_book</code>, što je očekivano — ta migracija je na ovoj grani, nije u <code>main</code>.</li></ol>
+<hr>
+<h2 id="tri-broja">Tri broja</h2>
+<p>Jedinica je „funkcija ili ponašanje&quot; — jedna stavka sa spiska iz zadatka, ili jedna provera koja se može zasebno ponoviti i dokazati.</p>
+<div class="tabela-okvir"><table><tbody><tr><td><strong>Provereno funkcija i ponašanja</strong></td><td><strong>124</strong></td></tr><tr><td><strong>Radi kako treba</strong></td><td><strong>100</strong></td></tr><tr><td><strong>Ne radi ili odstupa od specifikacije</strong></td><td><strong>24</strong></td></tr></tbody></table></div>
+<p>Raspodela odstupanja: <strong>1 kritično</strong>, <strong>9 ozbiljnih</strong>, <strong>14 sitnih</strong>.</p>
+<p>Uz to je <strong>12 stavki ostalo neprovereno</strong> — svaka je nabrojana gore, sa razlogom.</p>
+<p>Gde se odstupanja nalaze: kritično i pet ozbiljnih su u <strong>okruženju</strong> (Vercel, plan Supabase-a, zaglavlja, zaštita grane, mrežna ograničenja), tri ozbiljna u <strong>postupku oporavka</strong>, jedno u <strong>testu</strong>, jedno u <strong>kontrastu boja salona</strong>. Od sitnih, polovina je veličina meta za dodir na ekranima vlasnice.</p>
+<p><strong>Sam tok zakazivanja — izbor usluge, izbor izvođača, dan, sat, ime, telefon, potvrda — nema nijednu zamerku.</strong> To je i mesto koje sam proverio najtemeljnije: nula premalih meta, nula vodoravnog preliva, svaki razlog odbijanja sa svojom srpskom porukom, i baza koja odbija duplu rezervaciju na oba puta upisa.</p>
+<p class="podnozje">Snimci ekrana: <code>qa/screenshots/</code> — 49 fajlova, 390×844 sa <code>deviceScaleFactor: 3</code>. Skripte kojima je sve odrađeno: <code>qa/*.mjs</code>, da se svaki nalaz može ponoviti.</p>
+</div>

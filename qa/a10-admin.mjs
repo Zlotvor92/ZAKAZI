@@ -1,0 +1,10 @@
+import { launch, shot, BASE, MOBILE } from "./drive.mjs";
+import { signIn } from "./prijava.mjs";
+const { browser, ctx } = await launch(MOBILE);
+const page = await ctx.newPage();
+await signIn(page, "vlasnik@primer.rs");
+const res = await page.goto(`${BASE}/admin`, { waitUntil: "networkidle" });
+console.log("obican vlasnik na /admin -> status:", res?.status(), "url:", page.url().replace(BASE,""));
+console.log("tekst:", (await page.locator("body").innerText()).replace(/\s+/g," ").slice(0,180));
+await shot(page, "mob-22-admin-404");
+await browser.close();

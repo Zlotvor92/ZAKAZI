@@ -1,0 +1,15 @@
+import { launch, shot, auditScreen, BASE, MOBILE } from "./drive.mjs";
+import { signIn } from "./prijava.mjs";
+const { browser, ctx } = await launch(MOBILE);
+const page = await ctx.newPage();
+const say = (k,v)=>console.log(`${k}: ${v}`);
+await signIn(page);
+const res = await page.goto(`${BASE}/admin`, { waitUntil: "networkidle" });
+say("status", res?.status());
+await page.waitForTimeout(800);
+await shot(page, "mob-23-admin-konzola");
+say("naslovi", (await page.locator("h1,h2").allInnerTexts()).join(" | "));
+const t = (await page.locator("body").innerText()).replace(/\s+/g," ");
+say("tekst", t.slice(0, 700));
+say("audit", JSON.stringify(await auditScreen(page)).slice(0,400));
+await browser.close();

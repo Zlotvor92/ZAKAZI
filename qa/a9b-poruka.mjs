@@ -1,0 +1,17 @@
+import { launch, shot, BASE, MOBILE } from "./drive.mjs";
+const { browser } = await launch(MOBILE);
+const ctx = await browser.newContext({ ...MOBILE, locale: "sr-RS", timezoneId: "Europe/Belgrade" });
+const page = await ctx.newPage();
+await page.goto(`${BASE}/studio-milica`, { waitUntil: "networkidle" });
+await page.getByTestId("service-option").first().click(); await page.waitForTimeout(400);
+await page.getByRole("button", { name: /Svejedno mi je/ }).click(); await page.waitForTimeout(400);
+await page.getByTestId("day-option").first().click(); await page.waitForTimeout(300);
+await page.getByTestId("slot-option").first().click(); await page.waitForTimeout(300);
+await page.getByLabel(/Ime/i).fill("Limit Cetvrti");
+await page.getByLabel(/Broj telefona/i).fill("0645550001");
+await page.getByRole("button", { name: /Zakaži termin/i }).click();
+await page.waitForTimeout(2800);
+const t = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+console.log("CEO TEKST:", t);
+await shot(page, "mob-21-limit-poruka");
+await browser.close();
