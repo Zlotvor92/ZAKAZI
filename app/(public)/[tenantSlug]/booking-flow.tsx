@@ -377,6 +377,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           <li>
             <button
               type="button"
+              data-testid="staff-any"
               onClick={() => {
                 setStaffId(null);
                 setStaffPicked(true);

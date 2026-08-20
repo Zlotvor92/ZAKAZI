@@ -167,7 +167,7 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
           type="date"
           defaultValue={salon.paid_until ?? ""}
           disabled={pending}
-          className="h-9 w-auto text-sm"
+          className="h-11 w-auto text-sm"
           onChange={(event) => {
             const value = event.target.value;
             startTransition(async () => {

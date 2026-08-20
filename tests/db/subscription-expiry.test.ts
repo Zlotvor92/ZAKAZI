@@ -94,19 +94,25 @@ describe("računanje isteka", () => {
 
   it("dan se meri po salonu, ne po serveru", async () => {
     await withRollback(async (db) => {
-      // Kiritimati je UTC+14; tamo je datum uvek ispred beogradskog, pa isti
-      // `paid_until` tamo ističe ranije nego ovde.
-      const result = await db.query<{ ostrvo: boolean; beograd: boolean }>(
+      // Ranije su ovde stajali Kiritimati i Beograd, sa `now()`. Njih dvoje
+      // deli dvanaest sati, pa im se datum razlikuje samo dok je UTC sat
+      // između 10 i 22 — test je prolazio pola dana, a padao drugu polovinu.
+      //
+      // Etc/GMT+12 i Kiritimati dele dvadeset šest sati i nijedan nema letnje
+      // računanje vremena, pa im se datum ne poklopi nijednog sata u godini.
+      // Isti `paid_until` je zato uvek istekao na jednoj strani, a na drugoj
+      // nije — bez obzira kad se test pokrene.
+      const result = await db.query<{ istok: boolean; zapad: boolean }>(
         `select
            subscription_expired(
-             (now() at time zone 'Pacific/Kiritimati')::date - 1,
-             'Pacific/Kiritimati') as ostrvo,
+             (now() at time zone 'Etc/GMT+12')::date, 'Pacific/Kiritimati') as istok,
            subscription_expired(
-             (now() at time zone 'Pacific/Kiritimati')::date - 1,
-             'Europe/Belgrade') as beograd`,
+             (now() at time zone 'Etc/GMT+12')::date, 'Etc/GMT+12') as zapad`,
       );
-      expect(result.rows[0]!.ostrvo).toBe(true);
-      expect(result.rows[0]!.beograd).toBe(false);
+
+      // Na istoku je taj dan odavno prošao; na zapadu je upravo taj dan.
+      expect(result.rows[0]!.istok).toBe(true);
+      expect(result.rows[0]!.zapad).toBe(false);
     });
   });
 

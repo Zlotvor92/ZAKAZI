@@ -35,7 +35,10 @@ export const sr = {
   },
   signIn: {
     title: "Prijava",
+    /** Kad je Google prijava uključena. */
     subtitle: "Google nalogom ili linkom na mejl. Bez lozinke.",
+    /** Kad nije — inače strana obećava dugme kojeg nema. */
+    subtitleEmailOnly: "Link na mejl. Bez lozinke.",
     emailLabel: "Mejl adresa",
     emailPlaceholder: "ime@primer.rs",
     submit: "Pošalji mi link",

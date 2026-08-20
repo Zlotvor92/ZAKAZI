@@ -1,6 +1,10 @@
 import { sr } from "@/lib/i18n/sr";
 import { SignInForm } from "./sign-in-form";
 
+// Isti prekidač kao u formi ispod. Bez ovoga strana obećava „Google nalogom"
+// i kad dugmeta nema, pa korisnik traži nešto što ne postoji.
+const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN !== "false";
+
 export default async function SignInPage({
   searchParams,
 }: {
@@ -15,7 +19,7 @@ export default async function SignInPage({
           <h1 className="text-2xl font-semibold tracking-tight">
             {sr.signIn.title}
           </h1>
-          <p className="text-muted-foreground text-sm">{sr.signIn.subtitle}</p>
+          <p className="text-muted-foreground text-sm">{GOOGLE_ENABLED ? sr.signIn.subtitle : sr.signIn.subtitleEmailOnly}</p>
         </div>
 
         {greska ? (

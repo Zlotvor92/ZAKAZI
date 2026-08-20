@@ -1,5 +1,6 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { requireEnv, requireUrlEnv } from "@/lib/env";
+import { withDeadline } from "./deadline";
 
 /**
  * Klijent koji zaobilazi RLS.
@@ -15,7 +16,10 @@ export function createAdminClient() {
   return createSupabaseClient(
     requireUrlEnv("NEXT_PUBLIC_SUPABASE_URL"),
     requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
-    { auth: { persistSession: false, autoRefreshToken: false } },
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: withDeadline },
+    },
   );
 }
 

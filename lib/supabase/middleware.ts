@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { requireEnv, requireUrlEnv } from "@/lib/env";
+import { withDeadline } from "./deadline";
 
 const SIGN_IN_PATH = "/prijava";
 const HOME_PATH = "/";
@@ -12,6 +13,7 @@ export async function updateSession(request: NextRequest) {
     requireUrlEnv("NEXT_PUBLIC_SUPABASE_URL"),
     requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
+      global: { fetch: withDeadline },
       cookies: {
         getAll() {
           return request.cookies.getAll();

@@ -24,6 +24,9 @@ const eslintConfig = [
       "out/**",
       "build/**",
       "next-env.d.ts",
+      // Skripte iz revizije voze pregledač i namerno pišu u konzolu; nisu deo
+      // aplikacije i ne isporučuju se.
+      "qa/**",
     ],
   },
 ];

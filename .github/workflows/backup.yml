@@ -50,6 +50,12 @@ jobs:
           sudo install /tmp/age/age /usr/local/bin/age
           age --version
 
+      # `--no-privileges` je ranije stajao uz `--no-owner` i izbacivao SVE
+      # `grant` i `revoke` naredbe. Vraćena baza je zbog toga bila mrtva:
+      # nijedna funkcija se nije mogla pozvati, jer prava koja migracije
+      # pažljivo postavljaju nisu ni bila u fajlu. Vlasništvo se i dalje ne
+      # prenosi, jer role novog projekta nisu iste — ali prava se prenose.
+      #
       # Runner nosi pg_dump 16, a server je 17.6 — stariji klijent odbija da
       # čita noviji server. Zvanična slika nosi tačno 17 i povlači se sa
       # Docker Hub-a, pa se sistemski paketi ne diraju.
@@ -70,7 +76,6 @@ jobs:
               --schema=public \
               --schema=auth \
               --no-owner \
-              --no-privileges \
               --quote-all-identifiers \
             | gzip -9 > dump.sql.gz
           echo "DUMP_BYTES=$(stat -c%s dump.sql.gz)" >> "$GITHUB_ENV"
@@ -116,6 +121,26 @@ jobs:
             sleep 2
           done
 
+          # Bez ovoga oba `exclude using gist` ograničenja tiho puknu pri
+          # uvozu — `pg_dump` sa `--schema` ne nosi `create extension`. Dump
+          # ih sadrži, ali se ne mogu napraviti bez `btree_gist`, pa je
+          # vraćena baza ostajala BEZ zaštite od duple rezervacije, a ova
+          # proba je svejedno javljala da je sve u redu.
+          docker exec proba psql -U postgres -d postgres -q \
+            -c 'create extension if not exists btree_gist;'
+
+          # Role koje politike pominju. U pravom odredištu oporavka — novom
+          # Supabase projektu — one postoje; u praznom Postgresu ne, pa bi
+          # svaka `create policy` pukla i proba bi merila nešto što ni ne liči
+          # na stvarno vraćanje.
+          for r in anon authenticated service_role supabase_auth_admin supabase_admin \
+                   authenticator dashboard_user supabase_storage_admin \
+                   supabase_functions_admin supabase_read_only_user; do
+            docker exec proba psql -U postgres -d postgres -q \
+              -c "do \$\$ begin if not exists (select from pg_roles where rolname='$r')
+                  then execute format('create role %I', '$r'); end if; end \$\$;"
+          done
+
           # Vraćanje u prazan Postgres uvek nešto prijavi: dump nosi i `auth`
           # šemu, koja se oslanja na Supabase-ove role i proširenja kojih ovde
           # nema. To se ne prećutkuje nego broji, a presuđuje poređenje redova.
@@ -147,10 +172,41 @@ jobs:
             fi
           done
 
+          # Redovi nisu dovoljni. Kopija koja vrati sve podatke a izgubi
+          # ograničenje protiv duple rezervacije izgleda ispravno i nije —
+          # baš to se i dešavalo. Zato se broji i ono što čuva podatke, ne
+          # samo podaci.
+          u_bazi() {
+            docker exec proba psql -U postgres -d postgres -tAc "$1" 2>/dev/null || echo 0
+          }
+
+          exclude_ogranicenja=$(u_bazi "select count(*) from pg_constraint where contype='x'")
+          politike=$(u_bazi "select count(*) from pg_policy")
+          rls_tabele=$(u_bazi "select count(*) from pg_class c join pg_namespace n
+                               on n.oid=c.relnamespace
+                               where n.nspname='public' and c.relkind='r' and c.relrowsecurity")
+
+          echo "  exclude ograničenja: $exclude_ogranicenja (očekivano 2)"
+          echo "  RLS politika:        $politike (očekivano najmanje 39)"
+          echo "  tabela sa RLS:       $rls_tabele (očekivano najmanje 16)"
+
+          test "$exclude_ogranicenja" -eq 2 || {
+            echo "::error::Vraćena baza nema oba ograničenja protiv duple rezervacije."
+            greska=1
+          }
+          test "$politike" -ge 39 || {
+            echo "::error::Vraćena baza ima $politike RLS politika umesto najmanje 39."
+            greska=1
+          }
+          test "$rls_tabele" -ge 16 || {
+            echo "::error::Vraćena baza ima RLS na $rls_tabele tabela umesto najmanje 16."
+            greska=1
+          }
+
           docker rm -f proba > /dev/null
           rm -f dump.sql greske.txt
           test "$greska" -eq 0 || { echo "Vraćanje nije verno — kopija se ne sme smatrati ispravnom."; exit 1; }
-          echo "Vraćanje provereno: svaki red iz kopije je u bazi."
+          echo "Vraćanje provereno: podaci, ograničenja i politike su svi u bazi."
 
       - name: Šifrovanje
         run: |

@@ -31,6 +31,16 @@ jwt_expiry = 3600
 enable_signup = false
 
 [auth.email]
-enabled = true
-enable_signup = false
+# `enable_signup` ovde NIJE „sme li se registrovati" — Supabase CLI njime pali
+# i sam mejl provajder (`GOTRUE_EXTERNAL_EMAIL_ENABLED`). Sa `false` je gasio
+# i prijavu postojećih naloga, pa je lokalno `/prijava` vraćalo „Email logins
+# are disabled" i sandučić na :54324 nikad ništa nije dobio.
+#
+# Registraciju zatvara `enable_signup` u sekciji `[auth]` iznad, i ona ostaje
+# zatvorena — isto kao u produkciji, gde je `disable_signup: true` uz
+# `external_email_enabled: true`.
+#
+# Raniji `enabled = true` ovde nije postojao kao ključ i CLI ga je ćutke
+# ignorisao.
+enable_signup = true
 enable_confirmations = true
