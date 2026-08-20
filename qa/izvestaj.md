@@ -23,9 +23,10 @@ traže tvoju odluku (novac, DNS, prava na GitHub-u). Od četrnaest sitnih, **osa
 popravljeno**, jedan se pokazao kao **moja greška u merenju** (vidi S1), pet su
 kozmetika ili tvoja odluka.
 
-Odgovor na pitanje „sme li ovo da se prodaje": **sada da** — uz jednu ogradu koju ne mogu
-da sklonim umesto tebe: baza je na besplatnom planu bez ijedne kopije sa strane provajdera
-(O3). Sve ostalo što je blokiralo je otklonjeno.
+Odgovor na pitanje „sme li ovo da se prodaje": **sada da.** Ograda koja je ostala je
+manja nego pre: baza je i dalje na besplatnom planu bez kopije kod samog provajdera (O3),
+ali kopija sada ide **na sat vremena**, pa je najgori gubitak jedan sat umesto dvadeset
+četiri. Sve ostalo što je blokiralo je otklonjeno i provereno.
 
 ---
 
@@ -51,9 +52,76 @@ bez dokaza da radi.
 | **S8** | Tri funkcije bez `search_path` | sve tri sada `search_path=public` |
 | **S9** | Lokalna prijava ne radi | prijava kroz sandučić na `:54324` radi kao u `README.md` |
 | **S14** | Strana obećava Google i kad ga nema | podnaslov prati isti prekidač kao dugme; `data-testid` dodat |
+| **O3** *(deo)* | Gubitak do 24 sata | kopija na sat vremena; najgori gubitak **1 sat** |
 
 Posle svega: `npm test` **148/148**, `npm run test:db` **317/317**, `npm run lint` čist,
 `npm run build` prolazi, `npm run test:e2e` **2/2**.
+
+### Dokaz nad pravom produkcijom, ne samo lokalno
+
+Pokrenuo sam izmenjen posao nad stvarnom bazom (prolaz #7, `success`). Ovo je konačan
+dokaz za O1 i O2 — ranije je isti korak javljao da je sve u redu dok su ograničenja
+nedostajala:
+
+```
+Prijava pri uvozu: 1 redova.          ← ranije 44
+  tenants: 2 ✓            services: 16 ✓
+  clients: 11 ✓           working_hours: 19 ✓
+  appointments: 26 ✓      appointment_events: 50 ✓
+  exclude ograničenja: 2 (očekivano 2)        ← ranije 0, i niko to nije primetio
+  RLS politika:        39 (očekivano najmanje 39)
+  tabela sa RLS:       16 (očekivano najmanje 16)
+Vraćanje provereno: podaci, ograničenja i politike su svi u bazi.
+Otpremljeno: zakazi-2026-08-20.sql.gz.age
+Brišem satne kopije pre 2026-08-06.
+Obrisano starih satnih kopija: 0.
+```
+
+---
+
+## Kopija na sat vremena
+
+Traženo posle revizije, i urađeno. Najgori gubitak pada sa 24 sata na jedan.
+
+**Kako je podešeno.** `cron: "20 * * * *"`, ali se ne završava svaki prolaz isto:
+
+| | svaki sat | 01:20 UTC |
+|---|---|---|
+| dump, provere sadržaja | da | da |
+| proba vraćanja | da | da |
+| šifrovanje | da | da |
+| Cloudflare R2 | `satne/…T14.sql.gz.age`, briše se posle 14 dana | `…-2026-08-20.sql.gz.age`, ostaje |
+| privatni git repo | **ne** | da |
+
+**Zašto satne ne idu u git.** Šifrovan sadržaj je za git slučajan niz — ne delta-kodira se
+i ne kompresuje, pa svaka kopija leži cela:
+
+```
+   veličina baze   po kopiji   godišnje dnevno   godišnje na sat
+   danas (39 KB)       40 KB            14 MB            346 MB
+           ~1 MB      988 KB           361 MB           8652 MB   ← repo se ubija
+          ~10 MB     9877 KB          3605 MB          86525 MB
+```
+
+Na R2 sa rokom od 14 dana ustaljeno stanje je 19 MB danas, i ostaje u besplatnih 10 GB
+dugo pošto baza naraste.
+
+**Zašto proba vraćanja ostaje na svakom prolazu.** Traje tri sekunde — slika
+`postgres:17-alpine` je već povučena zbog `pg_dump`-a. Nema razloga da ijedna kopija
+ostane neprovereno da leži.
+
+**Zamka koju je trebalo rešiti pre uključivanja.** Ime fajla je nosilo samo datum
+(`%Y-%m-%d`). Da sam samo promenio `cron`, svih 24 prolaza bi pravilo isto ime, a
+postojeći `git commit || echo "Kopija za danas već postoji."; exit 0` bi tiho preskočio
+23 od 24 — posao bi bio zelen, a kopije ne bi bilo. Ime sada nosi i sat.
+
+**Košta li išta.** Ne. Prolaz traje 51 sekundu, 24 dnevno je 20 minuta — a repo je javan,
+pa su Actions minuti neograničeni i besplatni.
+
+**Jedno upozorenje.** GitHub pokreće zakazane poslove **samo sa podrazumevane grane**.
+Dok se ovo ne spoji u `main`, satni raspored ne radi — nastavlja da ide stara dnevna
+kopija. Ručno pokretanje (`workflow_dispatch`) radi sa bilo koje grane i uvek se računa
+kao dnevno, pa se puna putanja može isprobati bez čekanja.
 
 ---
 
@@ -239,7 +307,7 @@ Ako se zadržava vraćanje celog dumpa, izbaci `--no-privileges` i dodaj `--no-o
 
 ### O3. Jedina kopija je ona iz GitHub Actions — Supabase je na besplatnom planu
 
-**Stanje:** TRAŽI TVOJU ODLUKU — Odluka o novcu — Supabase Pro. Detalji na kraju izveštaja.
+**Stanje:** DELIMIČNO POPRAVLJENO — kopija sada ide **na sat vremena**, pa je najgori gubitak 1 sat umesto 24. Ostaje odluka o Supabase Pro planu (kopije kod samog provajdera), detalji na kraju izveštaja.
 
 **Šta sam radio.** Pitao Supabase Management API za stanje kopija i plan organizacije.
 
@@ -1249,8 +1317,11 @@ gubitak **do 24 sata**.
   više ne pauzira zbog neaktivnosti. Ovo bih uzeo pre prvog plaćenog korisnika.
 - **PITR, dodatnih 100 $/mesečno** — gubitak pada sa sati na minute. Ovo ne bih uzimao dok
   ne budeš imao desetak salona koji plaćaju.
-- **Besplatno, odmah:** u `.github/workflows/backup.yml` promeni `cron: "20 1 * * *"` u
-  `cron: "20 1,13 * * *"`. Gubitak pada sa 24 na 12 sati, bez ijednog dinara.
+- **Besplatan deo je već urađen:** kopija sada ide **na sat vremena** (vidi odeljak
+  „Kopija na sat vremena"), pa je gubitak 1 sat umesto 24 — bez ijednog dinara. Ono što
+  Pro dodaje preko toga je kopija **kod samog provajdera**: ako nestane ceo Supabase
+  nalog, satne kopije na R2 i u git-u i dalje postoje, ali projekat treba dizati iznova.
+  Pro to skraćuje, i sklanja rizik da se besplatan projekat pauzira zbog neaktivnosti.
 
 ### 2. Zaštita grane `main` (O6)
 
