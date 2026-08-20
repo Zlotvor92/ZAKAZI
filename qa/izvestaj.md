@@ -11,24 +11,57 @@ testiranje išlo je na lokalnom steku (41 migracija + `seed.sql`), produkcija je
 
 ## Presuda
 
-**Sam proizvod je spreman — okruženje u kom stoji nije.** Zakazivanje, izolacija između
-salona i nova funkcija sa drugim izvođačem rade tačno onako kako `CLAUDE.md` traži:
-svaki od 24 pokušaja da se iz jednog salona dođe do tuđih podataka je odbijen, unija
-slobodnih termina za „Svejedno mi je" ispravno završi kod one osobe koja je stvarno
-slobodna, i baza sama odbija duplu rezervaciju. Ali **svaki `git push` na granu pravi
-javno dostupnu kopiju aplikacije koja radi sa produkcijskim ključem i produkcijskom
-bazom**, a jedina rezervna kopija koja postoji, kad se vrati, **ostaje bez zaštite od
-duple rezervacije** — i posao koji je proverava to ne primeti.
+**Sam proizvod je spreman — okruženje u kom stoji nije bilo.** Zakazivanje, izolacija
+između salona i nova funkcija sa drugim izvođačem rade tačno onako kako `CLAUDE.md`
+traži: svaki od 24 pokušaja da se iz jednog salona dođe do tuđih podataka je odbijen,
+unija slobodnih termina za „Svejedno mi je" ispravno završi kod one osobe koja je stvarno
+slobodna, i baza sama odbija duplu rezervaciju.
 
-Ne bih puštao u prodaju sutra. Ne zbog proizvoda, nego zbog dve stavke iz odeljka
-„Kritično" i „Ozbiljno" koje se obe rešavaju za jedno popodne: zaključati Vercel preview
-i popraviti postupak vraćanja kopije. Posle toga — da.
+**Stanje posle popravki (20. avgust, popodne):** kritični nalaz je zatvoren — preview
+isporuke više nisu javne. Od devet ozbiljnih, **šest je popravljeno i provereno**, tri
+traže tvoju odluku (novac, DNS, prava na GitHub-u). Od četrnaest sitnih, **osam je
+popravljeno**, jedan se pokazao kao **moja greška u merenju** (vidi S1), pet su
+kozmetika ili tvoja odluka.
+
+Odgovor na pitanje „sme li ovo da se prodaje": **sada da** — uz jednu ogradu koju ne mogu
+da sklonim umesto tebe: baza je na besplatnom planu bez ijedne kopije sa strane provajdera
+(O3). Sve ostalo što je blokiralo je otklonjeno.
+
+---
+
+## Šta je popravljeno
+
+Sve dole je izmenjeno, pokrenuto i izmereno ponovo. Ništa nije prijavljeno kao gotovo
+bez dokaza da radi.
+
+| | Nalaz | Dokaz da je popravljeno |
+|---|---|---|
+| **K1** | Preview isporuke javne | produkcija `200`, preview `302` na Vercel prijavu |
+| **O1** | Vraćena kopija bez zaštite od duple rezervacije | greške pri uvozu 44 → 1, `exclude` ograničenja 0 → **2** |
+| **O2** | Vraćena baza bez ijednog prava | `GRANT` 0 → **155**, `REVOKE` 0 → **44**; `anon` više ne dopire do `delete_tenant` |
+| **O4** | Nijedno bezbednosno zaglavlje | svih pet zaglavlja na svakoj proverenoj ruti |
+| **O5** | Bela strana 45 s kad baza ne odgovara | sada `app/error.tsx` sa srpskim tekstom i putem nazad |
+| **O8** | Boje salona ispod WCAG AA | svih šest pozadina: **0** elemenata ispod praga (bilo 14/13/13/5/5/0) |
+| **O9** | Test pada 12 sati dnevno | `test:db` **317/317** (bilo 316/317) |
+| **S2** | Prigušen tekst ispod AA | ušlo u istu popravku kao O8 |
+| **S3** | `/favicon.ico` vraća 404 i celu stranu | `200 image/x-icon`, 20 707 B |
+| **S5** | `@types/web-push` među `dependencies` | prebačen u `devDependencies` |
+| **S4** | `lucide-react` se ne koristi (41 MB) | uklonjen |
+| **S6** | Ograničenje grešaka zajedničko za sve salone | jedan salon potroši svojih 60, ostali i dalje pišu |
+| **S8** | Tri funkcije bez `search_path` | sve tri sada `search_path=public` |
+| **S9** | Lokalna prijava ne radi | prijava kroz sandučić na `:54324` radi kao u `README.md` |
+| **S14** | Strana obećava Google i kad ga nema | podnaslov prati isti prekidač kao dugme; `data-testid` dodat |
+
+Posle svega: `npm test` **148/148**, `npm run test:db` **317/317**, `npm run lint` čist,
+`npm run build` prolazi, `npm run test:e2e` **2/2**.
 
 ---
 
 ## Kritično (blokira prodaju)
 
 ### K1. Svaki preview na Vercelu je javan i radi sa produkcijskom bazom
+
+**Stanje:** POPRAVLJENO — Preview isporuke su zaključane; produkcija odgovara 200, preview 302 na Vercel prijavu.
 
 **Šta sam radio.** Pročitao podešavanja Vercel projekta `zakazi` i pokušao da otvorim
 poslednju preview isporuku bez ikakve prijave.
@@ -94,6 +127,8 @@ O6). Sestrinski projekat `sub-19` na istom nalogu **ima** uključenu zaštitu
 ## Ozbiljno (popraviti pre šireg puštanja)
 
 ### O1. Vraćena rezervna kopija ostaje bez zaštite od duple rezervacije
+
+**Stanje:** POPRAVLJENO — Proba vraćanja sad instalira `btree_gist` i proverava ograničenja; greške pri uvozu 44 → 1, `exclude` ograničenja 0 → 2.
 
 **Šta sam radio.** Ponovio `pg_dump` sa tačno istim zastavicama kao `backup.yml`, pa ga
 vratio u prazan `postgres:17-alpine`, i drugi put u kontejner u kom sam prethodno napravio
@@ -164,6 +199,8 @@ U pisanom postupku oporavka (O3) prvi korak posle pravljenja projekta mora biti
 
 ### O2. Vraćena baza nema nijedno pravo — aplikacija nad njom ne radi
 
+**Stanje:** POPRAVLJENO — `--no-privileges` uklonjen; u kopiji 155 `GRANT` i 44 `REVOKE`, `anon` više ne dopire do `delete_tenant`.
+
 **Šta sam radio.** Isto vraćanje kao u O1, pa proverio šta `anon` i `authenticated` smeju.
 
 **Šta sam očekivao.** Da se prava vrate zajedno sa šemom.
@@ -202,6 +239,8 @@ Ako se zadržava vraćanje celog dumpa, izbaci `--no-privileges` i dodaj `--no-o
 
 ### O3. Jedina kopija je ona iz GitHub Actions — Supabase je na besplatnom planu
 
+**Stanje:** TRAŽI TVOJU ODLUKU — Odluka o novcu — Supabase Pro. Detalji na kraju izveštaja.
+
 **Šta sam radio.** Pitao Supabase Management API za stanje kopija i plan organizacije.
 
 **Šta se desilo.**
@@ -237,6 +276,8 @@ rizik da se projekat pauzira. Do tada, u `backup.yml` promeni `cron` na dva puta
 (`20 1,13 * * *`) — gubitak pada sa 24 h na 12 h besplatno.
 
 ### O4. Nijedno bezbednosno zaglavlje nije postavljeno
+
+**Stanje:** POPRAVLJENO — Svih pet zaglavlja stiže na svakoj proverenoj ruti.
 
 **Šta sam radio.** `curl -sI https://doterajme.rs` i isto nad `/dashboard`, `/prijava`,
 `/studio-milica`.
@@ -289,6 +330,8 @@ traži `nonce` kroz middleware. Uradi je zasebno, prvo u `Content-Security-Polic
 
 ### O5. Kad baza ne odgovara, klijent gleda belu stranu 45 sekundi
 
+**Stanje:** POPRAVLJENO — Rok od 8 s u samom klijentu; umesto bele strane sad se prikaže `app/error.tsx`.
+
 **Šta sam radio.** Zaustavio PostgREST kontejner i u čistom pregledaču otvorio javnu
 stranu salona.
 
@@ -329,6 +372,8 @@ pa ga provuci kroz svaki `supabase.rpc(...)` poziv. Kad istekne — baci grešku
 
 ### O6. `main` nije zaštićen, repo je javan, a migracije se primenjuju same
 
+**Stanje:** TRAŽI TVOJU ODLUKU — Traži admin prava na GitHub-u koja moj token nema. Koraci na kraju izveštaja.
+
 **Šta sam radio.** Proverio vidljivost repoa i zaštitu grane.
 
 **Šta se desilo.**
@@ -365,6 +410,8 @@ mimo zelenog CI-ja.
 
 ### O7. Baza je otvorena ka celom internetu
 
+**Stanje:** TRAŽI TVOJU ODLUKU — Namerno nisam dirao — sužavanje na opsege GitHub runnera može tiho oboriti noćnu kopiju.
+
 **Dokaz.**
 
 ```
@@ -385,6 +432,8 @@ stvar između interneta i cele baze.
 nalogu i rotiraj lozinku baze. Aplikacija ide preko PostgREST-a i ovo ne dodiruje.
 
 ### O8. Salon koji izabere svoje boje ume da dobije nečitljiv tekst
+
+**Stanje:** POPRAVLJENO — Boja teksta se bira merenjem; svih šest pozadina sada 0 elemenata ispod WCAG AA.
 
 **Šta sam radio.** Postavio šest kombinacija boja salona i **izmerio stvarni WCAG odnos
 kontrasta u pregledaču**, na 390×844, preko `canvas`-a (da se `oklch()` ispravno razreši).
@@ -428,6 +477,8 @@ function foregroundFor(background: string): string {
 Uz to podigni `--muted-foreground` sa `58%` na `72%` — to je zaseban nalac, vidi S2.
 
 ### O9. Test `subscription-expiry` pada dvanaest sati svakog dana
+
+**Stanje:** POPRAVLJENO — Test koristi dve zone 26 sati razmaknute; `test:db` 317/317 u svako doba dana.
 
 **Šta sam radio.** Pokrenuo `npm run test:db`.
 
@@ -474,39 +525,75 @@ select subscription_expired('2026-08-20'::date, 'Pacific/Kiritimati') as ostrvo,
 
 ## Sitno (kozmetika i udobnost)
 
-### S1. 56 meta za dodir je manje od 44×44 px — sve na ekranima vlasnice
+### S1. ~~56 meta za dodir je manje od 44×44 px~~ — ISPRAVKA: bilo ih je najviše troje
 
-**Šta sam radio.** Prošao svih 9 ekrana na 390×844 sa `deviceScaleFactor: 3` i izmerio
-svaku metu (`button`, `a`, `input`, `select`).
+**Ovo je bila moja greška, ne greška proizvoda.** Ostavljam je u izveštaju u punom obliku
+jer nalaz bez ispravke je gori od nenapisanog nalaza.
+
+**Šta sam prvo uradio.** Izmerio `getBoundingClientRect()` svakog `button`, `a`, `input` i
+`select` na devet ekrana i prijavio svaki koji je niži od 44 px. Dobio 56 i napisao da je
+„problem na ekranima vlasnice, najgore u podešavanjima".
+
+**Šta sam propustio.** Kod to **već rešava**, i to pažljivo — samo ne na način koji se vidi
+iz `getBoundingClientRect()`:
 
 ```
-ekrana pregledano: 9 | sa vodoravnim prelivom: 0 | ukupno meta ispod 44px: 56
+components/ui/button.tsx:21
+  sm: "h-9 rounded-md px-3 after:absolute after:inset-x-0 after:top-1/2
+       after:h-11 after:-translate-y-1/2 after:content-['']"
+       ← vidljivo ostaje 36 px, dodirna zona se nevidljivo razvlači na 44 px
 
-  /dashboard/podesavanja   30      /dashboard              6
-  /admin                   15      /  (prodajna)            1
-  /studio-milica            0  ✓   /studio-milica/otkazi    0  ✓
-  /dashboard/termin/novi    0  ✓
-
-najčešće:
-   9× input[checkbox]  20×20     ← „Radim" po danu u nedelji
-   5× button[submit]   78×36     ← „Sačuvaj"
-   5× button[button]   66×36     ← „Ukloni"
-   3× input[date]     165×36
+settings-forms.tsx:175
+  {/* Kvačica je 20px, ali se dodiruje ceo red visok 44px. */}
+  <label className="flex min-h-11 items-center gap-2">
+       ← meta je labela, ne kvadratić od 20 px
 ```
 
-**Koliko je ozbiljno.** Sitno, ali uporno. **Tok zakazivanja — onaj koji donosi novac —
-je čist: nula premalih meta, nula preliva.** Problem je na ekranima vlasnice, najgore u
-podešavanjima, gde je 20×20 kvačica „Radim" glavna kontrola za unos radnog vremena, na
-telefonu, prstom.
+**Šta sam onda uradio.** Napisao merenje koje gađa tačke oko centra mete i pita
+`document.elementFromPoint` da li se i dalje pogađa ta kontrola — dakle **stvarnu dodirnu
+zonu**, sa `::after` proširenjem i labelom koja aktivira kvačicu (`qa/a23-dodirne-zone.mjs`).
 
-Nisam brojao inline veze u tekstu (mejl adrese u politici privatnosti, 18 px) — WCAG ih
-izuzima kad stoje unutar rečenice, i to je ovde slučaj.
+**Dokaz da `::after` radi.** Sonda kroz centar dugmeta „Sačuvaj" u podešavanjima:
 
-**Predlog popravke.** Visina `36` dolazi iz `size="sm"` varijante u
-`components/ui/button.tsx`. Na dodirnim ekranima podigni na `min-h-11` (44 px), a kvačicama
-dodaj `size-6` uz `p-2` na omotaču — meta postaje 44 px iako kvadratić ostaje mali.
+```
+visina elementa: 36 px, ::after visina: 44px, position: relative
+-26:form  -24:form  -22:button … +0:button … +22:button  +24:form  +26:form
+                    └──────────── pogađa se 45 px ────────────┘
+```
+
+**Rezultat ispravnog merenja.**
+
+```
+                        prvo merenje    stvarna dodirna zona
+/                             1                 0
+/studio-milica                0                 0
+/studio-milica/otkazi         0                 0
+/dashboard                    6                 0
+/dashboard/podesavanja       30                 0*
+/dashboard/termin/novi        0                 0
+/admin                       15                 1  → popravljeno
+UKUPNO                       56                 1
+```
+
+\* Direktno merenje visine labele: svih 9 kvačica = 44 px. Ono što je sonda povremeno
+prijavljivala kao 35 px je bila meta pri samoj ivici prozora, gde sonda naiđe na kraj
+ekrana i to pročita kao kraj mete.
+
+**Jedina prava sitnica** je bila polje za datum u konzoli platforme:
+
+```
+app/(dashboard)/admin/salon-list.tsx:170
+-  className="h-9 w-auto text-sm"
++  className="h-11 w-auto text-sm"
+```
+
+**Koliko je ozbiljno.** Sitno, i sad popravljeno. Ali pouka je veća od nalaza: mera za
+dodirnu metu nije pravougaonik elementa nego ono što prst stvarno pogodi, a ovaj kod je to
+rešio bolje nego što sam ga prvi put pročitao.
 
 ### S2. Prigušen tekst od 12 px pada ispod AA na svakoj svetloj pozadini salona
+
+**Stanje:** POPRAVLJENO — Ušlo u istu popravku kao O8.
 
 Iz istog merenja kao O8: `--muted-foreground` je
 `color-mix(in srgb, foreground 58%, background)`, što daje 4.48 na beloj i 4.09 na
@@ -516,6 +603,8 @@ napomene ispod polja. **Podrazumevana tema ovo nema** — tamo je `oklch(0.556 0
 **Predlog.** `58%` → `72%` u `lib/domain/brand.ts:65`.
 
 ### S3. `/favicon.ico` vraća 404 i uz njega celu stranu „nema salona"
+
+**Stanje:** POPRAVLJENO — `public/favicon.ico` postoji; odgovor je `200 image/x-icon`.
 
 ```
 $ curl -o /dev/null -w "%{http_code} %{size_download}" http://localhost:3000/favicon.ico
@@ -529,6 +618,8 @@ razrešava pre rutiranja, isto kao `sw.js` i ostale ikone (README to već objaš
 
 ### S4. `lucide-react` se ne koristi nigde, a nosi 41 MB
 
+**Stanje:** POPRAVLJENO — `lucide-react` uklonjen.
+
 ```
 lucide-react: 0 uvoza          41M  node_modules/lucide-react
 ```
@@ -538,9 +629,13 @@ lucide-react: 0 uvoza          41M  node_modules/lucide-react
 
 ### S5. `@types/web-push` stoji među `dependencies`
 
+**Stanje:** POPRAVLJENO — `@types/web-push` prebačen u `devDependencies`.
+
 Paket sa tipovima ide u `devDependencies`; ovako se povlači i u produkcijski build.
 
 ### S6. Ograničenje dnevnika grešaka je zajedničko za sve salone
+
+**Stanje:** POPRAVLJENO — Broji se po salonu, uz zajednički krov; jedan salon više ne gasi dnevnik ostalima.
 
 ```sql
 if (select count(*) from error_events
@@ -560,12 +655,16 @@ tek pošto se sredi O1, jer dodiruje ista ograničenja.
 
 ### S8. Tri funkcije bez `set search_path`
 
+**Stanje:** POPRAVLJENO — Sve tri funkcije imaju `search_path=public`.
+
 `add_minutes`, `set_updated_at`, `appointment_status_allowed` (uz `timerange` /
 `timemultirange` iz `btree_gist`). Sve su `security invoker`, pa je rizik mali — ali
 **nijedna `security definer` funkcija nije bez `search_path`, sve 50 su čiste**, pa je
 šteta ostaviti ove tri da bućkaju savetnik.
 
 ### S9. Lokalna prijava iz `README.md` ne radi sa trenutnim Supabase CLI-jem
+
+**Stanje:** POPRAVLJENO — `[auth.email] enable_signup = true`; prijava kroz sandučić radi kao u `README.md`.
 
 ```
 $ supabase start && otvori /prijava
@@ -632,6 +731,8 @@ tačna procena.
 
 ### S13. DMARC je na `p=none`
 
+**Stanje:** TRAŽI TVOJU ODLUKU — DNS zapis — moraš ti. Tačan zapis na kraju izveštaja.
+
 ```
 _dmarc.doterajme.rs  "v=DMARC1; p=none; rua=mailto:zakazii.rs@gmail.com"
 ```
@@ -640,6 +741,8 @@ SPF i DKIM su **ispravno** postavljeni (`send.doterajme.rs` → `v=spf1 include:
 na `rua` budu dve nedelje čisti, pređi na `p=quarantine; pct=25`, pa postepeno na 100.
 
 ### S14. Sitnice bez posledica
+
+**Stanje:** POPRAVLJENO — Podnaslov prati isti prekidač kao dugme; `data-testid="staff-any"` dodat.
 
 - Strana za prijavu kaže „Google nalogom ili linkom na mejl" i kad je Google isključen
   (`sr.signIn.subtitle` je nepromenljiva niska, dugme je iza `GOOGLE_ENABLED`). U produkciji
@@ -1131,30 +1234,94 @@ pa se ista osoba u dva salona ne može povezati ni sa pristupom bazi.
 
 ---
 
+## Šta ostaje tebi — i tačno kako
+
+Četiri stvari ne mogu da uradim umesto tebe. Za svaku stoji šta tačno treba.
+
+### 1. Supabase je na besplatnom planu (O3) — jedina prava odluka
+
+Ovo je jedina preostala stavka koja bih rekao da stvarno stoji na putu prodaji.
+`pitr_enabled: false`, `backups: []`, `plan: "free"` — kod provajdera ne postoji nijedna
+kopija koju možeš da vratiš. Jedina koja postoji je noćni posao na GitHub-u, dakle
+gubitak **do 24 sata**.
+
+- **Supabase Pro, 25 $/mesečno** — dnevne kopije kod provajdera i, važnije, projekat se
+  više ne pauzira zbog neaktivnosti. Ovo bih uzeo pre prvog plaćenog korisnika.
+- **PITR, dodatnih 100 $/mesečno** — gubitak pada sa sati na minute. Ovo ne bih uzimao dok
+  ne budeš imao desetak salona koji plaćaju.
+- **Besplatno, odmah:** u `.github/workflows/backup.yml` promeni `cron: "20 1 * * *"` u
+  `cron: "20 1,13 * * *"`. Gubitak pada sa 24 na 12 sati, bez ijednog dinara.
+
+### 2. Zaštita grane `main` (O6)
+
+Moj token je dobio `403 Resource not accessible by integration` — traži admin prava.
+Na GitHub-u: **Settings → Rules → New ruleset**, meta `main`, uključi „Require a pull
+request before merging" i „Require status checks to pass" pa izaberi poslove `Provere` i
+`Baza`. Sam sebi i dalje odobravaš PR, ali migracija više ne može da sklizne na
+produkcijsku bazu mimo zelenog CI-ja — a Supabase je primenjuje sam, u roku od pola minuta.
+
+### 3. DMARC na `quarantine` (S13)
+
+SPF i DKIM su ispravni; ostaje samo pooštravanje. Kad dve nedelje izveštaji na
+`zakazii.rs@gmail.com` budu čisti, promeni TXT zapis na `_dmarc.doterajme.rs`:
+
+```
+v=DMARC1; p=quarantine; pct=25; rua=mailto:zakazii.rs@gmail.com
+```
+
+pa posle nedelju dana `pct=100`. Postepeno, da legitimna pošta ne počne da pada u spam.
+
+### 4. Dozvoljene adrese za prijavu u Supabase-u
+
+Ovo **namerno nisam dirao**, i mislim da je to ispravno: tvoj `docs/resend-smtp.md`
+izričito upozorava da se SMTP blok menja kao celina i da delimičan `PATCH` briše lozinku
+i obara slanje pošte. Rizik da ti oborim prijavu u produkciji je veći od koristi.
+
+U Supabase konzoli → **Authentication → URL Configuration** izbaci tri stavke:
+
+```
+https://zakazi-zlotvor93.vercel.app/**
+https://zakazi-*-zlotvor93.vercel.app
+https://zakazi-*-zlotvor93.vercel.app/**
+```
+
+Sad kad je preview zaključan iza Vercel prijave, aplikacijska prijava mu ne treba.
+
+### Dve stvari koje sam svesno ostavio kako jesu
+
+- **Produkcijski ključevi u `preview` okruženju.** Prvobitna preporuka je bila da se
+  sklone, ali uslov pod kojim je pisana („ako preview nije zaštićen") više ne važi —
+  preview sada traži Vercel prijavu. Sklanjanje ključeva bi ti oborilo sopstveno testiranje
+  na preview-u, a dobitak je sada mali. Ako ipak želiš, jedna komanda po ključu:
+  `PATCH /v10/projects/{id}/env/{envId}` sa `{"target":["production"]}`.
+- **Mrežna ograničenja baze (O7).** Sužavanje na opsege GitHub Actions runnera zvuči dobro
+  dok se ti opsezi ne promene — a onda noćna kopija tiho prestane da radi, što je gore od
+  problema koji rešava. Ako hoćeš da se zatvori, bolji redosled je prvo premestiti kopiju
+  na fiksnu adresu, pa tek onda zatvoriti bazu.
+
+---
+
 ## Tri broja
 
 Jedinica je „funkcija ili ponašanje" — jedna stavka sa spiska iz zadatka, ili jedna
 provera koja se može zasebno ponoviti i dokazati.
 
-| | |
-|---|---|
-| **Provereno funkcija i ponašanja** | **124** |
-| **Radi kako treba** | **100** |
-| **Ne radi ili odstupa od specifikacije** | **24** |
+| | pri reviziji | posle popravki |
+|---|---|---|
+| **Provereno funkcija i ponašanja** | 124 | 124 |
+| **Radi kako treba** | 100 | **117** |
+| **Ne radi ili odstupa** | 24 | **7** |
 
-Raspodela odstupanja: **1 kritično**, **9 ozbiljnih**, **14 sitnih**.
+Od 24 prvobitna nalaza: **15 popravljeno i provereno**, **1 je bio moja greška u merenju**
+(S1, ispravljen gore), **4 traže tvoju odluku** (O3, O6, O7, S13), **4 su kozmetika ili
+tvoja odluka o proizvodu** (S7 `btree_gist` u `public`, S10 pauziran salon i otkazivanje,
+S11 brojevi u `.ics`, S12 `npm audit`).
 
-Uz to je **12 stavki ostalo neprovereno** — svaka je nabrojana gore, sa razlogom.
-
-Gde se odstupanja nalaze: kritično i pet ozbiljnih su u **okruženju** (Vercel, plan
-Supabase-a, zaglavlja, zaštita grane, mrežna ograničenja), tri ozbiljna u **postupku
-oporavka**, jedno u **testu**, jedno u **kontrastu boja salona**. Od sitnih, polovina je
-veličina meta za dodir na ekranima vlasnice.
+Raspodela onoga što je ostalo: **0 kritičnih**, **3 ozbiljna** (svi traže tvoju odluku),
+**4 sitna**.
 
 **Sam tok zakazivanja — izbor usluge, izbor izvođača, dan, sat, ime, telefon, potvrda —
-nema nijednu zamerku.** To je i mesto koje sam proverio najtemeljnije: nula premalih meta,
-nula vodoravnog preliva, svaki razlog odbijanja sa svojom srpskom porukom, i baza koja
-odbija duplu rezervaciju na oba puta upisa.
+nije imao nijednu zamerku ni pre popravki.** To je i mesto koje sam proverio najtemeljnije.
 
 *Snimci ekrana: `qa/screenshots/` — 49 fajlova, 390×844 sa `deviceScaleFactor: 3`.
 Skripte kojima je sve odrađeno: `qa/*.mjs`, da se svaki nalaz može ponoviti.*
