@@ -8,10 +8,28 @@ name: Backup
 # nigde u GitHub-u, pa ni provala u ovaj nalog ne otvara brojeve telefona ni
 # beleške o klijentkinjama.
 
+# Ide na sat vremena, ali se ne završava svaki put isto:
+#
+#   svaki prolaz  → dump, provere, proba vraćanja, šifrovanje, R2
+#   01:20 UTC     → uz to i commit u privatni repo
+#
+# Zašto samo jednom dnevno u git: šifrovan sadržaj je za git slučajan niz —
+# ne delta-kodira se i ne kompresuje, pa svaka kopija leži cela. Na sat
+# vremena to je 346 MB godišnje već sad, a 8,6 GB kad baza naraste na jedan
+# megabajt. Git repo se time ubija; R2 sa rokom trajanja ne.
+#
+# Proba vraćanja ostaje na svakom prolazu jer traje tri sekunde — slika
+# `postgres:17-alpine` je već povučena zbog `pg_dump`-a. Nema razloga da
+# ijedna kopija ostane neprovereno ležati.
 on:
-  # 01:20 UTC je 03:20 po Beogradu leti, 02:20 zimi — kad niko ne zakazuje.
+  # Minut 20 svakog sata. 01:20 UTC je 03:20 po Beogradu leti, 02:20 zimi —
+  # tada ide i ona koja se pamti zauvek.
+  #
+  # GitHub ume da zakasni sa zakazanim poslovima kad je pod opterećenjem, i
+  # gasi ih na repou bez ijedne izmene 60 dana. Traka u konzoli na `/admin`
+  # zato prijavljuje `stale` posle 26 sati — ona je ta koja to primeti.
   schedule:
-    - cron: "20 1 * * *"
+    - cron: "20 * * * *"
   workflow_dispatch:
 
 permissions:
@@ -23,7 +41,7 @@ concurrency:
 
 jobs:
   backup:
-    name: Dnevna kopija
+    name: Kopija baze
     runs-on: ubuntu-latest
     # Bez ovoga zaglavljen korak vrti runner do šestočasovnog limita. Ceo
     # posao traje par minuta, pa je sve preko ovoga znak da nešto ne valja.
@@ -36,8 +54,38 @@ jobs:
       BACKUP_REPO: Zlotvor92/zakazi-backup
       R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
       R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      # Koliko dugo se čuvaju satne kopije. Dnevne se ne diraju — one žive u
+      # git istoriji i nemaju rok.
+      SATNE_DANA: 14
 
     steps:
+      # Jedan prolaz dnevno nosi i trajnu kopiju; ostali su samo kratkoročni.
+      # Ručno pokretanje se uvek računa kao dnevno, da se puna putanja može
+      # isprobati bez čekanja na 01:20.
+      - name: Koja je ovo kopija
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             || [ "$(date -u +%H)" = "01" ]; then
+            echo "TRAJNA=da" >> "$GITHUB_ENV"
+            echo "BACKUP_FILE=zakazi-$(date -u +%Y-%m-%d).sql.gz.age" >> "$GITHUB_ENV"
+            echo "R2_KLJUC=zakazi-$(date -u +%Y-%m-%d).sql.gz.age" >> "$GITHUB_ENV"
+            echo "Dnevna kopija — ide i u privatni repo."
+          else
+            echo "TRAJNA=ne" >> "$GITHUB_ENV"
+            echo "BACKUP_FILE=zakazi-$(date -u +%Y-%m-%dT%H).sql.gz.age" >> "$GITHUB_ENV"
+            echo "R2_KLJUC=satne/zakazi-$(date -u +%Y-%m-%dT%H).sql.gz.age" >> "$GITHUB_ENV"
+            echo "Satna kopija — ide samo na R2, briše se posle $SATNE_DANA dana."
+          fi
+
+      # Satna kopija bez R2 nema gde da ode: u git ne sme (vidi zaglavlje), pa
+      # bi posao trošio minute i tiho ne radio ništa. Bolje da stane glasno.
+      - name: R2 mora biti podešen za satne kopije
+        if: env.TRAJNA == 'ne' && env.R2_ACCOUNT_ID == ''
+        run: |
+          echo '::error::Satne kopije traže R2 (R2_ACCOUNT_ID). Bez njega vrati cron na "20 1 * * *".'
+          exit 1
+
       # Šifrovanje ide statičkim binarnim fajlom umesto preko `apt`-a: prvi
       # pokušaj je dovlačio PGDG repo i posao je visio jedanaest minuta bez
       # ijednog reda ispisa, dok ga nisam prekinuo.
@@ -211,14 +259,12 @@ jobs:
       - name: Šifrovanje
         run: |
           set -euo pipefail
-          NAME="zakazi-$(date -u +%Y-%m-%d).sql.gz.age"
-          age --recipient "$AGE_PUBLIC_KEY" --output "$NAME" dump.sql.gz
+          age --recipient "$AGE_PUBLIC_KEY" --output "$BACKUP_FILE" dump.sql.gz
           rm -f dump.sql.gz
-          echo "BACKUP_FILE=$NAME" >> "$GITHUB_ENV"
 
-      # Drugo odredište je opciono: dok njegovi podaci ne postoje, korak se
-      # preskače i kopija svejedno ode u privatni repo. Čim se dodaju, uključi
-      # se sam, bez izmene ovog fajla.
+      # Za dnevnu kopiju je R2 drugo odredište; za satnu je jedino. Dok R2
+      # nije podešen, dnevna svejedno ode u privatni repo — satne su iznad već
+      # zaustavljene, pa ovde nema tihog gubitka.
       - name: Slanje na Cloudflare R2
         if: env.R2_ACCOUNT_ID != ''
         env:
@@ -227,12 +273,49 @@ jobs:
           AWS_DEFAULT_REGION: auto
         run: |
           set -euo pipefail
-          aws s3 cp "$BACKUP_FILE" "s3://$R2_BUCKET/$BACKUP_FILE" \
+          aws s3 cp "$BACKUP_FILE" "s3://$R2_BUCKET/$R2_KLJUC" \
             --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+          echo "Otpremljeno: $R2_KLJUC"
+
+      # Rok trajanja se sprovodi ovde, a ne pravilom u Cloudflare konzoli —
+      # tako stoji uz posao koji ga pravi i vidi se u istoriji ovog fajla.
+      #
+      # Datum se čita iz imena, ne iz vremena izmene na R2: ime je ono što
+      # posao sam upisuje, pa ne može da se pomeri kad se fajl prekopira.
+      # Dnevne kopije nisu u `satne/` i ovo ih ne dodiruje.
+      - name: Brisanje satnih kopija starijih od roka
+        if: env.R2_ACCOUNT_ID != ''
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          set -euo pipefail
+          granica=$(date -u -d "$SATNE_DANA days ago" +%Y-%m-%d)
+          echo "Brišem satne kopije pre $granica."
+
+          obrisano=0
+          # `--recursive` daje pun ključ u poslednjoj koloni; imena su naša i
+          # nemaju razmake, pa je ovo bezbedno pročitati.
+          for kljuc in $(aws s3 ls "s3://$R2_BUCKET/satne/" --recursive \
+                           --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" \
+                         | awk '{print $4}'); do
+            datum=$(basename "$kljuc" | sed -n 's/^zakazi-\([0-9-]\{10\}\)T.*/\1/p')
+            [ -n "$datum" ] || continue
+            if [ "$datum" \< "$granica" ]; then
+              aws s3 rm "s3://$R2_BUCKET/$kljuc" \
+                --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" > /dev/null
+              obrisano=$((obrisano + 1))
+            fi
+          done
+          echo "Obrisano starih satnih kopija: $obrisano."
 
       # Istorija ovog repoa je usput i verzionisanje: svaki dan stoji kao svoj
       # commit, pa se može uzeti stanje od pre nedelju dana, ne samo poslednje.
+      #
+      # Samo dnevna kopija. Satne ovde ne ulaze — vidi objašnjenje u zaglavlju.
       - name: Slanje u privatni repo
+        if: env.TRAJNA == 'da'
         env:
           GIT_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
         run: |
@@ -250,12 +333,20 @@ jobs:
 
       - name: Sažetak
         run: |
-          echo "### Kopija napravljena" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$TRAJNA" = "da" ]; then
+            echo "### Dnevna kopija" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### Satna kopija" >> "$GITHUB_STEP_SUMMARY"
+          fi
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- fajl: \`$BACKUP_FILE\`" >> "$GITHUB_STEP_SUMMARY"
           echo "- veličina pre šifrovanja: $DUMP_BYTES B" >> "$GITHUB_STEP_SUMMARY"
-          if [ -n "$R2_ACCOUNT_ID" ]; then
-            echo "- odredišta: privatni repo i Cloudflare R2" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$TRAJNA" = "da" ]; then
+            if [ -n "$R2_ACCOUNT_ID" ]; then
+              echo "- odredišta: privatni repo i Cloudflare R2" >> "$GITHUB_STEP_SUMMARY"
+            else
+              echo "- odredište: privatni repo (R2 još nije podešen)" >> "$GITHUB_STEP_SUMMARY"
+            fi
           else
-            echo "- odredište: privatni repo (R2 još nije podešen)" >> "$GITHUB_STEP_SUMMARY"
+            echo "- odredište: Cloudflare R2, briše se posle $SATNE_DANA dana" >> "$GITHUB_STEP_SUMMARY"
           fi
