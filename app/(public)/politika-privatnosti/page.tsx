@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: `Politika privatnosti — ${sr.app.name}`,
 };
 
-const LAST_UPDATED = "18. avgust 2026.";
+const LAST_UPDATED = "20. avgust 2026.";
 
 function Section({
   title,
@@ -147,6 +147,13 @@ export default function PrivacyPolicyPage() {
             podaci kao klijenta budu obrisani, javi se direktno salonu kod
             kog si zakazivala, ili nama na kontakt iz tačke 1 — prosledićemo
             zahtev.
+          </p>
+          <p>
+            Rezervne kopije baze čuvamo šifrovane, i one po prirodi stvari
+            zadržavaju stanje kakvo je bilo u trenutku kad su napravljene. Iz
+            njih se pojedinačni podaci ne brišu — kopija se ne menja unazad —
+            ali se brisanje ponovo primenjuje ako se kopija ikada vrati u
+            upotrebu.
           </p>
         </Section>
 

@@ -1,0 +1,12 @@
+import { launch, shot, auditScreen, BASE, MOBILE } from "./drive.mjs";
+const { browser, ctx } = await launch(MOBILE);
+const page = await ctx.newPage();
+await page.goto(`${BASE}/politika-privatnosti`, { waitUntil: "networkidle" });
+await page.waitForTimeout(400);
+const t = (await page.locator("body").innerText()).replace(/\s+/g, " ");
+console.log("poslednja izmena:", (t.match(/Poslednja izmena: [^A-Z]*/)||[""])[0].trim());
+const i = t.indexOf("5. Koliko dugo");
+console.log("tačka 5:", t.slice(i, i + 620));
+console.log("audit:", JSON.stringify(await auditScreen(page)).slice(0, 200));
+await shot(page, "mob-35-privatnost-kopije");
+await browser.close();
