@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { requireEnv, requireUrlEnv } from "@/lib/env";
+import { withClockSkewRetry } from "@/lib/supabase/clock-skew";
 
 export async function createClient() {
   const cookieStore = await cookies();
@@ -9,6 +10,9 @@ export async function createClient() {
     requireUrlEnv("NEXT_PUBLIC_SUPABASE_URL"),
     requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
+      // Svaki upit ka bazi prolazi ovuda, pa čekanje na zaostao sat PostgREST-a
+      // stoji na jednom mestu umesto u svakoj funkciji u `lib/db/`.
+      global: { fetch: withClockSkewRetry() },
       cookies: {
         getAll() {
           return cookieStore.getAll();

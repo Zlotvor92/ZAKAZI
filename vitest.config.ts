@@ -9,7 +9,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["tests/domain/**/*.test.ts"],
+    include: ["tests/domain/**/*.test.ts", "tests/supabase/**/*.test.ts"],
     passWithNoTests: true,
   },
 });
