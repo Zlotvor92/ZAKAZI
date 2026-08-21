@@ -1,8 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  accessTokenIssuedAt,
+  lagSeconds,
   tokenIssuedInFuture,
   withClockSkewRetry,
 } from "@/lib/supabase/clock-skew";
+
+/** Token bez potpisa — čita se samo `iat`, pa potpis ovde ništa ne znači. */
+function tokenIssuedAt(seconds: number): string {
+  const payload = Buffer.from(JSON.stringify({ iat: seconds })).toString(
+    "base64url",
+  );
+  return `header.${payload}.signature`;
+}
 
 /** Odgovor kojim PostgREST odbija token izdat ispred svog sata. */
 function issuedInFuture(): Response {
@@ -119,5 +129,53 @@ describe("čekanje na zaostao sat", () => {
     const response = await retrying("https://baza.test");
 
     expect(await response.text()).toContain("JWT expired");
+  });
+});
+
+describe("merenje zaostatka", () => {
+  it("čita `iat` iz tokena kojim je zahtev potpisan", () => {
+    const headers = new Headers({
+      Authorization: `Bearer ${tokenIssuedAt(1_770_000_000)}`,
+    });
+
+    expect(accessTokenIssuedAt(headers)).toBe(1_770_000_000_000);
+  });
+
+  it("ćuti kad zaglavlja ne nose token sesije", () => {
+    expect(accessTokenIssuedAt(new Headers())).toBeNull();
+    expect(
+      accessTokenIssuedAt(new Headers({ Authorization: "Bearer nije-jwt" })),
+    ).toBeNull();
+  });
+
+  it("računa donju granicu zaostatka iz starosti tokena", () => {
+    // Odbijen token star 5 s znači sat iza bar 30 + 5 sekundi.
+    expect(lagSeconds(1_000_000, 1_005_000)).toBe(35);
+    expect(lagSeconds(1_000_000, 1_000_000)).toBe(30);
+  });
+
+  it("dopisuje izmereni zaostatak poruci koju vidi konzola", async () => {
+    const inner = fetchReturning([issuedInFuture(), issuedInFuture()]);
+    const retrying = withClockSkewRetry(inner.fetch, [0]);
+
+    const response = await retrying("https://baza.test", {
+      headers: {
+        Authorization: `Bearer ${tokenIssuedAt(Math.floor(Date.now() / 1000))}`,
+      },
+    });
+
+    expect(response.status).toBe(401);
+    expect(await response.text()).toMatch(
+      /JWT issued at future \(PostgREST zaostaje bar 30 s/,
+    );
+  });
+
+  it("ne dira poruku kad tokena nema iz čega da se izmeri", async () => {
+    const inner = fetchReturning([issuedInFuture(), issuedInFuture()]);
+    const retrying = withClockSkewRetry(inner.fetch, [0]);
+
+    const response = await retrying("https://baza.test");
+
+    expect(await response.text()).not.toContain("zaostaje");
   });
 });
