@@ -8,9 +8,6 @@ import type { BackupRun } from "@/lib/domain/backup-health";
 const RUNS_URL =
   "https://api.github.com/repos/Zlotvor92/ZAKAZI/actions/workflows/backup.yml/runs?per_page=1";
 
-/** Neprijavljen poziv ka GitHub-u ima sat limit, a odgovor se menja jednom dnevno. */
-const CACHE_SECONDS = 900;
-
 const runsSchema = z.object({
   workflow_runs: z.array(
     z.object({
@@ -27,9 +24,22 @@ const runsSchema = z.object({
  */
 export async function getLastBackupRun(): Promise<BackupRun | null> {
   try {
+    /*
+     * Bez keša, iako je poziv neprijavljen i GitHub mu meri sat limit.
+     *
+     * `next: { revalidate }` prvo vrati stari odgovor pa ga tek onda osveži u
+     * pozadini. Ovu stranu otvara jedan čovek i to retko, pa je „stari
+     * odgovor" onaj od prošlog otvaranja, ma koliko rok bio kratak: traka je
+     * javljala da kopije nema 28 sati dok je noćni posao te iste noći uredno
+     * prošao. Traka koja kasni jedno otvaranje nije provera nego šum, a od
+     * šuma se nauči da se ne gleda.
+     *
+     * Limit ovo ne dodiruje jer stranu otvara samo vlasnik platforme. Kad bi
+     * ga i dodirnulo, `null` niže znači „ne znam", nikad „sve je u redu".
+     */
     const response = await fetch(RUNS_URL, {
       headers: { Accept: "application/vnd.github+json" },
-      next: { revalidate: CACHE_SECONDS },
+      cache: "no-store",
     });
 
     if (!response.ok) {
