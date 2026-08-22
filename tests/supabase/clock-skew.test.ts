@@ -165,8 +165,11 @@ describe("merenje zaostatka", () => {
     });
 
     expect(response.status).toBe(401);
+    // Broj se ne tvrdi ovde: on zavisi od toga koliko je test trajao, a tačnu
+    // računicu proverava test iznad. Ovde se traži da je broj uopšte stigao
+    // do poruke.
     expect(await response.text()).toMatch(
-      /JWT issued at future \(PostgREST zaostaje bar 30 s/,
+      /JWT issued at future \(PostgREST zaostaje bar \d+ s za Supabase Auth-om\)/,
     );
   });
 
