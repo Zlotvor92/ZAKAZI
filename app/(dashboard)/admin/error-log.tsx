@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { Button } from "@/components/ui/button";
 import type { ErrorRow } from "@/lib/db/errors";
 import { pluralize } from "@/lib/domain/plural";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
+import { clearErrorLog } from "./actions";
 
 function when(value: string): string {
   const date = new Date(value);
@@ -85,6 +87,43 @@ export function ErrorLog({ rows }: { rows: ErrorRow[] }) {
         <Row key={row.id} row={row} />
       ))}
     </ul>
+  );
+}
+
+/**
+ * Prazni spisak kad je pročitan.
+ *
+ * Popravljena greška ostaje u spisku i dalje drži crvenu traku nad konzolom.
+ * Posle par dana toga traka se preskače, pa ne javi ni ono što je novo —
+ * zato mora da postoji način da se skloni ono što je rešeno.
+ *
+ * Ćuti kad nema šta da se briše, isto kao i sama traka.
+ */
+export function ClearErrors({ count }: { count: number }) {
+  const [pending, startTransition] = useTransition();
+
+  if (count === 0) {
+    return null;
+  }
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      disabled={pending}
+      className="text-destructive hover:text-destructive shrink-0"
+      onClick={() => {
+        if (!window.confirm(sr.admin.errors.clearConfirm)) {
+          return;
+        }
+        startTransition(async () => {
+          await clearErrorLog();
+        });
+      }}
+    >
+      {pending ? sr.admin.errors.clearing : sr.admin.errors.clear}
+    </Button>
   );
 }
 

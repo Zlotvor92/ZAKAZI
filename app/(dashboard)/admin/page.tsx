@@ -7,7 +7,7 @@ import { backupState, hoursSince } from "@/lib/domain/backup-health";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
 import { BackupBanner } from "./backup-banner";
-import { ErrorBanner, ErrorLog } from "./error-log";
+import { ClearErrors, ErrorBanner, ErrorLog } from "./error-log";
 import { NewSalonForm } from "./new-salon-form";
 import { SalonList } from "./salon-list";
 
@@ -62,9 +62,10 @@ export default async function AdminPage() {
       />
 
       <section className="border-border mt-6 border-t pt-5">
-        <h2 className="pb-1 text-base font-semibold">
-          {sr.admin.errors.title}
-        </h2>
+        <div className="flex items-center justify-between gap-3 pb-1">
+          <h2 className="text-base font-semibold">{sr.admin.errors.title}</h2>
+          <ClearErrors count={errors.length} />
+        </div>
         <ErrorLog rows={errors} />
       </section>
     </main>

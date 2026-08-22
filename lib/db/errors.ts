@@ -63,6 +63,24 @@ export async function getRecentErrors(limit = 50): Promise<ErrorRow[]> {
   return z.array(errorRowSchema).parse(data ?? []);
 }
 
+/**
+ * Prazni evidenciju i vraća koliko je redova otišlo.
+ *
+ * Nula za svakog ko ne upravlja platformom — baza to rešava, isto kao kod
+ * čitanja, pa se ni ovde ne oslanja na proveru u aplikaciji.
+ */
+export async function clearErrors(): Promise<number> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("clear_error_events");
+
+  if (error) {
+    throw new Error(`Brisanje grešaka nije uspelo: ${error.message}`);
+  }
+
+  return z.number().int().parse(data ?? 0);
+}
+
 export async function getErrorCountLastDay(): Promise<number> {
   const supabase = await createClient();
 
