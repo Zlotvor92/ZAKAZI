@@ -218,6 +218,12 @@ export const sr = {
     linkTitle: "Tvoj link za zakazivanje",
     linkHint:
       "Ovo stavi u Instagram bio i u automatski odgovor na poruku. Klijent otvara i zakazuje sam.",
+    linkCopy: "Kopiraj link",
+    linkOpen: "Otvori",
+
+    copied: "Kopirano",
+    /** Kad pregledač odbije pristup ostavi, korisniku ostaje ručni put. */
+    copyFailed: "Kopiranje nije uspelo. Dodirni i drži link, pa „Kopiraj”.",
 
     hoursTitle: "Radno vreme",
     hoursHint:

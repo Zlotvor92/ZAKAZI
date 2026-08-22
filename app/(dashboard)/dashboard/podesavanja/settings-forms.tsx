@@ -31,6 +31,46 @@ import {
   type SettingsState,
 } from "./actions";
 
+/**
+ * Kopira zadati tekst i to kaže.
+ *
+ * Ostava ume da bude zabranjena — stroža podešavanja pregledača, ugrađeni
+ * pregledač u Instagramu. Tada se ne sme ćutati: vlasnici koja je pritisla
+ * dugme i ništa se nije desilo ostaje da nagađa, pa dobija uputstvo kako da
+ * kopira rukom.
+ */
+function CopyButton({
+  value,
+  label,
+  onFailed,
+}: {
+  value: string;
+  label: string;
+  onFailed: (failed: boolean) => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="outline"
+      onClick={() => {
+        void navigator.clipboard
+          .writeText(value)
+          .then(() => {
+            onFailed(false);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+          })
+          .catch(() => onFailed(true));
+      }}
+    >
+      {copied ? sr.settings.copied : label}
+    </Button>
+  );
+}
+
 function Feedback({ state }: { state: SettingsState }) {
   if (state.status === "saved") {
     return <p className="text-muted-foreground text-sm">{sr.settings.saved}</p>;
@@ -864,7 +904,7 @@ export function CalendarFeed({
   origin: string;
 }) {
   const [pending, startTransition] = useTransition();
-  const [copied, setCopied] = useState(false);
+  const [copyFailed, setCopyFailed] = useState(false);
 
   const httpUrl = token ? `${origin}/api/kalendar/salon/${token}` : null;
   const webcalUrl = httpUrl
@@ -907,20 +947,18 @@ export function CalendarFeed({
           {sr.settings.calendarSubscribe}
         </a>
 
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => {
-            void navigator.clipboard.writeText(httpUrl).then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 2000);
-            });
-          }}
-        >
-          {copied ? sr.settings.calendarCopied : sr.settings.calendarCopy}
-        </Button>
+        <CopyButton
+          value={httpUrl}
+          label={sr.settings.calendarCopy}
+          onFailed={setCopyFailed}
+        />
       </div>
+
+      {copyFailed ? (
+        <p role="alert" className="text-destructive text-xs">
+          {sr.settings.copyFailed}
+        </p>
+      ) : null}
 
       <div className="text-muted-foreground space-y-2 pt-1 text-xs">
         <p className="font-medium">{sr.settings.calendarStepsTitle}</p>
@@ -962,6 +1000,52 @@ export function CalendarFeed({
           {sr.settings.calendarDisable}
         </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Javni link salona, sa kopiranjem.
+ *
+ * Ovo je jedina stvar sa cele strane koja stalno treba drugde — u Instagram
+ * bio, u automatski odgovor, u poruku klijentu. Do sada se morao označiti
+ * prstom po adresi koja se lomi u tri reda, što na telefonu skoro nikad ne
+ * uhvati tačno ceo tekst.
+ *
+ * „Otvori" stoji pored jer je jedini način da vlasnica vidi ono što vidi
+ * klijent, a da se ne odjavi iz svog naloga.
+ */
+export function PublicLink({ url }: { url: string }) {
+  const [copyFailed, setCopyFailed] = useState(false);
+
+  return (
+    <div className="space-y-3">
+      <p className="bg-accent rounded-md p-3 text-sm break-all">{url}</p>
+
+      <div className="flex flex-wrap gap-2">
+        <CopyButton
+          value={url}
+          label={sr.settings.linkCopy}
+          onFailed={setCopyFailed}
+        />
+
+        <a
+          href={url}
+          target="_blank"
+          rel="noreferrer"
+          className={buttonVariants({ size: "sm", variant: "outline" })}
+        >
+          {sr.settings.linkOpen}
+        </a>
+      </div>
+
+      {copyFailed ? (
+        <p role="alert" className="text-destructive text-xs">
+          {sr.settings.copyFailed}
+        </p>
+      ) : null}
+
+      <p className="text-muted-foreground text-xs">{sr.settings.linkHint}</p>
     </div>
   );
 }
