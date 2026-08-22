@@ -81,7 +81,7 @@ export function accessTokenIssuedAt(headers: Headers): number | null {
  * što se sa sigurnošću zna — i dovoljna je za prijavu Supabase-u.
  */
 export function lagSeconds(issuedAtMs: number, rejectedAtMs: number): number {
-  return Math.round(
+  return Math.floor(
     TOLERANCE_SECONDS + Math.max(0, rejectedAtMs - issuedAtMs) / 1000,
   );
 }
