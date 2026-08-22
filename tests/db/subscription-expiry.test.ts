@@ -94,19 +94,42 @@ describe("računanje isteka", () => {
 
   it("dan se meri po salonu, ne po serveru", async () => {
     await withRollback(async (db) => {
-      // Kiritimati je UTC+14; tamo je datum uvek ispred beogradskog, pa isti
-      // `paid_until` tamo ističe ranije nego ovde.
-      const result = await db.query<{ ostrvo: boolean; beograd: boolean }>(
+      // Kiritimati je UTC+14, Baker je UTC-12 — razmak od dvadeset šest sati,
+      // pa im se datum razlikuje u svakom trenutku. Beograd ovde ne može da
+      // stoji: on je od Kiritimatija udaljen dvanaest sati, pa im je datum
+      // isti svako prepodne, i test je bio zelen samo popodne.
+      const result = await db.query<{ ostrvo: boolean; baker: boolean }>(
         `select
            subscription_expired(
              (now() at time zone 'Pacific/Kiritimati')::date - 1,
              'Pacific/Kiritimati') as ostrvo,
            subscription_expired(
              (now() at time zone 'Pacific/Kiritimati')::date - 1,
-             'Europe/Belgrade') as beograd`,
+             'Etc/GMT+12') as baker`,
       );
       expect(result.rows[0]!.ostrvo).toBe(true);
-      expect(result.rows[0]!.beograd).toBe(false);
+      expect(result.rows[0]!.baker).toBe(false);
+    });
+  });
+
+  it("isti dan ističe ranije što je salon istočnije", async () => {
+    await withRollback(async (db) => {
+      // Ono što je prethodni test tvrdio o Beogradu, bez oslanjanja na doba
+      // dana: ističe li negde, mora isteći i svuda istočnije od toga.
+      const result = await db.query<{ prekrsaj: boolean }>(
+        `select coalesce(bool_or(zapad and not istok), true) as prekrsaj
+           from (
+             select
+               subscription_expired(d::date, 'Etc/GMT+12') as zapad,
+               subscription_expired(d::date, 'Pacific/Kiritimati') as istok
+             from generate_series(
+                    (now() at time zone 'Etc/GMT+12')::date - 2,
+                    (now() at time zone 'Pacific/Kiritimati')::date + 2,
+                    interval '1 day'
+                  ) as d
+           ) as parovi`,
+      );
+      expect(result.rows[0]!.prekrsaj).toBe(false);
     });
   });
 
