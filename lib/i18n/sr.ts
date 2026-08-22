@@ -107,6 +107,10 @@ export const sr = {
       hide: "Sakrij",
       client: "pregledač",
       server: "server",
+      clear: "Obriši spisak",
+      clearing: "Brišem…",
+      clearConfirm:
+        "Obrisati sve zabeležene greške? Spisak se ne može vratiti.",
     },
 
     backup: {

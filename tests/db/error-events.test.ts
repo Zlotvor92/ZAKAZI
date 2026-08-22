@@ -176,3 +176,58 @@ describe("greške čita samo vlasnik platforme", () => {
     });
   });
 });
+
+describe("evidenciju prazni samo vlasnik platforme", () => {
+  async function clear(db: pg.PoolClient): Promise<number> {
+    const result = await db.query<{ n: number }>(
+      "select clear_error_events() as n",
+    );
+    return result.rows[0]!.n;
+  }
+
+  it("vlasnik platforme briše sve i dobija koliko je otišlo", async () => {
+    await withRollback(async (db) => {
+      const adminId = await makeAdmin(db);
+      await log(db, { message: "prva" });
+      await log(db, { message: "druga" });
+
+      const deleted = await asUser(db, adminId, () => clear(db));
+
+      expect(deleted).toBe(2);
+      expect(await countAll(db)).toBe(0);
+    });
+  });
+
+  it("vlasnica salona ne obriše ništa i ne sazna da je nešto bilo", async () => {
+    await withRollback(async (db) => {
+      const tenantId = await createTenant(db);
+      const userId = await createUser(db, tenantId);
+      await log(db, { message: "tajna iz steka" });
+
+      const deleted = await asUser(db, userId, () => clear(db));
+
+      expect(deleted).toBe(0);
+      expect(await countAll(db)).toBe(1);
+    });
+  });
+
+  it("neprijavljen ne sme ni da pozove brisanje", async () => {
+    await withRollback(async (db) => {
+      await log(db);
+
+      await expect(
+        inSavepoint(db, () => asAnon(db, () => clear(db))),
+      ).rejects.toThrow();
+
+      expect(await countAll(db)).toBe(1);
+    });
+  });
+
+  it("prazna evidencija vraća nulu umesto da pukne", async () => {
+    await withRollback(async (db) => {
+      const adminId = await makeAdmin(db);
+
+      expect(await asUser(db, adminId, () => clear(db))).toBe(0);
+    });
+  });
+});

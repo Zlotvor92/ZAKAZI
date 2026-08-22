@@ -11,6 +11,7 @@ import {
   setSalonPaidUntil,
   setSalonSuspended,
 } from "@/lib/db/admin";
+import { clearErrors } from "@/lib/db/errors";
 import { removeLogoFiles, uploadLogo } from "@/lib/db/logo";
 import { sr } from "@/lib/i18n/sr";
 import { ensureUser } from "@/lib/supabase/admin";
@@ -237,6 +238,22 @@ export async function savePaidUntil(
   revalidatePath("/admin");
   // Vlasnica vidi svoj datum u kalendaru, pa i on mora da se osveži.
   revalidatePath("/dashboard", "layout");
+  return { status: "idle" };
+}
+
+/**
+ * Prazni evidenciju grešaka.
+ *
+ * Pravo proverava `clear_error_events` u bazi, pa se ovde ne proverava opet.
+ */
+export async function clearErrorLog(): Promise<AdminState> {
+  try {
+    await clearErrors();
+  } catch {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
+  revalidatePath("/admin");
   return { status: "idle" };
 }
 
