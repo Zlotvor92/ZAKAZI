@@ -15,6 +15,7 @@ import {
   BookingRulesForm,
   BrandForm,
   CalendarFeed,
+  PublicLink,
   ServicesSection,
   TimeOffSection,
   WorkingHoursForm,
@@ -97,10 +98,7 @@ export default async function SettingsPage() {
       </header>
 
       <Section title={sr.settings.linkTitle}>
-        <p className="bg-accent rounded-md p-3 text-sm break-all">{link}</p>
-        <p className="text-muted-foreground pt-2 text-xs">
-          {sr.settings.linkHint}
-        </p>
+        <PublicLink url={link} />
       </Section>
 
       <Section title={sr.settings.servicesTitle}>
