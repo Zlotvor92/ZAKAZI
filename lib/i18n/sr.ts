@@ -111,6 +111,9 @@ export const sr = {
       clearing: "Brišem…",
       clearConfirm:
         "Obrisati sve zabeležene greške? Spisak se ne može vratiti.",
+      /** `{razlog}` se zamenjuje pre prikaza. Ovo vidi samo vlasnik platforme. */
+      clearFailed: "Brisanje nije uspelo: {razlog}",
+      clearedNone: "Baza je odbila brisanje — nijedan red nije obrisan.",
     },
 
     backup: {

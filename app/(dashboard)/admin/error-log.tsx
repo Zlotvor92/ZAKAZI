@@ -1,12 +1,13 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import type { ErrorRow } from "@/lib/db/errors";
 import { pluralize } from "@/lib/domain/plural";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
-import { clearErrorLog } from "./actions";
+import { clearErrorLog, type ClearState } from "./actions";
 
 function when(value: string): string {
   const date = new Date(value);
@@ -100,30 +101,63 @@ export function ErrorLog({ rows }: { rows: ErrorRow[] }) {
  * Ćuti kad nema šta da se briše, isto kao i sama traka.
  */
 export function ClearErrors({ count }: { count: number }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [state, setState] = useState<ClearState>({ status: "idle" });
 
   if (count === 0) {
     return null;
   }
 
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant="outline"
-      disabled={pending}
-      className="text-destructive hover:text-destructive shrink-0"
-      onClick={() => {
-        if (!window.confirm(sr.admin.errors.clearConfirm)) {
-          return;
-        }
-        startTransition(async () => {
-          await clearErrorLog();
-        });
-      }}
-    >
-      {pending ? sr.admin.errors.clearing : sr.admin.errors.clear}
-    </Button>
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={pending}
+        className="text-destructive hover:text-destructive shrink-0"
+        onClick={() => {
+          if (!window.confirm(sr.admin.errors.clearConfirm)) {
+            return;
+          }
+          startTransition(async () => {
+            // I sam poziv ume da padne — akcija iz starijeg izdanja strane
+            // više ne postoji na serveru posle novog objavljivanja. Bez ovog
+            // `catch`-a to bi bilo odbijeno obećanje koje niko ne vidi, pa bi
+            // dugme ćutalo isto kao da ništa nije ni pritisnuto.
+            try {
+              const result = await clearErrorLog();
+              setState(result);
+              if (result.status === "cleared" && result.count > 0) {
+                router.refresh();
+              }
+            } catch (cause) {
+              setState({
+                status: "error",
+                message: cause instanceof Error ? cause.message : String(cause),
+              });
+            }
+          });
+        }}
+      >
+        {pending ? sr.admin.errors.clearing : sr.admin.errors.clear}
+      </Button>
+
+      {state.status === "error" ? (
+        <p role="alert" className="text-destructive text-xs break-all">
+          {sr.admin.errors.clearFailed.replace("{razlog}", state.message)}
+        </p>
+      ) : null}
+
+      {/* Nula znači da je baza odbila poziv, ne da je spisak bio prazan —
+          dugme se i ne prikazuje kad nema šta da se briše. */}
+      {state.status === "cleared" && state.count === 0 ? (
+        <p role="alert" className="text-destructive text-xs">
+          {sr.admin.errors.clearedNone}
+        </p>
+      ) : null}
+    </div>
   );
 }
 
