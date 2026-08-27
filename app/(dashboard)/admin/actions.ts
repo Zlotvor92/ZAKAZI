@@ -241,20 +241,32 @@ export async function savePaidUntil(
   return { status: "idle" };
 }
 
+export type ClearState =
+  | { status: "idle" }
+  | { status: "cleared"; count: number }
+  | { status: "error"; message: string };
+
 /**
  * Prazni evidenciju grešaka.
  *
  * Pravo proverava `clear_error_events` u bazi, pa se ovde ne proverava opet.
+ *
+ * Vraća koliko je redova otišlo, a ne samo „prošlo je": baza vrati nulu i kad
+ * odbije poziv, pa bi bez broja odbijanje izgledalo isto kao uspeh. Razlog
+ * pada ide ovuda neskraćen — ovo je konzola vlasnika platforme, koja ionako
+ * prikazuje sirove poruke grešaka, i tu je opis kvara vredniji od uglađenosti.
  */
-export async function clearErrorLog(): Promise<AdminState> {
+export async function clearErrorLog(): Promise<ClearState> {
   try {
-    await clearErrors();
-  } catch {
-    return { status: "error", message: sr.admin.actionFailed };
+    return { status: "cleared", count: await clearErrors() };
+  } catch (cause) {
+    return {
+      status: "error",
+      message: cause instanceof Error ? cause.message : String(cause),
+    };
+  } finally {
+    revalidatePath("/admin");
   }
-
-  revalidatePath("/admin");
-  return { status: "idle" };
 }
 
 /**
