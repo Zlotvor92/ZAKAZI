@@ -147,6 +147,34 @@ jobs:
             fi
           done
 
+          # Gornja provera pokriva šest tabela, pa se na pitanje „da li je juče
+          # nestalo nešto i iz ostalih" moglo odgovoriti samo dešifrovanjem, a
+          # privatni ključ ne sme ovde. Zato uz svaku kopiju ide i broj redova
+          # po svakoj tabeli, otvorenim tekstom: brojevi nisu lični podatak, a
+          # `git diff` nad dva dana onda kaže šta se promenilo bez ijednog
+          # ključa. Broji se iz vraćene baze, ne iz produkcije, da bi merilo
+          # baš ono što u kopiji zaista piše.
+          #
+          # Ako brojanje zakaže, kopija svejedno ide na oba odredišta — spisak
+          # ne sme da košta kopiju.
+          MANIFEST="zakazi-$(date -u +%Y-%m-%d).brojevi.txt"
+          if docker exec proba psql -U postgres -d postgres -tA -F$'\t' -v ON_ERROR_STOP=1 -c "
+            select table_name,
+                   (xpath('/row/c/text()',
+                          query_to_xml(format('select count(*) as c from public.%I', table_name),
+                                       false, true, '')))[1]::text::bigint
+            from information_schema.tables
+            where table_schema = 'public' and table_type = 'BASE TABLE'
+            order by table_name
+          " > "$MANIFEST" 2> brojanje.txt && [ -s "$MANIFEST" ]; then
+            echo "MANIFEST_FILE=$MANIFEST" >> "$GITHUB_ENV"
+            echo "Zapisano stanje $(wc -l < "$MANIFEST") tabela u $MANIFEST."
+          else
+            echo "Brojanje tabela nije uspelo, kopija ide bez spiska: $(cat brojanje.txt)"
+            rm -f "$MANIFEST"
+          fi
+          rm -f brojanje.txt
+
           docker rm -f proba > /dev/null
           rm -f dump.sql greske.txt
           test "$greska" -eq 0 || { echo "Vraćanje nije verno — kopija se ne sme smatrati ispravnom."; exit 1; }
@@ -185,10 +213,13 @@ jobs:
             "https://x-access-token:${GIT_TOKEN}@github.com/$BACKUP_REPO.git" repo
           mkdir -p repo/dnevno
           cp "$BACKUP_FILE" "repo/dnevno/$BACKUP_FILE"
+          if [ -n "${MANIFEST_FILE:-}" ]; then
+            cp "$MANIFEST_FILE" "repo/dnevno/$MANIFEST_FILE"
+          fi
           cd repo
           git config user.name "backup"
           git config user.email "backup@users.noreply.github.com"
-          git add "dnevno/$BACKUP_FILE"
+          git add "dnevno/$BACKUP_FILE" ${MANIFEST_FILE:+"dnevno/$MANIFEST_FILE"}
           git commit -m "Kopija $BACKUP_FILE" || { echo "Kopija za danas već postoji."; exit 0; }
           git push
 
