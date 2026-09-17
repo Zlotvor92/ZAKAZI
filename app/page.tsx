@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Playfair_Display } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
-import heroImage from "@/public/home-hero-manicure.webp";
 import { sr } from "@/lib/i18n/sr";
 
 /**
@@ -97,12 +96,18 @@ export default function HomePage() {
 
           `priority` stoji zato što je ovo najveći element u prvom ekranu:
           bez njega Next je učitava tek posle skripti i strana vidno poskoči.
+
+          Adresa je upisana kao putanja, a ne uvezena kao modul: `next-env.d.ts`
+          koji opisuje tip uvezene slike pravi tek `next build`, pa `tsc` na
+          čistom klonu — kakav je onaj u CI-ju — takav uvoz ne ume da razreši.
+          Dimenzije zato stoje ovde, i dalje čuvaju raspored od poskakivanja.
         */}
         <Image
-          src={heroImage}
+          src="/home-hero-manicure.webp"
           alt={sr.home.heroImageAlt}
+          width={1600}
+          height={900}
           sizes="(max-width: 448px) 100vw, 448px"
-          placeholder="blur"
           priority
           className="-mx-6 w-[calc(100%+3rem)] max-w-none"
         />
