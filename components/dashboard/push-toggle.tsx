@@ -5,7 +5,27 @@ import { Button } from "@/components/ui/button";
 import { sr } from "@/lib/i18n/sr";
 import type { PushSubscriptionInput } from "@/lib/db/push";
 
-type State = "checking" | "off" | "on" | "blocked" | "unsupported";
+type State =
+  | "checking"
+  | "off"
+  | "on"
+  | "blocked"
+  | "unsupported"
+  | "needs_home_screen";
+
+/**
+ * iPhone i iPad, uključujući iPad koji se predstavlja kao Mac sa ekranom na
+ * dodir. Na njima obaveštenja postoje samo u aplikaciji sa početnog ekrana, pa
+ * odsustvo API-ja nije „pregledač ne podržava" nego „nije još dodata".
+ */
+function isApplePhone(): boolean {
+  const ua = navigator.userAgent;
+
+  return (
+    /iPhone|iPad|iPod/.test(ua) ||
+    (ua.includes("Macintosh") && navigator.maxTouchPoints > 1)
+  );
+}
 
 /** VAPID ključ putuje kao base64url, a `subscribe` traži sirove bajtove. */
 function decodeKey(base64Url: string): ArrayBuffer {
@@ -56,7 +76,7 @@ export function PushToggle({
       !("PushManager" in window) ||
       !("Notification" in window)
     ) {
-      setState("unsupported");
+      setState(isApplePhone() ? "needs_home_screen" : "unsupported");
       return;
     }
 
@@ -119,6 +139,12 @@ export function PushToggle({
 
   if (state === "checking") {
     return null;
+  }
+
+  // Na iPhone-u dugme ne sme ni da se pojavi dok stranica nije na početnom
+  // ekranu — pritisak tada ne može da uspe. Umesto njega stoji šta da uradi.
+  if (state === "needs_home_screen") {
+    return <p className="text-sm">{sr.settings.pushIosHint}</p>;
   }
 
   if (state === "unsupported") {
