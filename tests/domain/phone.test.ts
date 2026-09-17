@@ -64,6 +64,14 @@ describe("domaći fiksni broj", () => {
   it("novosadski broj prolazi", () => {
     expect(e164("021 456789")).toBe("+38121456789");
   });
+
+  it("niz cifara na fiksnom broju nije znak da je izmišljen", () => {
+    // `011 234 5678` je običan beogradski broj. Pretplatnički deo fiksnog
+    // broja je kraći i pravilniji od mobilnog, pa niz od sedam cifara tu nije
+    // dokaz ni o čemu — a bio je dovoljan da se broj odbije.
+    expect(e164("011 234 5678")).toBe("+381112345678");
+    expect(e164("024 345 6789")).toBe("+381243456789");
+  });
 });
 
 describe("strani broj", () => {
@@ -147,7 +155,7 @@ describe("izmišljen broj", () => {
     expect(problem("011 111 1111")).toBe("looks_fake");
   });
 
-  it("niz uzastopnih cifara se odbija", () => {
+  it("niz uzastopnih cifara se odbija na mobilnom broju", () => {
     expect(problem("0641234567")).toBe("looks_fake");
     expect(problem("064 123 4567")).toBe("looks_fake");
     expect(problem("0647654321")).toBe("looks_fake");
