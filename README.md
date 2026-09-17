@@ -103,7 +103,31 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
 
 Obe se ugrađuju u toku build-a, pa posle izmene treba napraviti novu verziju.
-Ključ koji zaobilazi RLS nigde nije potreban i ne sme se dodavati.
+
+Za obaveštenja na telefon i za pravljenje salona iz konzole potrebne su još
+četiri:
+
+```
+SUPABASE_SERVICE_ROLE_KEY
+NEXT_PUBLIC_VAPID_PUBLIC_KEY
+VAPID_PRIVATE_KEY
+VAPID_SUBJECT
+```
+
+`SUPABASE_SERVICE_ROLE_KEY` zaobilazi RLS i zato ide **samo** na server, nikad
+u promenljivu sa `NEXT_PUBLIC_` prefiksom. Potreban je za dva posla koja se
+bez njega ne mogu odraditi: obaveštenje o zakazivanju šalje se na uređaje
+vlasnice, a zakazuje neprijavljena klijentkinja koja te uređaje po RLS-u ne
+sme ni da vidi; i nalog vlasnice se pravi kroz Supabase Auth, kome anonimni
+ključ ne daje pravo. Sve ostalo radi sa anonimnim ključem i RLS-om.
+
+Bez `VAPID_*` ključeva obaveštenja se prosto ne uključuju i ostatak
+aplikacije radi normalno. `VAPID_SUBJECT` je `mailto:` adresa za koju ti
+pretplatnički servisi pišu u slučaju problema. Par ključeva se pravi jednom:
+
+```bash
+npx web-push generate-vapid-keys
+```
 
 Sesija se u middleware-u proverava lokalno, `getClaims()` umesto `getUser()`,
 pa svaki zahtev ka `/dashboard` više ne ide na Supabase Auth. To traži da
