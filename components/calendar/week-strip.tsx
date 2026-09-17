@@ -24,7 +24,9 @@ export function WeekStrip({
   today: string;
 }) {
   return (
-    <ul className="grid grid-cols-7 gap-1">
+    /* Razmak od 2px na najužim telefonima: na 360px sedam ćelija sa razmakom
+       od 4px daje 43px po ćeliji, tik ispod mete koju prst pogađa. */
+    <ul className="grid grid-cols-7 gap-0.5 sm:gap-1">
       {days.map((day) => {
         const isSelected = day.date === selected;
 
