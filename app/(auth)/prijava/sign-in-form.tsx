@@ -2,8 +2,7 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { display } from "@/app/fonts";
 import { sr } from "@/lib/i18n/sr";
 import {
   requestMagicLink,
@@ -35,17 +34,24 @@ function GoogleMark() {
   );
 }
 
+const ERROR = "border-l-2 border-[#B3261E] pl-3 text-sm leading-relaxed text-[#B3261E]";
+const LABEL = "text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase";
+
 function GoogleButton() {
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState<string | null>(null);
 
   return (
-    <div className="space-y-2">
-      <Button
+    <div className="flex flex-col gap-3">
+      {/*
+        Dugme ostaje belo, sa njihovim znakom i punim imenom, jer to traže
+        Googleova pravila za prijavu. Uz okvir strane ga vezuje samo boja
+        linije i ugao — ništa od onoga što ta pravila propisuju.
+      */}
+      <button
         type="button"
-        variant="outline"
-        className="h-12 w-full gap-2"
         disabled={pending}
+        className="flex h-14 w-full items-center justify-center gap-3 rounded-sm border border-[#DED5C7] bg-white text-[15px] font-medium text-[#211D1A] disabled:opacity-60"
         onClick={() => {
           startTransition(async () => {
             const result = await signInWithGoogle();
@@ -57,15 +63,17 @@ function GoogleButton() {
       >
         <GoogleMark />
         {pending ? sr.signIn.googleGoing : sr.signIn.google}
-      </Button>
+      </button>
 
       {message ? (
-        <p role="alert" className="text-destructive text-sm">
+        <p role="alert" className={ERROR}>
           {message}
         </p>
       ) : null}
 
-      <p className="text-muted-foreground text-xs">{sr.signIn.googleHint}</p>
+      <p className="text-xs leading-relaxed text-[#6B6055]">
+        {sr.signIn.googleHint}
+      </p>
     </div>
   );
 }
@@ -84,9 +92,13 @@ const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_SIGN_IN !== "false";
 function SubmitButton() {
   const { pending } = useFormStatus();
   return (
-    <Button type="submit" className="w-full" disabled={pending}>
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex h-14 w-full items-center justify-center bg-[#211D1A] text-xs font-bold tracking-[0.18em] text-[#FBF7F0] uppercase disabled:opacity-60"
+    >
       {pending ? sr.signIn.submitting : sr.signIn.submit}
-    </Button>
+    </button>
   );
 }
 
@@ -98,35 +110,41 @@ export function SignInForm() {
 
   if (state.status === "sent") {
     return (
-      <div className="space-y-2 text-center">
-        <h2 className="text-lg font-medium">{sr.signIn.sentTitle}</h2>
-        <p className="text-muted-foreground text-sm">{sr.signIn.sentBody}</p>
+      <div className="flex flex-col gap-3 border-t-2 border-[#211D1A] pt-4">
+        <h2 className={`${display.className} text-[28px] leading-tight`}>
+          {sr.signIn.sentTitle}
+        </h2>
+        <p className="text-sm leading-relaxed text-[#554C44]">
+          {sr.signIn.sentBody}
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-5">
+    <div className="flex flex-col gap-6">
       {GOOGLE_ENABLED ? (
         <>
           <GoogleButton />
 
           {/* Mejlom se prijavljuje onaj ko nema Google nalog; oba puta vode
               istom korisniku, jer se traži ista adresa. */}
-          <div className="flex items-center gap-3">
-            <span className="bg-border h-px flex-1" />
-            <span className="text-muted-foreground text-xs">{sr.signIn.or}</span>
-            <span className="bg-border h-px flex-1" />
+          <div className="flex items-center gap-4">
+            <span className="h-px flex-1 bg-[#DED5C7]" />
+            <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+              {sr.signIn.or}
+            </span>
+            <span className="h-px flex-1 bg-[#DED5C7]" />
           </div>
         </>
       ) : null}
 
-      <form action={formAction} className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
+      <form action={formAction} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <label htmlFor="email" className={LABEL}>
             {sr.signIn.emailLabel}
           </label>
-          <Input
+          <input
             id="email"
             name="email"
             type="email"
@@ -139,11 +157,12 @@ export function SignInForm() {
             aria-describedby={
               state.status === "error" ? "email-error" : undefined
             }
+            className="h-13 w-full rounded-sm border border-[#DED5C7] bg-white px-4 text-base text-[#211D1A] outline-none placeholder:text-[#A2988A] focus-visible:border-[#8C1D3F] focus-visible:ring-1 focus-visible:ring-[#8C1D3F]"
           />
         </div>
 
         {state.status === "error" ? (
-          <p id="email-error" role="alert" className="text-destructive text-sm">
+          <p id="email-error" role="alert" className={ERROR}>
             {state.message}
           </p>
         ) : null}

@@ -1,18 +1,8 @@
 import type { Metadata } from "next";
-import { Playfair_Display } from "next/font/google";
 import Image from "next/image";
 import Link from "next/link";
+import { display } from "@/app/fonts";
 import { sr } from "@/lib/i18n/sr";
-
-/**
- * Serif se učitava samo ovde, a ne u `layout.tsx`, da ga ne bi vukla nijedna
- * druga strana — jedina koja ga koristi je ova. `latin-ext` je obavezan zbog
- * č, ć, ž, š i đ, isto kao kod osnovnog fonta.
- */
-const display = Playfair_Display({
-  subsets: ["latin", "latin-ext"],
-  display: "swap",
-});
 
 /**
  * Naslov je golo ime aplikacije, bez dodatka posle crte.
