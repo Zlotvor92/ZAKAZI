@@ -6,9 +6,13 @@ export const sr = {
   home: {
     tagline: "Zakazivanje termina za male salone lepote u Srbiji.",
     eyebrow: "Zakazivanje termina · Srbija",
-    /** Naslov je razbijen na dva dela zato što drugi ide u kurziv i drugoj boji. */
+    /**
+     * Naslov je razbijen na tri dela zato što samo srednja reč ide u kurziv i
+     * u vinsku boju — ostatak ostaje uspravan i crn.
+     */
     headline: "Tvoje vreme",
-    headlineEmphasis: "nije besplatno.",
+    headlineEmphasis: "nije",
+    headlineTail: "besplatno.",
     intro:
       "Klijent otvori link tvog salona, izabere uslugu i slobodan termin — i to je to. Bez dopisivanja i bez čekanja na tvoj odgovor.",
     example: {
@@ -41,7 +45,7 @@ export const sr = {
     forWho:
       "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
     priceLabel: "Pretplata",
-    price: "990–3.900 RSD",
+    price: "od 990 RSD",
     pricePeriod: "mesečno",
     dataTitle: "Prijava preko Google naloga",
     dataBody:

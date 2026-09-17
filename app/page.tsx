@@ -68,16 +68,19 @@ export default function HomePage() {
             {sr.home.eyebrow}
           </span>
           <h1
-            className={`${display.className} text-[44px] leading-[1.04] tracking-[-0.02em]`}
+            className={`${display.className} text-[46px] leading-[1.02] tracking-[-0.022em]`}
           >
             {sr.home.headline}
             <br />
             <em className="text-[#8C1D3F] italic">
               {sr.home.headlineEmphasis}
-            </em>
+            </em>{" "}
+            {sr.home.headlineTail}
           </h1>
           <span className="h-0.5 w-14 bg-[#211D1A]" />
-          <p className="text-[16.5px] leading-relaxed text-[#4A423B]">
+          <p
+            className={`${display.className} text-[21px] leading-snug text-[#4A423B]`}
+          >
             {sr.home.tagline}
           </p>
           <p className="text-sm leading-relaxed text-[#554C44]">
@@ -85,63 +88,63 @@ export default function HomePage() {
           </p>
         </section>
 
-        <section className="flex flex-col gap-3">
-          <span className="text-[11px] font-bold tracking-[0.16em] text-[#6B6055] uppercase">
+        {/*
+          Primer termina namerno nije kartica sa senkom: na magazinskoj strani
+          bela kutija postaje najglasniji element i potuče i naslov i sliku.
+          Ovde je to tabela činjenica — tanke linije i serifni brojevi.
+        */}
+        <section className="flex flex-col border-t-2 border-[#211D1A] pt-3">
+          <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
             {sr.home.example.label}
           </span>
-          <div className="flex flex-col gap-4 border border-[#E4DAC9] bg-white p-5">
-            <div className="flex flex-col gap-1">
-              <span className="text-[10.5px] font-bold tracking-[0.16em] text-[#6B6055] uppercase">
-                {sr.home.example.serviceLabel}
-              </span>
-              <span className={`${display.className} text-2xl`}>
-                {sr.home.example.service}
-              </span>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-[10.5px] font-bold tracking-[0.16em] text-[#6B6055] uppercase">
+          <p className={`${display.className} mt-1 mb-3 text-[28px]`}>
+            {sr.home.example.service}
+          </p>
+          <dl className="flex flex-col">
+            <div className="flex items-baseline justify-between gap-4 border-t border-[#E4DAC9] py-2.5">
+              <dt className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
                 {sr.home.example.whenLabel}
-              </span>
-              <span className="text-sm font-semibold">
+              </dt>
+              <dd className="text-right text-[13.5px] font-medium">
                 {sr.home.example.when}
-              </span>
+              </dd>
             </div>
-            <div className="flex gap-5">
-              <div className="flex flex-1 flex-col gap-1">
-                <span className="text-[10.5px] font-bold tracking-[0.16em] text-[#6B6055] uppercase">
-                  {sr.home.example.clientLabel}
-                </span>
-                <span className="text-sm font-semibold">
-                  {sr.home.example.client}
-                </span>
-              </div>
-              <div className="flex flex-1 flex-col gap-1">
-                <span className="text-[10.5px] font-bold tracking-[0.16em] text-[#6B6055] uppercase">
-                  {sr.home.example.priceLabel}
-                </span>
-                <span className="text-sm font-semibold tabular-nums">
-                  {sr.home.example.price}
-                </span>
-              </div>
+            <div className="flex items-baseline justify-between gap-4 border-t border-[#E4DAC9] py-2.5">
+              <dt className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+                {sr.home.example.clientLabel}
+              </dt>
+              <dd className="text-right text-[13.5px] font-medium">
+                {sr.home.example.client}
+              </dd>
             </div>
-            <div className="flex items-center gap-2 border-t border-[#EDE4D6] pt-3">
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#1C7A4E"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
+            <div className="flex items-baseline justify-between gap-4 border-t border-[#E4DAC9] py-2.5">
+              <dt className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+                {sr.home.example.priceLabel}
+              </dt>
+              <dd
+                className={`${display.className} text-right text-lg tabular-nums`}
               >
-                <path d="M20 6 9 17l-5-5" />
-              </svg>
-              <span className="text-[13px] font-semibold text-[#1C7A4E]">
-                {sr.home.example.status}
-              </span>
+                {sr.home.example.price}
+              </dd>
             </div>
+          </dl>
+          <div className="flex items-center gap-2 border-t border-[#E4DAC9] pt-3">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#1C7A4E"
+              strokeWidth="2.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+            <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#1C7A4E] uppercase">
+              {sr.home.example.status}
+            </span>
           </div>
         </section>
 
