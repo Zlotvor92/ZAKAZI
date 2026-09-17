@@ -10,6 +10,7 @@ import {
   createStaff,
   createTenant,
   createUser,
+  futureStartAt,
   insertAppointment,
   inSavepoint,
   withRollback,
@@ -190,7 +191,7 @@ describe("šta kalendar ne pokazuje", () => {
         staffId,
         serviceId,
         clientId,
-        startAt: "2026-09-10T08:00:00Z",
+        startAt: futureStartAt(),
       });
 
       expect(

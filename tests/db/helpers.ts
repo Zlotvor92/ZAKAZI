@@ -152,6 +152,21 @@ export async function createClient(
   return result.rows[0]!.id;
 }
 
+/**
+ * Sve što se pita o „budućim terminima" — javni spisak za otkazivanje, dovod
+ * kalendara — poredi `start_at` sa `now()`. Termin upisan na fiksni datum zato
+ * radi tačno do dana kad taj datum prođe, a onda niz testova počne da pada bez
+ * ijedne izmene u kodu; upravo to se i desilo 10. septembra 2026.
+ *
+ * Ovaj se računa od trenutka pokretanja, pa ne može da istekne. Test kojem je
+ * bitan tačan dan ili sat i dalje prosleđuje svoj `startAt`.
+ */
+export function futureStartAt(): string {
+  const at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  at.setUTCHours(8, 0, 0, 0);
+  return at.toISOString();
+}
+
 export type AppointmentInput = {
   tenantId: string;
   staffId: string;
@@ -248,7 +263,7 @@ export async function createPopulatedTenant(
     staffId,
     serviceId,
     clientId,
-    startAt: "2026-09-10T08:00:00Z",
+    startAt: futureStartAt(),
   });
 
   return { tenantId, userId, staffId, serviceId, clientId, appointmentId: appointment.id };

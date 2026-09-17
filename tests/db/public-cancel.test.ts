@@ -9,6 +9,7 @@ import {
   createStaff,
   createTenant,
   createUser,
+  futureStartAt,
   insertAppointment,
   withRollback,
 } from "./helpers";
@@ -102,7 +103,7 @@ async function salonWithAppointment(
     staffId,
     serviceId,
     clientId,
-    startAt: options.startAt ?? "2026-09-14T08:00:00Z",
+    startAt: options.startAt ?? futureStartAt(),
     status: options.status ?? "confirmed",
   });
 
