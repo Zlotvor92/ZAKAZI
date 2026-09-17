@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Playfair_Display } from "next/font/google";
+import Image from "next/image";
 import Link from "next/link";
+import heroImage from "@/public/home-hero-manicure.webp";
 import { sr } from "@/lib/i18n/sr";
 
 /**
@@ -87,6 +89,23 @@ export default function HomePage() {
             {sr.home.intro}
           </p>
         </section>
+
+        {/*
+          Slika izlazi iz kolone do ivica ekrana. Tako se ponaša fotografija u
+          časopisu, a na telefonu je to jedina prilika da se dobije kadar širi
+          od 342 piksela.
+
+          `priority` stoji zato što je ovo najveći element u prvom ekranu:
+          bez njega Next je učitava tek posle skripti i strana vidno poskoči.
+        */}
+        <Image
+          src={heroImage}
+          alt={sr.home.heroImageAlt}
+          sizes="(max-width: 448px) 100vw, 448px"
+          placeholder="blur"
+          priority
+          className="-mx-6 w-[calc(100%+3rem)] max-w-none"
+        />
 
         {/*
           Primer termina namerno nije kartica sa senkom: na magazinskoj strani

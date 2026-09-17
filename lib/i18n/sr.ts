@@ -6,6 +6,7 @@ export const sr = {
   home: {
     tagline: "Zakazivanje termina za male salone lepote u Srbiji.",
     eyebrow: "Zakazivanje termina · Srbija",
+    heroImageAlt: "Ruke sa svežim manikirom na lanenoj tkanini.",
     /**
      * Naslov je razbijen na tri dela zato što samo srednja reč ide u kurziv i
      * u vinsku boju — ostatak ostaje uspravan i crn.
