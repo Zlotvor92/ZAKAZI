@@ -56,6 +56,14 @@ function CopyButton({
       size="sm"
       variant="outline"
       onClick={() => {
+        // Ostave ume i da nema, ne samo da odbije: stariji ugrađeni pregledači
+        // je nemaju uopšte. Bez ove provere poziv pukne pre nego što `catch`
+        // stigne da javi, pa dugme ćuti.
+        if (!navigator.clipboard) {
+          onFailed(true);
+          return;
+        }
+
         void navigator.clipboard
           .writeText(value)
           .then(() => {
@@ -74,6 +82,15 @@ function CopyButton({
 function Feedback({ state }: { state: SettingsState }) {
   if (state.status === "saved") {
     return <p className="text-muted-foreground text-sm">{sr.settings.saved}</p>;
+  }
+  // Upisano je, ali ima šta da se uradi rukom. Nije greška, pa nije crveno —
+  // ali ni obično „Sačuvano.", jer se preko toga pređe bez čitanja.
+  if (state.status === "warning") {
+    return (
+      <p role="status" className="border-l-2 border-l-primary pl-3 text-sm">
+        {state.message}
+      </p>
+    );
   }
   if (state.status === "error") {
     return (
@@ -94,17 +111,29 @@ function useSettingsAction() {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<SettingsState>({ status: "idle" });
 
+  /**
+   * Pad samog poziva — prekinuta mreža ili greška na serveru — mora da ostane
+   * u formi. Bez ovoga React odnese odbijeno obećanje na granicu greške i cela
+   * podešavanja se zamene stranom „Nešto je puklo".
+   */
+  function guard(work: Promise<SettingsState>): Promise<SettingsState> {
+    return work.catch(() => ({
+      status: "error" as const,
+      message: sr.error.unreachable,
+    }));
+  }
+
   function submit(action: (formData: FormData) => Promise<SettingsState>) {
     return (formData: FormData) => {
       startTransition(async () => {
-        setState(await action(formData));
+        setState(await guard(action(formData)));
       });
     };
   }
 
   function call(action: () => Promise<SettingsState>) {
     startTransition(async () => {
-      setState(await action());
+      setState(await guard(action()));
     });
   }
 

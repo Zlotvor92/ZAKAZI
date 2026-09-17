@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { sr } from "@/lib/i18n/sr";
+import { isRedirect } from "@/lib/utils";
 import { addSalon, type AdminState } from "./actions";
 
 /** „Salon Smiley" → „salon-smiley". Adresa se kuca samo ako je predlog loš. */
@@ -44,7 +45,16 @@ export function NewSalonForm() {
     <form
       action={(formData) => {
         startTransition(async () => {
-          setState(await addSalon(formData));
+          try {
+            setState(await addSalon(formData));
+          } catch (cause) {
+            // Uspeh se odavde vraća kao `redirect()`, koji do pregledača ume
+            // da stigne kao greška — on mora dalje do rutera.
+            if (isRedirect(cause)) {
+              throw cause;
+            }
+            setState({ status: "error", message: sr.error.unreachable });
+          }
         });
       }}
       className="border-border space-y-4 rounded-xl border p-4"

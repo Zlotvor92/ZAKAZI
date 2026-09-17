@@ -7,7 +7,7 @@ import type { AdminSalon } from "@/lib/db/admin";
 import { pluralize } from "@/lib/domain/plural";
 import { subscriptionState } from "@/lib/domain/subscription";
 import { sr } from "@/lib/i18n/sr";
-import { cn } from "@/lib/utils";
+import { cn, isRedirect } from "@/lib/utils";
 import {
   deleteSalon,
   enterSalon,
@@ -69,6 +69,27 @@ function PaidUntil({ salon, today }: { salon: AdminSalon; today: string }) {
 function Row({ salon, today }: { salon: AdminSalon; today: string }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<AdminState>({ status: "idle" });
+
+  /**
+   * Pad samog poziva ostaje u redu spiska.
+   *
+   * Bez ovoga odbijeno obećanje ide na granicu greške i konzola se zameni
+   * stranom „Nešto je puklo" — a ulazak u salon uspeh javlja `redirect()`-om,
+   * koji do pregledača ume da stigne kao greška i mora dalje do rutera.
+   */
+  function run(work: Promise<AdminState | void>) {
+    startTransition(async () => {
+      try {
+        setState((await work) ?? { status: "idle" });
+      } catch (cause) {
+        if (isRedirect(cause)) {
+          throw cause;
+        }
+        setState({ status: "error", message: sr.error.unreachable });
+      }
+    });
+  }
+
   const logoLabel = salon.logo_url ? sr.admin.logoReplace : sr.admin.logoChoose;
   // Salon kome je pretplata istekla ne prima termine isto kao pauziran, samo
   // ga je zaustavio datum a ne potez. Traka koja bi za oba pisala „Radi" bila
@@ -170,9 +191,7 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
           className="h-9 w-auto text-sm"
           onChange={(event) => {
             const value = event.target.value;
-            startTransition(async () => {
-              setState(await savePaidUntil(salon.id, value === "" ? null : value));
-            });
+            run(savePaidUntil(salon.id, value === "" ? null : value));
           }}
         />
       </label>
@@ -183,9 +202,7 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
           size="sm"
           disabled={pending}
           onClick={() => {
-            startTransition(async () => {
-              await enterSalon(salon.id);
-            });
+            run(enterSalon(salon.id));
           }}
         >
           {sr.admin.enter}
@@ -203,9 +220,7 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
             ) {
               return;
             }
-            startTransition(async () => {
-              setState(await toggleSalon(salon.id, !salon.suspended));
-            });
+            run(toggleSalon(salon.id, !salon.suspended));
           }}
         >
           {salon.suspended ? sr.admin.resume : sr.admin.suspend}
@@ -235,9 +250,7 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
               const data = new FormData();
               data.set("tenantId", salon.id);
               data.set("logo", file);
-              startTransition(async () => {
-                setState(await saveLogo(data));
-              });
+              run(saveLogo(data));
             }}
           />
         </label>
@@ -249,9 +262,7 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
             variant="ghost"
             disabled={pending}
             onClick={() => {
-              startTransition(async () => {
-                setState(await removeLogo(salon.id));
-              });
+              run(removeLogo(salon.id));
             }}
           >
             {sr.admin.logoRemove}
@@ -276,9 +287,7 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
               return;
             }
 
-            startTransition(async () => {
-              setState(await deleteSalon(salon.id, typed));
-            });
+            run(deleteSalon(salon.id, typed));
           }}
         >
           {sr.admin.remove}

@@ -165,8 +165,16 @@ function Row({
     startTransition(async () => {
       // Bez `router.refresh()`: akcija je pozvala `revalidatePath`, pa svež
       // sadržaj stiže uz njen odgovor. Osvežavanje bi bio pun zahtev više.
-      const result = await action();
-      setError(result.ok ? null : result.message);
+      //
+      // `catch` je tu jer i sam poziv ume da padne — mreža u salonu koji je u
+      // suterenu. Bez njega React odnese pad na granicu greške, pa vlasnica
+      // izgubi ceo kalendar zbog jednog dodira po statusu.
+      try {
+        const result = await action();
+        setError(result.ok ? null : result.message);
+      } catch {
+        setError(sr.error.unreachable);
+      }
       setArmed(false);
     });
   }
@@ -210,9 +218,12 @@ function Row({
       {open ? (
         <div className="space-y-2 pb-3 pl-15">
           <div className="flex flex-wrap gap-2">
+            {/* Vidljivo 36px kao i dugmad oko njega, a dodirna zona razvučena
+                na 44px istim potezom kao u `buttonVariants` — bez toga je ovo
+                jedina meta u kalendaru koju prst promašuje. */}
             <a
               href={`tel:${appointment.client_phone}`}
-              className="border-border hover:bg-accent inline-flex h-9 items-center rounded-md border px-3 text-sm"
+              className="border-border hover:bg-accent relative inline-flex h-9 items-center rounded-md border px-3 text-sm after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']"
             >
               {sr.dashboard.call}
             </a>

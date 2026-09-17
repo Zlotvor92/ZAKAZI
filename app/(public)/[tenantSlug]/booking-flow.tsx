@@ -134,8 +134,16 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
-      const result = await submitBooking(formData);
-      setState(result);
+      // Sam poziv ume da padne: prekinuta mreža u liftu, ili greška na
+      // serveru. Bez `catch`-a to je odbijeno obećanje koje React odnese na
+      // granicu greške, pa klijentkinja usred zakazivanja dobije stranu
+      // „Nešto je puklo" umesto jedne rečenice ispod dugmeta.
+      try {
+        const result = await submitBooking(formData);
+        setState(result);
+      } catch {
+        setState({ status: "error", message: sr.error.unreachable });
+      }
 
       // Termin je upravo zauzet — spisak slobodnih koji je stigao sa servera
       // od ovog trenutka laže, i za onog ko zakazuje još jedan, i za onog ko
