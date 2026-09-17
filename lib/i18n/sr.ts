@@ -5,8 +5,24 @@ export const sr = {
   },
   home: {
     tagline: "Zakazivanje termina za male salone lepote u Srbiji.",
+    eyebrow: "Zakazivanje termina · Srbija",
+    /** Naslov je razbijen na dva dela zato što drugi ide u kurziv i drugoj boji. */
+    headline: "Tvoje vreme",
+    headlineEmphasis: "nije besplatno.",
     intro:
       "Klijent otvori link tvog salona, izabere uslugu i slobodan termin — i to je to. Bez dopisivanja i bez čekanja na tvoj odgovor.",
+    example: {
+      label: "Ovako izgleda zakazan termin",
+      serviceLabel: "Usluga",
+      service: "Gel nokti",
+      whenLabel: "Termin",
+      when: "Petak, 10. oktobra u 14.30",
+      clientLabel: "Klijent",
+      client: "Milica J.",
+      priceLabel: "Cena",
+      price: "2.400 RSD",
+      status: "Potvrđeno",
+    },
     points: [
       {
         title: "Zakazivanje bez dopisivanja",
@@ -17,12 +33,16 @@ export const sr = {
         body: "Vidiš šta te čeka, dodaješ termine dogovorene uživo, menjaš im status i upisuješ slobodne dane.",
       },
       {
-        title: "Isti sat ne može dvaput",
+        title: "Termin ne može biti zakazan dva puta u isto vreme",
         body: "Zauzet termin se više nikome ne nudi — ni kada dvoje kliknu u istoj sekundi.",
       },
     ],
+    forWhoTitle: "Ko ovo koristi",
     forWho:
       "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
+    priceLabel: "Pretplata",
+    price: "990–3.900 RSD",
+    pricePeriod: "mesečno",
     dataTitle: "Prijava preko Google naloga",
     dataBody:
       "U salon se ulazi Google nalogom. Tom prilikom čitamo samo ime i mejl adresu — taman koliko treba da prepoznamo čiji je salon. Ništa drugo sa Google naloga ne tražimo i ne čuvamo: ni kontakte, ni poštu, ni kalendar, ni fotografije.",
