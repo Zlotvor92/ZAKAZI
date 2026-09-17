@@ -4,6 +4,7 @@ import {
   bookingDataSchema,
   bookResultSchema,
 } from "@/lib/db/public-booking";
+import { buildAvailability } from "@/lib/domain/availability";
 import {
   asAnon,
   asUser,
@@ -766,6 +767,67 @@ describe("public_book odbija ono što ne sme", () => {
       );
 
       expect(result).toEqual({ ok: false, reason: "time_off" });
+    });
+  });
+
+  it("prima termin koji počinje tačno kad se odsustvo završi", async () => {
+    // Motor u aplikaciji nudi kraj svakog zauzetog komada kao nov početak, pa
+    // odsustvo do 10:20 daje termin u 10:20 iako on nije na rasporedu salona.
+    // Baza to mora da primi: ponuđen termin koji se odbije je klijentkinja
+    // koja je izabrala sat i dobila „Salon tada ne radi".
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const endsAt = await nextMonday(db, "10:20");
+
+      await db.query(
+        `insert into time_off (tenant_id, staff_id, start_at, end_at, reason)
+         values ($1, $2, $3, $4, 'lekar')`,
+        [salon.tenantId, salon.staffId, await nextMonday(db, "09:00"), endsAt],
+      );
+
+      const offered = await asAnon(db, async () => {
+        const data = await bookingData(db, salon.slug);
+
+        return buildAvailability({
+          timeZone: data!.tenant.timezone,
+          fromDate: data!.from_date,
+          toDate: data!.to_date,
+          blocks: data!.blocks.map((block) => ({
+            weekday: block.weekday,
+            startMinute: block.start_minute,
+            endMinute: block.end_minute,
+            slotMinutes: block.slot_minutes,
+          })),
+          busy: data!.busy.map((range) => ({
+            startAt: new Date(range.start_at),
+            endAt: new Date(range.end_at),
+          })),
+          serviceMinutes: 90,
+          now: new Date(data!.now),
+          minLeadMin: data!.tenant.min_lead_minutes,
+        })
+          .flatMap((day) => day.slots)
+          .map((slot) => slot.startAt.getTime());
+      });
+
+      // Kroz bazu, ne kroz `new Date`: `nextMonday` vraća pomeraj kao `+02`,
+      // što JS ne prihvata kao ispravan ISO zapis.
+      const endsAtMs = await db.query<{ ms: string }>(
+        "select (extract(epoch from $1::timestamptz) * 1000)::bigint::text as ms",
+        [endsAt],
+      );
+
+      expect(offered).toContain(Number(endsAtMs.rows[0]!.ms));
+
+      const result = await asAnon(db, () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: endsAt,
+        }),
+      );
+
+      expect(result.ok).toBe(true);
     });
   });
 
