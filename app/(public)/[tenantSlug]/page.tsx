@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { getPublicBookingData } from "@/lib/db/public-booking";
+import { getSalonSummary } from "@/lib/db/public-cancel";
 import { brandVariables } from "@/lib/domain/brand";
 import { sr } from "@/lib/i18n/sr";
 import { BookingFlow } from "./booking-flow";
@@ -11,6 +12,9 @@ type PageProps = { params: Promise<{ tenantSlug: string }> };
 
 /** Naslov i sama stranica traže isto; bez ovoga bi to bila dva ista upita. */
 const bookingData = cache(getPublicBookingData);
+
+/** Traži se samo kad je zakazivanje zatvoreno, da se salon razluči od slova. */
+const salonSummary = cache(getSalonSummary);
 
 export async function generateMetadata({
   params,
@@ -63,11 +67,20 @@ export function Brand({
   );
 }
 
-export function Notice({ title, message }: { title: string; message: string }) {
+export function Notice({
+  title,
+  message,
+  children,
+}: {
+  title: string;
+  message: string;
+  children?: React.ReactNode;
+}) {
   return (
     <main className="mx-auto min-h-dvh w-full max-w-md p-4">
       <h1 className="pt-8 text-lg font-semibold">{title}</h1>
       <p className="text-muted-foreground pt-2 text-sm">{message}</p>
+      {children}
     </main>
   );
 }
@@ -76,13 +89,36 @@ export default async function PublicBookingPage({ params }: PageProps) {
   const { tenantSlug } = await params;
   const data = await bookingData(tenantSlug);
 
-  // Nepoznat salon, ugašeno zakazivanje i suspendovan salon se i dalje namerno
-  // ne razlikuju: iz javne stranice se ne saznaje koji slugovi postoje. Sva tri
-  // vode na `not-found.tsx` ovog segmenta, koji nosi istu poruku kao ranije —
-  // razlika je samo u statusu 404, da pogrešno prepisana adresa prestane da se
-  // predstavlja kao postojeća strana.
+  // Zakazivanje je zatvoreno, ali salon postoji i nije pauziran — ugašen je
+  // prekidač ili je istekla pretplata. Otkazivanje u tom slučaju namerno
+  // nastavlja da radi, pa ovde mora da stoji i put do njega: klijentkinja koja
+  // je sprečena dolazi na ovaj link, ne na `/otkazi` koji nikad nije videla.
+  //
+  // Nepoznat i pauziran salon i dalje idu na `not-found.tsx` ovog segmenta, sa
+  // statusom 404 — tamo nema šta da se otkaže.
   if (!data) {
-    notFound();
+    const salon = await salonSummary(tenantSlug);
+
+    if (!salon) {
+      notFound();
+    }
+
+    return (
+      <>
+        <Brand tenant={salon} />
+        <Notice title={salon.name} message={sr.booking.closed}>
+          <p className="text-muted-foreground pt-4 text-sm">
+            {sr.booking.haveAppointment}{" "}
+            <Link
+              href={`/${tenantSlug}/otkazi`}
+              className="text-brand inline-block py-3.5 underline"
+            >
+              {sr.booking.manageLink}
+            </Link>
+          </p>
+        </Notice>
+      </>
+    );
   }
 
   if (data.services.length === 0) {
