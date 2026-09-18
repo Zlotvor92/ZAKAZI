@@ -5,8 +5,10 @@ const appointmentSchema = z.object({
   id: z.uuid(),
   start_at: z.string(),
   end_at: z.string(),
+  // Bez `pending`: oba upisa u bazi pišu `confirmed`, a i podrazumevana
+  // vrednost kolone je `confirmed`, pa taj status ne nastaje nigde. Kad ga
+  // Faza 3 vrati zajedno sa proverom broja, vraća se i ovde.
   status: z.enum([
-    "pending",
     "confirmed",
     "completed",
     "no_show",
@@ -28,7 +30,6 @@ export type AppointmentStatus = DashboardAppointment["status"];
 
 /** Statusi koje kalendar prikazuje. Otkazan termin je oslobodio svoje vreme. */
 export const LIVE_STATUSES: AppointmentStatus[] = [
-  "pending",
   "confirmed",
   "completed",
   "no_show",

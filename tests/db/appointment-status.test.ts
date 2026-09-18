@@ -54,6 +54,28 @@ async function statusOf(
   return result.rows[0]!.status;
 }
 
+describe("nastanak termina", () => {
+  it("upis bez statusa daje potvrđen termin", async () => {
+    // `pending` postoji u tipu zbog ograničenja protiv dvostruke rezervacije i
+    // zbog provere broja koja dolazi, ali ga ništa ne pravi samo — pa ni upis
+    // rukom, iz konzole, mimo obe funkcije koje termine upisuju.
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      const inserted = await db.query<{ status: string }>(
+        `insert into appointments
+           (tenant_id, staff_id, service_id, client_id, start_at,
+            duration_min, price_rsd, source)
+         values ($1, $2, $3, $4, '2026-09-21T08:00:00Z', 60, 2500, 'salon')
+         returning status`,
+        [base.tenantId, base.staffId, base.serviceId, base.clientId],
+      );
+
+      expect(inserted.rows[0]!.status).toBe("confirmed");
+    });
+  });
+});
+
 describe("dozvoljeni prelazi", () => {
   it("pending ide u confirmed i u oba otkazivanja", async () => {
     await withRollback(async (db) => {

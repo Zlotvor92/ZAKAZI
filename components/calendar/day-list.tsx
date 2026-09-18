@@ -29,11 +29,6 @@ type Action = { label: string; status: AppointmentStatus };
  */
 function actionsFor(status: AppointmentStatus): Action[] {
   switch (status) {
-    case "pending":
-      return [
-        { label: sr.dashboard.confirm, status: "confirmed" },
-        { label: sr.dashboard.cancel, status: "cancelled_by_salon" },
-      ];
     case "confirmed":
       return [
         { label: sr.dashboard.arrived, status: "completed" },

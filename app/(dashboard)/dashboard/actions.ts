@@ -47,7 +47,6 @@ export type ActionState = { ok: true } | { ok: false; message: string };
 const statusSchema = z.object({
   appointmentId: z.uuid(),
   status: z.enum([
-    "pending",
     "confirmed",
     "completed",
     "no_show",

@@ -233,7 +233,6 @@ export const sr = {
     fromPublicPage: "preko sajta",
     addAppointment: "Dodaj termin",
     call: "Pozovi",
-    confirm: "Potvrdi",
     arrived: "Obavljeno",
     noShow: "Izostanak",
     cancel: "Otkaži",
@@ -438,7 +437,6 @@ export const sr = {
     clientCancelledBody: "{klijent} — {usluga}, {vreme}",
   },
   appointmentStatus: {
-    pending: "Čeka",
     confirmed: "Potvrđen",
     completed: "Obavljeno",
     no_show: "Izostanak",

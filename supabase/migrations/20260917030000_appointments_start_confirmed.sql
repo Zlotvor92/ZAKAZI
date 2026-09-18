@@ -1,0 +1,13 @@
+-- Termin nastaje potvrđen.
+--
+-- Obe funkcije koje upisuju termin — `public_book` i `create_appointment` —
+-- odavno upisuju `confirmed`, jer u ovoj fazi nema čega da se čeka: nema
+-- provere broja porukom niti posla koji bi neodobren termin isterao posle
+-- pola sata. Podrazumevana vrednost je i dalje stajala na `pending`, pa je
+-- svaki upis mimo tih funkcija (ručno, iz Supabase konzole) pravio status koji
+-- aplikacija nigde ne prikazuje.
+--
+-- Vrednost `pending` ostaje u tipu i u svim uslovima `status in ('pending',
+-- 'confirmed')`: ograničenje protiv dvostruke rezervacije se na nju poziva, a
+-- provera broja u Fazi 3 će je koristiti. Ne pravi je više ništa slučajno.
+alter table appointments alter column status set default 'confirmed';
