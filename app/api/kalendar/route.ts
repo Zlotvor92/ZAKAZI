@@ -1,7 +1,7 @@
 import { createHash } from "node:crypto";
 import { type NextRequest } from "next/server";
 import { z } from "zod";
-import { buildCalendarEvent } from "@/lib/domain/ics";
+import { buildCalendarCancel, buildCalendarEvent } from "@/lib/domain/ics";
 
 /**
  * Termin kao fajl za kalendar.
@@ -16,6 +16,8 @@ const requestSchema = z.object({
   kraj: z.iso.datetime({ offset: true }),
   usluga: z.string().min(1).max(80),
   salon: z.string().min(1).max(80),
+  /** Isti termin, ali kao poništenje unosa koji je već u kalendaru. */
+  otkazano: z.literal("1").optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -26,6 +28,7 @@ export async function GET(request: NextRequest) {
     kraj: params.get("kraj"),
     usluga: params.get("usluga"),
     salon: params.get("salon"),
+    otkazano: params.get("otkazano") ?? undefined,
   });
 
   if (!parsed.success) {
@@ -42,12 +45,14 @@ export async function GET(request: NextRequest) {
   }
 
   // Isti termin mora da da isti UID, da drugi preuzeti fajl ne bi napravio
-  // duplikat u kalendaru nego zamenio prvi.
+  // duplikat u kalendaru nego zamenio prvi — i da bi poništenje pogodilo unos
+  // koji je već tamo. Zato ide trenutak, a ne tekst iz adrese: isti čas zapisan
+  // sa „+02:00" i sa „Z" mora da da isti UID.
   const uid = createHash("sha256")
     .update(
       [
-        parsed.data.pocetak,
-        parsed.data.kraj,
+        startAt.toISOString(),
+        endAt.toISOString(),
         parsed.data.usluga,
         parsed.data.salon,
       ].join("|"),
@@ -55,7 +60,7 @@ export async function GET(request: NextRequest) {
     .digest("hex")
     .slice(0, 32);
 
-  const body = buildCalendarEvent({
+  const event = {
     uid: `${uid}@doterajme`,
     startAt,
     endAt,
@@ -63,12 +68,17 @@ export async function GET(request: NextRequest) {
     title: `${parsed.data.usluga} — ${parsed.data.salon}`,
     location: parsed.data.salon,
     description: `Termin u salonu ${parsed.data.salon}.`,
-  });
+  };
+
+  const cancelled = parsed.data.otkazano === "1";
+  const body = cancelled
+    ? buildCalendarCancel(event)
+    : buildCalendarEvent(event);
 
   return new Response(body, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      "Content-Disposition": 'attachment; filename="termin.ics"',
+      "Content-Disposition": `attachment; filename="${cancelled ? "otkazan-termin" : "termin"}.ics"`,
       "Cache-Control": "no-store",
     },
   });

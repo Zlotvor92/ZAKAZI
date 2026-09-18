@@ -61,7 +61,11 @@ export default async function CancelPage({ params }: PageProps) {
 
         <h2 className="pt-2 pb-1 text-base font-semibold">{sr.cancel.title}</h2>
 
-        <CancelFlow slug={data.slug} timeZone={data.timezone} />
+        <CancelFlow
+          slug={data.slug}
+          salonName={data.name}
+          timeZone={data.timezone}
+        />
 
         <p className="text-muted-foreground pt-2 text-center text-xs">
           <Link

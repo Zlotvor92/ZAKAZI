@@ -16,6 +16,10 @@ function formatPrice(rsd: number): string | null {
   return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
 }
 
+function formatWhen(value: string, timeZone: string): string {
+  return `${formatInTimeZone(new Date(value), timeZone, "dd.MM.yyyy.")} ${formatInTimeZone(new Date(value), timeZone, "HH:mm")}`;
+}
+
 function AppointmentRow({
   appointment,
   slug,
@@ -27,7 +31,7 @@ function AppointmentRow({
   slug: string;
   phone: string;
   timeZone: string;
-  onCancelled: (id: string) => void;
+  onCancelled: (appointment: UpcomingAppointment) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [armed, setArmed] = useState(false);
@@ -58,7 +62,7 @@ function AppointmentRow({
         return;
       }
 
-      onCancelled(appointment.id);
+      onCancelled(appointment);
     });
   }
 
@@ -70,8 +74,7 @@ function AppointmentRow({
             {appointment.service_name}
           </div>
           <div className="text-muted-foreground text-xs tabular-nums">
-            {formatInTimeZone(new Date(appointment.start_at), timeZone, "dd.MM.yyyy.")}{" "}
-            {formatInTimeZone(new Date(appointment.start_at), timeZone, "HH:mm")}
+            {formatWhen(appointment.start_at, timeZone)}
           </div>
         </div>
         {formatPrice(appointment.price_rsd) ? (
@@ -104,10 +107,61 @@ function AppointmentRow({
   );
 }
 
-export function CancelFlow({ slug, timeZone }: { slug: string; timeZone: string }) {
+/**
+ * Otkazan termin, sa načinom da se izbaci i iz kalendara telefona.
+ *
+ * Fajl koji je klijentkinja preuzela pri zakazivanju nije pretplata: telefon
+ * nema od koga da sazna da termina više nema, pa unos ostaje da stoji i
+ * podsetnici iz njega zvone. Ovo je jedini put da se to poništi.
+ */
+function CancelledRow({
+  appointment,
+  salonName,
+  timeZone,
+}: {
+  appointment: UpcomingAppointment;
+  salonName: string;
+  timeZone: string;
+}) {
+  const href = `/api/kalendar?${new URLSearchParams({
+    pocetak: appointment.start_at,
+    kraj: appointment.end_at,
+    usluga: appointment.service_name,
+    salon: salonName,
+    otkazano: "1",
+  }).toString()}`;
+
+  return (
+    <li className="border-border space-y-2 rounded-xl border border-dashed p-3">
+      <div className="text-muted-foreground min-w-0 text-sm">
+        <span className="line-through">{appointment.service_name}</span>{" "}
+        <span className="tabular-nums">
+          {formatWhen(appointment.start_at, timeZone)}
+        </span>
+      </div>
+
+      <a
+        href={href}
+        className="border-border text-brand inline-flex h-11 w-full items-center justify-center rounded-xl border text-sm font-medium"
+      >
+        {sr.cancel.removeFromCalendar}
+      </a>
+    </li>
+  );
+}
+
+export function CancelFlow({
+  slug,
+  salonName,
+  timeZone,
+}: {
+  slug: string;
+  salonName: string;
+  timeZone: string;
+}) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<LookupState>({ status: "idle" });
-  const [cancelledIds, setCancelledIds] = useState<Set<string>>(new Set());
+  const [cancelled, setCancelled] = useState<UpcomingAppointment[]>([]);
 
   function onLookup(formData: FormData) {
     startTransition(async () => {
@@ -121,7 +175,7 @@ export function CancelFlow({ slug, timeZone }: { slug: string; timeZone: string 
 
   if (state.status === "found") {
     const remaining = state.appointments.filter(
-      (appointment) => !cancelledIds.has(appointment.id),
+      (appointment) => !cancelled.some((done) => done.id === appointment.id),
     );
 
     return (
@@ -138,11 +192,13 @@ export function CancelFlow({ slug, timeZone }: { slug: string; timeZone: string 
           </Button>
         </div>
 
-        {remaining.length === 0 ? (
+        {remaining.length === 0 && cancelled.length === 0 ? (
           <p className="text-muted-foreground py-6 text-center text-sm">
-            {cancelledIds.size > 0 ? sr.cancel.cancelledTitle : sr.cancel.empty}
+            {sr.cancel.empty}
           </p>
-        ) : (
+        ) : null}
+
+        {remaining.length > 0 ? (
           <ul className="space-y-2">
             {remaining.map((appointment) => (
               <AppointmentRow
@@ -151,18 +207,36 @@ export function CancelFlow({ slug, timeZone }: { slug: string; timeZone: string 
                 slug={slug}
                 phone={state.phone}
                 timeZone={timeZone}
-                onCancelled={(id) =>
-                  setCancelledIds((current) => new Set(current).add(id))
+                onCancelled={(done) =>
+                  setCancelled((current) => [...current, done])
                 }
               />
             ))}
           </ul>
-        )}
+        ) : null}
 
-        {cancelledIds.size > 0 ? (
-          <p className="text-muted-foreground text-center text-xs">
-            {sr.cancel.cancelledBody}
-          </p>
+        {cancelled.length > 0 ? (
+          <div className="space-y-2">
+            <p className="text-sm font-medium">{sr.cancel.cancelledTitle}</p>
+            <p className="text-muted-foreground text-xs">
+              {sr.cancel.removeFromCalendarHint}
+            </p>
+
+            <ul className="space-y-2">
+              {cancelled.map((appointment) => (
+                <CancelledRow
+                  key={appointment.id}
+                  appointment={appointment}
+                  salonName={salonName}
+                  timeZone={timeZone}
+                />
+              ))}
+            </ul>
+
+            <p className="text-muted-foreground text-center text-xs">
+              {sr.cancel.cancelledBody}
+            </p>
+          </div>
         ) : null}
       </div>
     );
