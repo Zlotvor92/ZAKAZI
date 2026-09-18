@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { buildCalendarEvent, type CalendarEvent } from "@/lib/domain/ics";
+import {
+  buildCalendarCancel,
+  buildCalendarEvent,
+  buildCalendarFeed,
+  type CalendarEvent,
+} from "@/lib/domain/ics";
 
 function event(overrides: Partial<CalendarEvent> = {}): CalendarEvent {
   return {
@@ -58,6 +63,65 @@ describe("podsetnici", () => {
     expect(rows.filter((row) => row === "BEGIN:VALARM")).toHaveLength(2);
     expect(rows).toContain("TRIGGER:-P1D");
     expect(rows).toContain("TRIGGER:-PT2H");
+  });
+});
+
+describe("poništavanje termina", () => {
+  it("nosi poništenje umesto objave", () => {
+    const rows = lines(buildCalendarCancel(event()));
+
+    expect(rows).toContain("METHOD:CANCEL");
+    expect(rows).toContain("STATUS:CANCELLED");
+    expect(rows).not.toContain("STATUS:CONFIRMED");
+  });
+
+  it("izdanje je veće od onoga koje unos već ima", () => {
+    // Poslati unos nema `SEQUENCE`, što važi kao nula; bez većeg broja
+    // kalendar sme da odbije poništenje kao zastarelo.
+    expect(lines(buildCalendarCancel(event()))).toContain("SEQUENCE:1");
+  });
+
+  it("ne nosi podsetnike", () => {
+    const rows = lines(buildCalendarCancel(event()));
+
+    expect(rows).not.toContain("BEGIN:VALARM");
+  });
+
+  it("pogađa isti unos koji je poslat pri zakazivanju", () => {
+    // Kalendar spaja po `UID`-u; drugi `UID` ne poništava ništa nego dodaje
+    // prazan unos.
+    const same = event();
+
+    expect(lines(buildCalendarCancel(same))).toContain(`UID:${same.uid}`);
+    expect(lines(buildCalendarEvent(same))).toContain(`UID:${same.uid}`);
+  });
+});
+
+describe("kalendar salona", () => {
+  function feedRows(cancelled: boolean): string[] {
+    const { createdAt, ...rest } = event();
+
+    return lines(
+      buildCalendarFeed({
+        name: "Studio Milica",
+        createdAt,
+        events: [{ ...rest, cancelled }],
+      }),
+    );
+  }
+
+  it("otkazan termin izlazi kao poništen, ne izostavljen", () => {
+    expect(feedRows(true)).toContain("STATUS:CANCELLED");
+    expect(feedRows(true)).toContain("SEQUENCE:1");
+  });
+
+  it("termin koji stoji nije poništen", () => {
+    expect(feedRows(false)).toContain("STATUS:CONFIRMED");
+    expect(feedRows(false)).not.toContain("STATUS:CANCELLED");
+  });
+
+  it("nijedan termin iz kalendara salona ne zvoni", () => {
+    expect(feedRows(false)).not.toContain("BEGIN:VALARM");
   });
 });
 

@@ -70,7 +70,11 @@ function fold(line: string): string {
   return parts.join("\r\n ");
 }
 
-type EventLinesInput = CalendarEvent & { reminders: boolean };
+type EventLinesInput = CalendarEvent & {
+  reminders: boolean;
+  /** Poništava unos koji je već u tuđem kalendaru, umesto da ga doda. */
+  cancelled?: boolean;
+};
 
 function eventLines(event: EventLinesInput): string[] {
   const lines = [
@@ -82,8 +86,15 @@ function eventLines(event: EventLinesInput): string[] {
     `SUMMARY:${escapeText(event.title)}`,
     `LOCATION:${escapeText(event.location)}`,
     `DESCRIPTION:${escapeText(event.description)}`,
-    "STATUS:CONFIRMED",
   ];
+
+  if (event.cancelled) {
+    // Broj izdanja mora da bude veći od onog koji unos već ima; poslati unos
+    // ga nije imao, pa važi kao nula.
+    lines.push("STATUS:CANCELLED", "SEQUENCE:1");
+  } else {
+    lines.push("STATUS:CONFIRMED");
+  }
 
   if (event.reminders) {
     // Dva podsetnika: veče pre, da stigne da otkaže ako ne može, i dva sata
@@ -107,13 +118,13 @@ function eventLines(event: EventLinesInput): string[] {
   return lines;
 }
 
-function wrap(lines: string[]): string {
+function wrap(lines: string[], method = "PUBLISH"): string {
   const all = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
     "PRODID:-//Doteraj Me//sr",
     "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
+    `METHOD:${method}`,
     ...lines,
     "END:VCALENDAR",
   ];
@@ -123,6 +134,25 @@ function wrap(lines: string[]): string {
 
 export function buildCalendarEvent(event: CalendarEvent): string {
   return wrap(eventLines({ ...event, reminders: true }));
+}
+
+/**
+ * Otkazivanje termina koji je klijentkinja ranije dodala u svoj kalendar.
+ *
+ * Telefon nema od koga da sazna da je termin otkazan: `.ics` je jednom
+ * preuzet fajl, ne pretplata. Bez ovoga unos ostaje da stoji i, još gore,
+ * podsetnici iz njega zvone veče pre i dva sata pre termina koji više ne
+ * postoji — pa klijentkinja dođe na otkazan sat.
+ *
+ * Kalendar poništava unos po `UID`-u, zato on mora da bude isti onaj koji je
+ * poslat pri zakazivanju. `METHOD:CANCEL` bez podsetnika: ovo ništa ne
+ * zakazuje, samo briše.
+ */
+export function buildCalendarCancel(event: CalendarEvent): string {
+  return wrap(
+    eventLines({ ...event, reminders: false, cancelled: true }),
+    "CANCEL",
+  );
 }
 
 /**
@@ -136,11 +166,14 @@ export function buildCalendarEvent(event: CalendarEvent): string {
  * adrese, a `REFRESH-INTERVAL` je molba koliko često da povlači. Google i
  * Apple je uzimaju kao predlog, ne kao obavezu — Google ume da povlači i na
  * nekoliko sati bez obzira šta ovde piše.
+ *
+ * Otkazan termin izlazi sa `cancelled`, a ne tako što ispadne iz spiska:
+ * nestanak reda je nagoveštaj, poništenje je poruka.
  */
 export function buildCalendarFeed(input: {
   name: string;
   createdAt: Date;
-  events: Omit<CalendarEvent, "createdAt">[];
+  events: (Omit<CalendarEvent, "createdAt"> & { cancelled?: boolean })[];
 }): string {
   const header = [
     `X-WR-CALNAME:${escapeText(input.name)}`,

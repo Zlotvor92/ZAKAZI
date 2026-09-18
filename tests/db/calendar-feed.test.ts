@@ -177,8 +177,8 @@ describe("kalendar se čita samo tačnom adresom", () => {
   });
 });
 
-describe("šta kalendar ne pokazuje", () => {
-  it("otkazan termin nestaje iz kalendara", async () => {
+describe("otkazani i stari termini", () => {
+  it("otkazan termin izlazi kao otkazan, da bi ruta poslala poništenje", async () => {
     await withRollback(async (db) => {
       const tenantId = await createTenant(db);
       const staffId = await createStaff(db, tenantId);
@@ -194,18 +194,44 @@ describe("šta kalendar ne pokazuje", () => {
         startAt: futureStartAt(),
       });
 
-      expect(
-        (await asAnon(db, () => readFeed(db, token))).map((r) => r.appointment_id),
-      ).toContain(appointment.id);
+      const before = await asAnon(db, () => readFeed(db, token));
+      expect(before.find((r) => r.appointment_id === appointment.id)?.status).toBe(
+        "confirmed",
+      );
 
       await db.query(
         "update appointments set status = 'cancelled_by_client' where id = $1",
         [appointment.id],
       );
 
+      const after = await asAnon(db, () => readFeed(db, token));
+      expect(after.find((r) => r.appointment_id === appointment.id)?.status).toBe(
+        "cancelled_by_client",
+      );
+    });
+  });
+
+  it("otkazan termin ispada kad mu vreme prođe", async () => {
+    await withRollback(async (db) => {
+      const tenantId = await createTenant(db);
+      const staffId = await createStaff(db, tenantId);
+      const serviceId = await createService(db, tenantId);
+      const clientId = await createClient(db, tenantId);
+      const token = await tokenOf(db, tenantId);
+
+      const old = await db.query<{ id: string }>(
+        `insert into appointments
+           (tenant_id, staff_id, service_id, client_id, start_at,
+            duration_min, buffer_after_min, price_rsd, status, source)
+         values ($1, $2, $3, $4, now() - interval '30 days',
+                 60, 0, 2500, 'cancelled_by_client', 'salon')
+         returning id`,
+        [tenantId, staffId, serviceId, clientId],
+      );
+
       expect(
         (await asAnon(db, () => readFeed(db, token))).map((r) => r.appointment_id),
-      ).not.toContain(appointment.id);
+      ).not.toContain(old.rows[0]!.id);
     });
   });
 

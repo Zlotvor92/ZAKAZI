@@ -585,6 +585,9 @@ export const sr = {
     cancelling: "Otkazujem…",
     cancelledTitle: "Termin je otkazan",
     cancelledBody: "Javi se salonu ako se predomisliš.",
+    removeFromCalendar: "Ukloni iz kalendara",
+    removeFromCalendarHint:
+      "Ako si termin dodala u kalendar telefona, otvori ovo da ga obrišeš — inače će podsetnici zvoniti za termin koji više ne postoji.",
     failed: "Otkazivanje nije uspelo. Pokušaj ponovo.",
     rejected: {
       not_found: "Taj termin nije pronađen za uneti broj telefona.",

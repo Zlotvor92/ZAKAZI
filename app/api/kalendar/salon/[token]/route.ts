@@ -9,6 +9,10 @@ import { buildCalendarFeed } from "@/lib/domain/ics";
  * Bez prijave: kalendar aplikacija ne ume da se prijavi, pa je token u adresi
  * jedini dokaz. Netačan token dobija prazan kalendar, ne grešku — inače bi se
  * pogađanjem moglo saznati koji tokeni postoje.
+ *
+ * Otkazan termin ostaje u odgovoru dok mu vreme ne prođe, ali kao poništen.
+ * Aplikacija ga tada skloni zato što joj je rečeno, a ne zato što je red
+ * nestao — to drugo ne ume svaka.
  */
 export async function GET(
   _request: NextRequest,
@@ -31,6 +35,7 @@ export async function GET(
       title: `${row.client_name} — ${row.service_name}`,
       location: row.tenant_name,
       description: [row.client_phone, row.staff_name].join("\n"),
+      cancelled: row.status.startsWith("cancelled"),
     })),
   });
 
