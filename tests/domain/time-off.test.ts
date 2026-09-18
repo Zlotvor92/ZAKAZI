@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { timeOffOfDay, type TimeOffRange } from "@/lib/domain/time-off";
+import {
+  dayFullyOff,
+  timeOffOfDay,
+  type TimeOffRange,
+} from "@/lib/domain/time-off";
 
 const BELGRADE = "Europe/Belgrade";
 
@@ -105,5 +109,73 @@ describe("odsustvo u danu", () => {
     );
 
     expect(rows.map((row) => row.id)).toEqual(["pre", "posle"]);
+  });
+});
+
+describe("dan pojeden odsustvom", () => {
+  it("jedno celodnevno odsustvo gasi dan", () => {
+    expect(
+      dayFullyOff(
+        [range("a", "2026-09-20T22:00:00Z", "2026-09-21T22:00:00Z")],
+        "2026-09-21",
+        BELGRADE,
+      ),
+    ).toBe(true);
+  });
+
+  it("dva uzastopna odsustva zajedno gase dan", () => {
+    // Jutro pa popodne: nijedno samo nije ceo dan, a dana nema.
+    const rows = [
+      range("jutro", "2026-09-20T22:00:00Z", "2026-09-21T10:00:00Z"),
+      range("popodne", "2026-09-21T10:00:00Z", "2026-09-21T22:00:00Z"),
+    ];
+
+    expect(dayFullyOff(rows, "2026-09-21", BELGRADE)).toBe(true);
+    expect(timeOffOfDay(rows, "2026-09-21", BELGRADE).map((r) => r.wholeDay))
+      .toEqual([false, false]);
+  });
+
+  it("rupa između dva odsustva ostavlja dan radnim", () => {
+    expect(
+      dayFullyOff(
+        [
+          range("jutro", "2026-09-20T22:00:00Z", "2026-09-21T10:00:00Z"),
+          range("popodne", "2026-09-21T11:00:00Z", "2026-09-21T22:00:00Z"),
+        ],
+        "2026-09-21",
+        BELGRADE,
+      ),
+    ).toBe(false);
+  });
+
+  it("deo dana ne gasi dan", () => {
+    expect(
+      dayFullyOff(
+        [range("a", "2026-09-21T07:00:00Z", "2026-09-21T08:30:00Z")],
+        "2026-09-21",
+        BELGRADE,
+      ),
+    ).toBe(false);
+  });
+
+  it("dan bez odsustva ostaje radni", () => {
+    expect(dayFullyOff([], "2026-09-21", BELGRADE)).toBe(false);
+  });
+
+  it("odsustvo preko više dana gasi samo pune dane", () => {
+    const week = [range("a", "2026-09-18T12:00:00Z", "2026-09-21T07:00:00Z")];
+
+    expect(dayFullyOff(week, "2026-09-18", BELGRADE)).toBe(false);
+    expect(dayFullyOff(week, "2026-09-19", BELGRADE)).toBe(true);
+    expect(dayFullyOff(week, "2026-09-20", BELGRADE)).toBe(true);
+    expect(dayFullyOff(week, "2026-09-21", BELGRADE)).toBe(false);
+  });
+
+  it("dan prelaska na zimsko vreme traži svih 25 sati", () => {
+    const short = [range("a", "2026-10-24T22:00:00Z", "2026-10-25T22:00:00Z")];
+    expect(dayFullyOff(short, "2026-10-25", BELGRADE)).toBe(false);
+
+    const whole = [range("a", "2026-10-24T22:00:00Z", "2026-10-25T23:00:00Z")];
+    expect(dayFullyOff(whole, "2026-10-25", BELGRADE)).toBe(true);
   });
 });

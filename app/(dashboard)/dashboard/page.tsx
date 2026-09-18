@@ -18,7 +18,7 @@ import {
 } from "@/lib/domain/calendar";
 import { pluralize } from "@/lib/domain/plural";
 import { daysUntil, subscriptionState } from "@/lib/domain/subscription";
-import { timeOffOfDay } from "@/lib/domain/time-off";
+import { dayFullyOff, timeOffOfDay } from "@/lib/domain/time-off";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import { selectedTenantId } from "@/lib/tenant";
@@ -152,10 +152,16 @@ export default async function DashboardPage({ searchParams }: PageProps) {
 
   // Tačka na traci dana broji samo žive termine: otkazan termin je oslobodio
   // svoje vreme i ne sme da izgleda kao zauzet dan.
+  //
+  // Dan koji je odsustvo pojelo celog je neradan isto kao dan bez radnog
+  // vremena. Tačka na njemu ostaje ako u njemu ipak stoji zakazan termin — siv
+  // dan sa tačkom je tačno ono što se desilo: ne radim, a nešto je zakazano.
   const days: StripDay[] = weekDates.map((date) => ({
     date,
     appointments: within(live, date).length,
-    working: week.blocks.some((block) => block.weekday === isoWeekday(date)),
+    working:
+      week.blocks.some((block) => block.weekday === isoWeekday(date)) &&
+      !dayFullyOff(absences, date, tenant.timezone),
   }));
 
   const selectedDay = days.find((day) => day.date === selected);
