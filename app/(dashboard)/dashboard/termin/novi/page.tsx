@@ -23,7 +23,7 @@ export default async function NewAppointmentPage({ searchParams }: PageProps) {
         </p>
         <Link
           href="/dashboard"
-          className="text-brand inline-flex min-h-11 items-center text-sm underline"
+          className="text-primary inline-flex min-h-11 items-center text-sm underline"
         >
           ‹ {sr.newAppointment.back}
         </Link>

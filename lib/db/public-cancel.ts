@@ -11,9 +11,6 @@ export const salonSummarySchema = z.object({
   name: z.string(),
   slug: z.string(),
   timezone: z.string(),
-  brand_background: z.string().nullable(),
-  brand_primary: z.string().nullable(),
-  brand_accent: z.string().nullable(),
   logo_url: z.url().nullable(),
 });
 

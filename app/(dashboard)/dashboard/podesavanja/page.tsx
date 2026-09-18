@@ -4,7 +4,6 @@ import {
   CalendarDays,
   CalendarOff,
   ChevronLeft,
-  Palette,
   Scissors,
   Clock,
   SlidersHorizontal,
@@ -25,7 +24,6 @@ import { selectedTenantId } from "@/lib/tenant";
 import {
   BlockedNumbers,
   BookingRulesForm,
-  BrandForm,
   CalendarFeed,
   PublicLink,
   ServicesSection,
@@ -165,17 +163,6 @@ export default async function SettingsPage() {
             entries={timeOff}
             timeZone={tenant.timezone}
             today={currentDateInTimeZone(new Date(), tenant.timezone)}
-          />
-        </Section>
-
-        <Section
-          title={sr.settings.brandTitle}
-          icon={<Palette size={18} strokeWidth={1.8} />}
-        >
-          <BrandForm
-            background={tenant.brand_background}
-            primary={tenant.brand_primary}
-            accent={tenant.brand_accent}
           />
         </Section>
 
