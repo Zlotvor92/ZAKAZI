@@ -232,6 +232,9 @@ export const sr = {
     notWorking: "Ovog dana ne radiš.",
     timeOff: "Odsustvo",
     timeOffWholeDay: "ceo dan",
+    timeOffUntil: "do",
+    /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
+    appointmentsCount: ["termin", "termina", "termina"],
     fromPublicPage: "preko sajta",
     addAppointment: "Dodaj termin",
     call: "Pozovi",

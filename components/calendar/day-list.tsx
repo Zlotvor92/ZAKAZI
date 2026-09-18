@@ -1,6 +1,7 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
+import { Phone } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,15 @@ import { cn } from "@/lib/utils";
 
 /** Statusi koji su završena priča i zato izbledeli u spisku. */
 const SETTLED = new Set<AppointmentStatus>(["completed", "no_show"]);
+
+/** Boja statusa; ista skala kao na početnoj strani. */
+const STATUS_COLOR: Record<AppointmentStatus, string> = {
+  confirmed: "text-[#8C1D3F]",
+  completed: "text-[#1C7A4E]",
+  no_show: "text-[#B3261E]",
+  cancelled_by_client: "text-[#6B6055]",
+  cancelled_by_salon: "text-[#6B6055]",
+};
 
 type Action = { label: string; status: AppointmentStatus };
 
@@ -63,7 +73,7 @@ function HistoryLine({
   );
 
   return (
-    <li className="text-muted-foreground flex flex-wrap gap-x-1 text-xs">
+    <li className="flex flex-wrap gap-x-1 text-xs text-[#6B6055]">
       <span className="tabular-nums">{when}</span>
       <span aria-hidden>·</span>
       <span>
@@ -112,36 +122,41 @@ function History({
     });
   }
 
+  // Dugme je stavka u redu sa ostalim dugmadima, a spisak ispod njega zauzima
+  // celu širinu — u redu koji se prelama to ga samo po sebi stavlja u nov red.
   return (
-    <div className="space-y-1">
+    <>
       <Button
         type="button"
-        variant="ghost"
+        variant="outline"
         size="sm"
         aria-expanded={shown}
+        className="rounded-full border-[#E4DAC9] px-3.5 text-[#6B6055]"
         onClick={toggle}
       >
         {shown ? sr.history.hide : sr.history.show}
       </Button>
 
       {shown ? (
-        loading ? (
-          <p className="text-muted-foreground text-xs">{sr.history.loading}</p>
-        ) : failed ? (
-          <p role="alert" className="text-destructive text-xs">
-            {failed}
-          </p>
-        ) : entries && entries.length > 0 ? (
-          <ul className="space-y-0.5">
-            {entries.map((entry) => (
-              <HistoryLine key={entry.id} entry={entry} timeZone={timeZone} />
-            ))}
-          </ul>
-        ) : (
-          <p className="text-muted-foreground text-xs">{sr.history.empty}</p>
-        )
+        <div className="w-full basis-full pt-1">
+          {loading ? (
+            <p className="text-xs text-[#6B6055]">{sr.history.loading}</p>
+          ) : failed ? (
+            <p role="alert" className="text-xs text-[#B3261E]">
+              {failed}
+            </p>
+          ) : entries && entries.length > 0 ? (
+            <ul className="space-y-0.5">
+              {entries.map((entry) => (
+                <HistoryLine key={entry.id} entry={entry} timeZone={timeZone} />
+              ))}
+            </ul>
+          ) : (
+            <p className="text-xs text-[#6B6055]">{sr.history.empty}</p>
+          )}
+        </div>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -178,52 +193,71 @@ function Row({
   const actions = actionsFor(appointment.status);
 
   return (
-    <li className={cn("py-1", SETTLED.has(appointment.status) && "opacity-60")}>
-      <button
-        type="button"
-        onClick={() => setOpen((was) => !was)}
-        aria-expanded={open}
-        className="flex w-full items-start gap-3 py-2 text-left"
-      >
-        <span className="w-12 shrink-0 text-sm tabular-nums">
-          <span className="block font-medium">
-            {formatInTimeZone(new Date(appointment.start_at), timeZone, "HH:mm")}
+    <li
+      className={cn(
+        "rounded-[18px] border border-[#E4DAC9] bg-white",
+        SETTLED.has(appointment.status) && "opacity-70",
+      )}
+    >
+      {/* Red drži dva odvojena poteza: dodir na termin ga otvara, dodir na
+          krug pored njega zove. Veza u dugmetu ne bi radila — dugme bi joj
+          pojelo dodir. */}
+      <div className="flex items-center gap-2 p-3 pl-4">
+        <button
+          type="button"
+          onClick={() => setOpen((was) => !was)}
+          aria-expanded={open}
+          className="flex min-w-0 flex-1 items-center gap-3.5 py-1 text-left"
+        >
+          <span className="w-12 shrink-0 text-center">
+            <span className="block text-[15px] leading-tight font-bold tabular-nums">
+              {formatInTimeZone(new Date(appointment.start_at), timeZone, "HH:mm")}
+            </span>
+            <span className="block text-[10.5px] leading-tight text-[#6B6055] tabular-nums">
+              {formatInTimeZone(new Date(appointment.end_at), timeZone, "HH:mm")}
+            </span>
           </span>
-          <span className="text-muted-foreground block text-xs">
-            {formatInTimeZone(new Date(appointment.end_at), timeZone, "HH:mm")}
-          </span>
-        </span>
 
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-sm font-medium">
-            {appointment.client_name}
-          </span>
-          <span className="text-muted-foreground block truncate text-xs">
-            {appointment.service_name}
-            {appointment.source === "public"
-              ? ` · ${sr.dashboard.fromPublicPage}`
-              : ""}
-          </span>
-        </span>
+          <span aria-hidden className="h-9 w-px shrink-0 bg-[#E4DAC9]" />
 
-        <span className="text-muted-foreground shrink-0 text-right text-xs">
-          {sr.appointmentStatus[appointment.status]}
-        </span>
-      </button>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[14.5px] font-semibold">
+              {appointment.client_name}
+            </span>
+            <span className="block truncate text-xs text-[#554C44]">
+              {appointment.service_name}
+              {appointment.source === "public"
+                ? ` · ${sr.dashboard.fromPublicPage}`
+                : ""}
+            </span>
+            {/* Potvrđen je podrazumevano stanje svakog budućeg termina, pa se
+                ne ispisuje: red bi na svakom terminu dobio treću liniju koja
+                ne kaže ništa. Ispisuje se ono što se razlikuje. */}
+            {appointment.status === "confirmed" ? null : (
+              <span
+                className={cn(
+                  "block pt-0.5 text-[9.5px] font-bold tracking-[0.12em] uppercase",
+                  STATUS_COLOR[appointment.status],
+                )}
+              >
+                {sr.appointmentStatus[appointment.status]}
+              </span>
+            )}
+          </span>
+        </button>
+
+        <a
+          href={`tel:${appointment.client_phone}`}
+          aria-label={`${sr.dashboard.call} ${appointment.client_name}`}
+          className="grid size-11 shrink-0 place-items-center rounded-full bg-[#FBF7F0] text-[#8C1D3F] transition-colors hover:bg-[#E4DAC9]"
+        >
+          <Phone size={17} strokeWidth={1.8} aria-hidden />
+        </a>
+      </div>
 
       {open ? (
-        <div className="space-y-2 pb-3 pl-15">
-          <div className="flex flex-wrap gap-2">
-            {/* Vidljivo 36px kao i dugmad oko njega, a dodirna zona razvučena
-                na 44px istim potezom kao u `buttonVariants` — bez toga je ovo
-                jedina meta u kalendaru koju prst promašuje. */}
-            <a
-              href={`tel:${appointment.client_phone}`}
-              className="border-border hover:bg-accent relative inline-flex h-9 items-center rounded-md border px-3 text-sm after:absolute after:inset-x-0 after:top-1/2 after:h-11 after:-translate-y-1/2 after:content-['']"
-            >
-              {sr.dashboard.call}
-            </a>
-
+        <div className="space-y-1.5 border-t border-[#E4DAC9] px-3 pt-2.5 pb-2.5">
+          <div className="flex flex-wrap gap-1.5">
             {actions.map((action) => (
               <Button
                 key={action.status}
@@ -231,6 +265,7 @@ function Row({
                 variant="outline"
                 size="sm"
                 disabled={pending}
+                className="rounded-full border-[#DED5C7] bg-[#FBF7F0] px-3.5"
                 onClick={() => run(() => changeStatus(appointment.id, action.status))}
               >
                 {action.label}
@@ -240,24 +275,30 @@ function Row({
             {/* Dva dodira namerno: blokada je teška odluka, promašen prst nije. */}
             <Button
               type="button"
-              variant={armed ? "default" : "ghost"}
+              variant="outline"
               size="sm"
               disabled={pending}
+              className={cn(
+                "rounded-full px-3.5",
+                armed
+                  ? "border-[#B3261E] bg-[#B3261E] text-[#FBF7F0] hover:bg-[#B3261E]/90 hover:text-[#FBF7F0]"
+                  : "border-[#E4DAC9] text-[#B3261E] hover:text-[#B3261E]",
+              )}
               onClick={() =>
                 armed ? run(() => blockClient(appointment.id)) : setArmed(true)
               }
             >
               {armed ? sr.dashboard.blockConfirm : sr.dashboard.block}
             </Button>
+
+            <History appointmentId={appointment.id} timeZone={timeZone} />
           </div>
 
           {error ? (
-            <p role="alert" className="text-destructive text-xs">
+            <p role="alert" className="text-xs text-[#B3261E]">
               {error}
             </p>
           ) : null}
-
-          <History appointmentId={appointment.id} timeZone={timeZone} />
         </div>
       ) : null}
     </li>
@@ -274,26 +315,18 @@ function TimeOffRow({
 }) {
   const label = [sr.dashboard.timeOff, entry.reason].filter(Boolean).join(" · ");
 
-  // Isti ritam kao red termina: `py-1` na redu, `py-2` unutra.
   return (
-    <li className="py-1 opacity-60">
-      <div className="flex items-start gap-3 py-2">
-        <span className="w-12 shrink-0 text-sm tabular-nums">
-          {entry.wholeDay ? null : (
-            <>
-              <span className="block font-medium">
-                {formatInTimeZone(new Date(entry.startAt), timeZone, "HH:mm")}
-              </span>
-              <span className="block text-xs">
-                {formatInTimeZone(new Date(entry.endAt), timeZone, "HH:mm")}
-              </span>
-            </>
-          )}
-        </span>
-        <span className="min-w-0 flex-1 text-sm">
-          {entry.wholeDay ? `${label} · ${sr.dashboard.timeOffWholeDay}` : label}
-        </span>
-      </div>
+    <li className="flex items-center gap-3.5 rounded-[18px] bg-[#E4DAC9] px-4 py-3.5">
+      <span className="w-12 shrink-0 text-center text-[13px] font-semibold text-[#554C44] tabular-nums">
+        {entry.wholeDay
+          ? "—"
+          : formatInTimeZone(new Date(entry.startAt), timeZone, "HH:mm")}
+      </span>
+      <span className="min-w-0 flex-1 text-[12.5px] text-[#4A423B]">
+        {entry.wholeDay
+          ? `${label} · ${sr.dashboard.timeOffWholeDay}`
+          : `${label} · ${sr.dashboard.timeOffUntil} ${formatInTimeZone(new Date(entry.endAt), timeZone, "HH:mm")}`}
+      </span>
     </li>
   );
 }
@@ -332,25 +365,26 @@ export function DayList({
 
   return (
     <>
-      <ul className="divide-border divide-y">{rows.map((row) => row.node)}</ul>
+      <ul className="space-y-2.5">{rows.map((row) => row.node)}</ul>
 
       {/* Otkazan termin je oslobodio svoje vreme, pa ne stoji u spisku dana —
           ali mora da postoji negde: bez ovoga u interfejsu ne ostaje nikakav
           trag da je termin ikada postojao, ni put do njegove istorije. */}
       {cancelled.length > 0 ? (
-        <div className="border-border border-t pt-1">
+        <div className="pt-3">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             aria-expanded={showCancelled}
+            className="rounded-full px-3 text-[#6B6055]"
             onClick={() => setShowCancelled((was) => !was)}
           >
             {sr.cancelled.toggle} · {cancelled.length}
           </Button>
 
           {showCancelled ? (
-            <ul className="divide-border divide-y opacity-70">
+            <ul className="space-y-2.5 pt-2 opacity-70">
               {cancelled.map((appointment) => (
                 <Row
                   key={appointment.id}
