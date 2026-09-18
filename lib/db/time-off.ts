@@ -11,7 +11,12 @@ const timeOffSchema = z.object({
 export type TimeOff = z.infer<typeof timeOffSchema>;
 
 const writeResultSchema = z.discriminatedUnion("ok", [
-  z.object({ ok: z.literal(true), id: z.uuid() }),
+  z.object({
+    ok: z.literal(true),
+    id: z.uuid(),
+    /** Koliko je već zakazanih termina zateklo u tom vremenu. */
+    overlapping: z.number().int(),
+  }),
   z.object({ ok: z.literal(false), reason: z.string() }),
 ]);
 

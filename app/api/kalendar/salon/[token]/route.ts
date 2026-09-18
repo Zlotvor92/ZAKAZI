@@ -30,13 +30,7 @@ export async function GET(
       endAt: new Date(row.end_at),
       title: `${row.client_name} — ${row.service_name}`,
       location: row.tenant_name,
-      description: [
-        row.client_phone,
-        row.staff_name,
-        row.status === "pending" ? "Čeka potvrdu" : null,
-      ]
-        .filter(Boolean)
-        .join("\n"),
+      description: [row.client_phone, row.staff_name].join("\n"),
     })),
   });
 

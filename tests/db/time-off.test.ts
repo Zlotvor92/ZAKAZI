@@ -4,17 +4,22 @@ import {
   asAnon,
   asUser,
   closePool,
+  createClient,
   createService,
   createStaff,
   createTenant,
   createUser,
+  futureStartAt,
   inSavepoint,
+  insertAppointment,
   withRollback,
 } from "./helpers";
 
 afterAll(closePool);
 
-type WriteResult = { ok: true; id: string } | { ok: false; reason: string };
+type WriteResult =
+  | { ok: true; id: string; overlapping: number }
+  | { ok: false; reason: string };
 
 async function salon(db: pg.PoolClient) {
   const tenantId = await createTenant(db);
@@ -102,6 +107,66 @@ describe("unos odsustva", () => {
       );
 
       expect(result).toEqual({ ok: false, reason: "end_before_start" });
+    });
+  });
+
+  it("javlja koliko je zakazanih termina zateklo u tom vremenu", async () => {
+    // Upis se ne odbija — vlasnica koja ide kod lekara ide kod lekara — ali
+    // ekran mora da ima čime da je upozori, jer klijentkinja i dalje dolazi.
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const clientId = await createClient(db, base.tenantId);
+      const startAt = futureStartAt();
+
+      await insertAppointment(db, {
+        tenantId: base.tenantId,
+        staffId: base.staffId,
+        serviceId: base.serviceId,
+        clientId,
+        startAt,
+      });
+
+      const day = startAt.slice(0, 10);
+      const over = await asUser(db, base.userId, () =>
+        add(db, `${day}T00:00:00Z`, `${day}T23:00:00Z`),
+      );
+      expect(over).toMatchObject({ ok: true, overlapping: 1 });
+
+      const clear = await asUser(db, base.userId, () =>
+        add(db, `${day}T23:00:00Z`, `${day}T23:30:00Z`),
+      );
+      expect(clear).toMatchObject({ ok: true, overlapping: 0 });
+
+      // Termin ostaje tu: bez njega vlasnica ne bi imala koga da pozove.
+      const left = await db.query(
+        "select 1 from appointments where tenant_id = $1",
+        [base.tenantId],
+      );
+      expect(left.rowCount).toBe(1);
+    });
+  });
+
+  it("otkazan termin se ne računa u upozorenje", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const clientId = await createClient(db, base.tenantId);
+      const startAt = futureStartAt();
+
+      await insertAppointment(db, {
+        tenantId: base.tenantId,
+        staffId: base.staffId,
+        serviceId: base.serviceId,
+        clientId,
+        startAt,
+        status: "cancelled_by_client",
+      });
+
+      const day = startAt.slice(0, 10);
+      const result = await asUser(db, base.userId, () =>
+        add(db, `${day}T00:00:00Z`, `${day}T23:00:00Z`),
+      );
+
+      expect(result).toMatchObject({ ok: true, overlapping: 0 });
     });
   });
 

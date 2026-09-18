@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Service } from "@/lib/db/services";
 import { sr } from "@/lib/i18n/sr";
+import { isRedirect } from "@/lib/utils";
 import { saveAppointment, type NewAppointmentState } from "./actions";
 
 /** Trajanja koja solo majstor stvarno koristi; ostalo je kucanje bez potrebe. */
@@ -24,7 +25,18 @@ export function AppointmentForm({
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
-      setState(await saveAppointment(formData));
+      try {
+        setState(await saveAppointment(formData));
+      } catch (cause) {
+        // Uspeh se iz ove akcije vraća kao `redirect()`, a on do pregledača
+        // ume da stigne kao greška. Takva mora da ide dalje do rutera —
+        // progutana bi značila da se posle svakog uspešnog upisa ispiše da
+        // ništa nije sačuvano.
+        if (isRedirect(cause)) {
+          throw cause;
+        }
+        setState({ status: "error", message: sr.error.unreachable });
+      }
     });
   }
 

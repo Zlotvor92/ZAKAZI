@@ -16,6 +16,7 @@ import {
 } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
 import { brandVariables } from "@/lib/domain/brand";
+import { cn } from "@/lib/utils";
 import {
   disableCalendarFeed,
   enableCalendarFeed,
@@ -43,10 +44,12 @@ function CopyButton({
   value,
   label,
   onFailed,
+  className,
 }: {
   value: string;
   label: string;
   onFailed: (failed: boolean) => void;
+  className?: string;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -55,7 +58,16 @@ function CopyButton({
       type="button"
       size="sm"
       variant="outline"
+      className={cn("rounded-full", className)}
       onClick={() => {
+        // Ostave ume i da nema, ne samo da odbije: stariji ugrađeni pregledači
+        // je nemaju uopšte. Bez ove provere poziv pukne pre nego što `catch`
+        // stigne da javi, pa dugme ćuti.
+        if (!navigator.clipboard) {
+          onFailed(true);
+          return;
+        }
+
         void navigator.clipboard
           .writeText(value)
           .then(() => {
@@ -73,11 +85,20 @@ function CopyButton({
 
 function Feedback({ state }: { state: SettingsState }) {
   if (state.status === "saved") {
-    return <p className="text-muted-foreground text-sm">{sr.settings.saved}</p>;
+    return <p className="text-sm text-[#554C44]">{sr.settings.saved}</p>;
+  }
+  // Upisano je, ali ima šta da se uradi rukom. Nije greška, pa nije crveno —
+  // ali ni obično „Sačuvano.", jer se preko toga pređe bez čitanja.
+  if (state.status === "warning") {
+    return (
+      <p role="status" className="border-l-2 border-l-[#8C1D3F] pl-3 text-sm">
+        {state.message}
+      </p>
+    );
   }
   if (state.status === "error") {
     return (
-      <p role="alert" className="text-destructive text-sm">
+      <p role="alert" className="text-[#B3261E] text-sm">
         {state.message}
       </p>
     );
@@ -94,17 +115,29 @@ function useSettingsAction() {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<SettingsState>({ status: "idle" });
 
+  /**
+   * Pad samog poziva — prekinuta mreža ili greška na serveru — mora da ostane
+   * u formi. Bez ovoga React odnese odbijeno obećanje na granicu greške i cela
+   * podešavanja se zamene stranom „Nešto je puklo".
+   */
+  function guard(work: Promise<SettingsState>): Promise<SettingsState> {
+    return work.catch(() => ({
+      status: "error" as const,
+      message: sr.error.unreachable,
+    }));
+  }
+
   function submit(action: (formData: FormData) => Promise<SettingsState>) {
     return (formData: FormData) => {
       startTransition(async () => {
-        setState(await action(formData));
+        setState(await guard(action(formData)));
       });
     };
   }
 
   function call(action: () => Promise<SettingsState>) {
     startTransition(async () => {
-      setState(await action());
+      setState(await guard(action()));
     });
   }
 
@@ -174,11 +207,11 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
       onChange={reset}
       className="space-y-3"
     >
-      <p className="text-muted-foreground text-xs">{sr.settings.hoursHint}</p>
+      <p className="text-[#554C44] text-xs">{sr.settings.hoursHint}</p>
 
       {/* Oba načina upisuju isti podatak; prekidač menja samo šta se kuca. */}
       <fieldset className="flex items-center gap-2">
-        <legend className="text-muted-foreground pb-1 text-xs">
+        <legend className="text-[#554C44] pb-1 text-xs">
           {sr.settings.slotModeLabel}
         </legend>
         {(["minutes", "count"] as const).map((option) => (
@@ -187,6 +220,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
             type="button"
             size="sm"
             variant={mode === option ? "default" : "outline"}
+            className="rounded-full"
             onClick={() => setMode(option)}
           >
             {option === "minutes"
@@ -197,7 +231,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
       </fieldset>
 
       {days.map((day) => (
-        <div key={day.weekday} className="border-border rounded-lg border p-3">
+        <div key={day.weekday} className="rounded-2xl border border-[#E4DAC9] bg-[#FBF7F0] p-3">
           {/* Kvačica je 20px, ali se dodiruje ceo red visok 44px. */}
           <label className="flex min-h-11 items-center gap-2">
             <input
@@ -212,7 +246,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
             <span className="text-sm font-medium">
               {sr.calendar.weekdaysShort[day.weekday - 1]}
             </span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-[#554C44] text-xs">
               {day.working ? sr.settings.working : sr.settings.notWorking}
             </span>
           </label>
@@ -297,7 +331,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
                 value={day.slotMinutes}
               />
 
-              <p className="text-muted-foreground text-xs">
+              <p className="text-[#554C44] text-xs">
                 {slotSummary(day)}
               </p>
             </div>
@@ -309,11 +343,12 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
         <Button
           type="button"
           variant="outline"
+          className="rounded-full"
           onClick={() => setDays(defaultWeek())}
         >
           {sr.settings.useTemplate}
         </Button>
-        <Button type="submit" disabled={pending}>
+        <Button type="submit" className="rounded-full" disabled={pending}>
           {sr.settings.saveHours}
         </Button>
       </div>
@@ -378,7 +413,7 @@ function Field({
 }) {
   return (
     <label className="block space-y-1">
-      <span className="text-muted-foreground block text-xs">{label}</span>
+      <span className="text-[#554C44] block text-xs">{label}</span>
       {children}
     </label>
   );
@@ -435,7 +470,7 @@ export function BookingRulesForm({
         <span className="text-sm">{sr.settings.publicLabel}</span>
       </label>
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" className="rounded-full" disabled={pending}>
         {sr.settings.saveRules}
       </Button>
 
@@ -499,7 +534,7 @@ export function BrandForm({
 
   return (
     <form action={submit(saveBrand)} onChange={reset} className="space-y-3">
-      <p className="text-muted-foreground text-xs">{sr.settings.brandHint}</p>
+      <p className="text-[#554C44] text-xs">{sr.settings.brandHint}</p>
 
       <label className="flex min-h-11 items-center gap-2">
         <input
@@ -532,7 +567,7 @@ export function BrandForm({
             value={acc ?? pri}
             onChange={setAcc}
           />
-          <p className="text-muted-foreground text-xs">
+          <p className="text-[#554C44] text-xs">
             {sr.settings.brandAccentHint}
           </p>
         </div>
@@ -540,7 +575,7 @@ export function BrandForm({
 
       {preview ? (
         <div className="space-y-1">
-          <span className="text-muted-foreground block text-xs">
+          <span className="text-[#554C44] block text-xs">
             {sr.settings.brandPreview}
           </span>
           {/* Isti postupak kao na javnoj strani: vrednosti prolaze kroz
@@ -566,7 +601,7 @@ export function BrandForm({
         </div>
       ) : null}
 
-      <Button type="submit" disabled={pending}>
+      <Button type="submit" className="rounded-full" disabled={pending}>
         {sr.settings.saveBrand}
       </Button>
 
@@ -584,14 +619,14 @@ export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
 
   return (
     <div className="space-y-3" onChange={reset}>
-      <p className="text-muted-foreground text-xs">{sr.settings.blockedHint}</p>
+      <p className="text-[#554C44] text-xs">{sr.settings.blockedHint}</p>
 
       {numbers.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-[#554C44] text-sm">
           {sr.settings.blockedEmpty}
         </p>
       ) : (
-        <ul className="divide-border divide-y">
+        <ul className="divide-y divide-[#E4DAC9]">
           {numbers.map((number) => (
             <li
               key={number.id}
@@ -600,7 +635,7 @@ export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
               <div className="min-w-0">
                 <div className="text-sm tabular-nums">{number.phone_e164}</div>
                 {number.reason ? (
-                  <div className="text-muted-foreground truncate text-xs">
+                  <div className="text-[#554C44] truncate text-xs">
                     {number.reason}
                   </div>
                 ) : null}
@@ -628,7 +663,12 @@ export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
           placeholder={sr.booking.phonePlaceholder}
           className="min-w-40 flex-1"
         />
-        <Button type="submit" variant="outline" disabled={pending}>
+        <Button
+          type="submit"
+          variant="outline"
+          className="rounded-full"
+          disabled={pending}
+        >
           {sr.settings.addBlocked}
         </Button>
       </form>
@@ -655,14 +695,14 @@ export function TimeOffSection({
 
   return (
     <div className="space-y-3" onChange={reset}>
-      <p className="text-muted-foreground text-xs">{sr.settings.timeOffHint}</p>
+      <p className="text-[#554C44] text-xs">{sr.settings.timeOffHint}</p>
 
       {entries.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-[#554C44] text-sm">
           {sr.settings.timeOffEmpty}
         </p>
       ) : (
-        <ul className="divide-border divide-y">
+        <ul className="divide-y divide-[#E4DAC9]">
           {entries.map((entry) => (
             <li
               key={entry.id}
@@ -673,7 +713,7 @@ export function TimeOffSection({
                   {describeTimeOff(entry, timeZone)}
                 </div>
                 {entry.reason ? (
-                  <div className="text-muted-foreground truncate text-xs">
+                  <div className="text-[#554C44] truncate text-xs">
                     {entry.reason}
                   </div>
                 ) : null}
@@ -695,25 +735,25 @@ export function TimeOffSection({
       <form action={submit(saveTimeOff)} className="space-y-2">
         <div className="grid grid-cols-2 gap-2">
           <label className="space-y-1">
-            <span className="text-muted-foreground block text-xs">
+            <span className="text-[#554C44] block text-xs">
               {sr.settings.timeOffFrom}
             </span>
             <Input type="date" name="fromDate" required defaultValue={today} />
           </label>
           <label className="space-y-1">
-            <span className="text-muted-foreground block text-xs">
+            <span className="text-[#554C44] block text-xs">
               {sr.settings.timeOffTo}
             </span>
             <Input type="date" name="toDate" required defaultValue={today} />
           </label>
           <label className="space-y-1">
-            <span className="text-muted-foreground block text-xs">
+            <span className="text-[#554C44] block text-xs">
               {sr.settings.timeOffFromTime}
             </span>
             <Input type="time" name="fromTime" step={900} />
           </label>
           <label className="space-y-1">
-            <span className="text-muted-foreground block text-xs">
+            <span className="text-[#554C44] block text-xs">
               {sr.settings.timeOffToTime}
             </span>
             <Input type="time" name="toTime" step={900} />
@@ -726,7 +766,12 @@ export function TimeOffSection({
           placeholder={sr.settings.timeOffReasonPlaceholder}
         />
 
-        <Button type="submit" variant="outline" disabled={pending}>
+        <Button
+          type="submit"
+          variant="outline"
+          className="rounded-full"
+          disabled={pending}
+        >
           {sr.settings.addTimeOff}
         </Button>
       </form>
@@ -771,10 +816,10 @@ export function ServicesSection({ services }: { services: Service[] }) {
 
   return (
     <div className="space-y-3" onChange={reset}>
-      <p className="text-muted-foreground text-xs">{sr.settings.servicesHint}</p>
+      <p className="text-[#554C44] text-xs">{sr.settings.servicesHint}</p>
 
       {services.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-[#554C44] text-sm">
           {sr.settings.servicesEmpty}
         </p>
       ) : null}
@@ -783,7 +828,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
         <form
           key={service.id}
           action={submit(saveServiceEntry)}
-          className="border-border space-y-2 rounded-lg border p-3"
+          className="space-y-2 rounded-2xl border border-[#E4DAC9] bg-[#FBF7F0] p-3"
         >
           <input type="hidden" name="id" value={service.id} />
 
@@ -820,14 +865,20 @@ export function ServicesSection({ services }: { services: Service[] }) {
               osam piksela razmaka, od kojih jedno briše uslugu, na telefonu su
               ista meta. Potvrda je isti postupak kao kod blokiranja broja. */}
           <div className="flex items-center justify-between gap-2">
-            <Button type="submit" size="sm" variant="outline" disabled={pending}>
+            <Button
+              type="submit"
+              size="sm"
+              variant="outline"
+              className="rounded-full"
+              disabled={pending}
+            >
               {sr.settings.saveService}
             </Button>
             <Button
               type="button"
               size="sm"
               variant="ghost"
-              className="text-destructive hover:text-destructive"
+              className="text-[#B3261E] hover:text-[#B3261E]"
               disabled={pending}
               onClick={() => {
                 if (!window.confirm(sr.settings.removeServiceConfirm)) {
@@ -844,7 +895,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
 
       <form
         action={submit(saveServiceEntry)}
-        className="border-border space-y-2 rounded-lg border border-dashed p-3"
+        className="space-y-2 rounded-2xl border border-dashed border-[#DED5C7] p-3"
       >
         <input type="hidden" name="id" value="" />
 
@@ -877,7 +928,12 @@ export function ServicesSection({ services }: { services: Service[] }) {
           </Field>
         </div>
 
-        <Button type="submit" size="sm" disabled={pending}>
+        <Button
+          type="submit"
+          size="sm"
+          className="rounded-full"
+          disabled={pending}
+        >
           {sr.settings.addService}
         </Button>
       </form>
@@ -914,11 +970,12 @@ export function CalendarFeed({
   if (!token || !httpUrl || !webcalUrl) {
     return (
       <div className="space-y-3">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-[#554C44] text-sm">
           {sr.settings.calendarHint}
         </p>
         <Button
           type="button"
+          className="rounded-full"
           disabled={pending}
           onClick={() => {
             startTransition(async () => {
@@ -934,16 +991,19 @@ export function CalendarFeed({
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-sm">{sr.settings.calendarHint}</p>
+      <p className="text-[#554C44] text-sm">{sr.settings.calendarHint}</p>
 
-      <p className="bg-accent rounded-md p-3 font-mono text-xs break-all">
+      <p className="rounded-xl bg-[#FBF7F0] p-3 font-mono text-xs break-all">
         {httpUrl}
       </p>
 
       <div className="flex flex-wrap gap-2">
         {/* Sidro, ne dugme: `webcal://` predaje telefon kalendar aplikaciji,
             a to ume samo prava veza. Stil je isti kao kod dugmeta pored. */}
-        <a href={webcalUrl} className={buttonVariants({ size: "sm" })}>
+        <a
+          href={webcalUrl}
+          className={cn(buttonVariants({ size: "sm" }), "rounded-full")}
+        >
           {sr.settings.calendarSubscribe}
         </a>
 
@@ -955,17 +1015,17 @@ export function CalendarFeed({
       </div>
 
       {copyFailed ? (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className="text-[#B3261E] text-xs">
           {sr.settings.copyFailed}
         </p>
       ) : null}
 
-      <div className="text-muted-foreground space-y-2 pt-1 text-xs">
+      <div className="text-[#554C44] space-y-2 pt-1 text-xs">
         <p className="font-medium">{sr.settings.calendarStepsTitle}</p>
         <p>{sr.settings.calendarStepsIphone}</p>
         <p>{sr.settings.calendarStepsAndroid}</p>
         <p>{sr.settings.calendarDelay}</p>
-        <p className="text-destructive">
+        <p className="text-[#B3261E]">
           {sr.settings.calendarSecretWarning}
         </p>
       </div>
@@ -975,6 +1035,7 @@ export function CalendarFeed({
           type="button"
           size="sm"
           variant="outline"
+          className="rounded-full"
           disabled={pending}
           onClick={() => {
             startTransition(async () => {
@@ -990,7 +1051,7 @@ export function CalendarFeed({
           size="sm"
           variant="ghost"
           disabled={pending}
-          className="text-destructive hover:text-destructive"
+          className="text-[#B3261E] hover:text-[#B3261E]"
           onClick={() => {
             startTransition(async () => {
               await disableCalendarFeed();
@@ -1019,33 +1080,41 @@ export function PublicLink({ url }: { url: string }) {
   const [copyFailed, setCopyFailed] = useState(false);
 
   return (
-    <div className="space-y-3">
-      <p className="bg-accent rounded-md p-3 text-sm break-all">{url}</p>
+    <section className="rounded-[22px] bg-[#8C1D3F] p-5 text-[#FBF7F0]">
+      <span className="text-[11px] font-bold tracking-[0.16em] uppercase opacity-90">
+        {sr.settings.linkTitle}
+      </span>
 
-      <div className="flex flex-wrap gap-2">
+      <p className="pt-2 text-base font-semibold break-all">{url}</p>
+
+      <div className="flex flex-wrap gap-2 pt-4">
         <CopyButton
           value={url}
           label={sr.settings.linkCopy}
           onFailed={setCopyFailed}
+          className="h-11 border-transparent bg-[#FBF7F0] px-5 text-[#211D1A] hover:bg-white hover:text-[#211D1A]"
         />
 
         <a
           href={url}
           target="_blank"
           rel="noreferrer"
-          className={buttonVariants({ size: "sm", variant: "outline" })}
+          className="flex h-11 items-center rounded-full border border-[#FBF7F0]/45 px-5 text-sm font-medium"
         >
           {sr.settings.linkOpen}
         </a>
       </div>
 
+      <p className="pt-3 text-xs leading-relaxed opacity-90">
+        {sr.settings.linkHint}
+      </p>
+
       {copyFailed ? (
-        <p role="alert" className="text-destructive text-xs">
+        <p role="alert" className="pt-2 text-xs font-medium">
           {sr.settings.copyFailed}
         </p>
       ) : null}
 
-      <p className="text-muted-foreground text-xs">{sr.settings.linkHint}</p>
-    </div>
+    </section>
   );
 }

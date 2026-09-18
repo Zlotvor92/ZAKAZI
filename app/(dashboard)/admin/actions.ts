@@ -43,7 +43,24 @@ export async function addSalon(formData: FormData): Promise<AdminState> {
   });
 
   if (!parsed.success) {
-    return { status: "error", message: sr.admin.problem.invalid_email };
+    // Poruka mora da pokaže na polje: ranije je i prazno ime i prekratka
+    // adresa javljalo da mejl nije ispravan.
+    const problem = parsed.error.issues
+      .map((issue) => issue.path[0])
+      .find(
+        (field): field is "name" | "slug" | "ownerEmail" =>
+          field === "name" || field === "slug" || field === "ownerEmail",
+      );
+
+    return {
+      status: "error",
+      message:
+        problem === "name"
+          ? sr.admin.problem.invalid_name
+          : problem === "slug"
+            ? sr.admin.problem.invalid_slug
+            : sr.admin.problem.invalid_email,
+    };
   }
 
   const email = parsed.data.ownerEmail.trim().toLowerCase();

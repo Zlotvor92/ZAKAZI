@@ -21,6 +21,9 @@ const REAL = [
   "+38164123456",
   "+38121456789",
   "+381113456781",
+  // Fiksni broj sa nizom cifara: na fiksnoj mreži to nije signal.
+  "+381112345678",
+  "+381243456789",
   "+4915112345678",
 ];
 

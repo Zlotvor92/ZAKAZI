@@ -81,6 +81,13 @@ export const sr = {
       "Greška nije do tebe. Zapisana je i stiže nam odmah — pokušaj ponovo za koji trenutak.",
     retry: "Pokušaj ponovo",
     home: "Nazad na početnu",
+    /**
+     * Radnja nije stigla do servera ili se odatle nije vratila. Poruka pokriva
+     * oba slučaja namerno: u pregledaču se prekinuta veza i pukao server ne
+     * razlikuju, a korisnici je bitno samo da ništa nije upisano.
+     */
+    unreachable:
+      "Nije uspelo — ništa nije sačuvano. Proveri internet i pokušaj ponovo.",
   },
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
@@ -223,10 +230,14 @@ export const sr = {
     nextWeek: "Sledeća nedelja",
     emptyDay: "Ovog dana nema zakazanih termina.",
     notWorking: "Ovog dana ne radiš.",
+    timeOff: "Odsustvo",
+    timeOffWholeDay: "ceo dan",
+    timeOffUntil: "do",
+    /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
+    appointmentsCount: ["termin", "termina", "termina"],
     fromPublicPage: "preko sajta",
     addAppointment: "Dodaj termin",
     call: "Pozovi",
-    confirm: "Potvrdi",
     arrived: "Obavljeno",
     noShow: "Izostanak",
     cancel: "Otkaži",
@@ -279,6 +290,10 @@ export const sr = {
     leadLabel: "Najranije koliko sati unapred",
     publicLabel: "Zakazivanje preko interneta je uključeno",
     saveRules: "Sačuvaj pravila",
+    rulesProblem: {
+      horizonDays: "Upiši između 1 i 90 dana.",
+      leadHours: "Upiši između 0 i 168 sati.",
+    },
 
     servicesTitle: "Usluge",
     servicesHint:
@@ -369,6 +384,15 @@ export const sr = {
     addTimeOff: "Dodaj odsustvo",
     removeTimeOff: "Obriši",
     wholeDay: "ceo dan",
+    /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
+    timeOffAppointmentsCount: [
+      "zakazan termin",
+      "zakazana termina",
+      "zakazanih termina",
+    ],
+    /** `{termini}` se zamenjuje pre prikaza. */
+    timeOffOverlaps:
+      "Odsustvo je upisano, ali u tom vremenu već imaš {termini}. Termini su i dalje u kalendaru — pozovi klijente i pomeri ih.",
     timeOffProblem: {
       end_before_start: "Kraj mora biti posle početka.",
       no_staff: "Salon nema nijednog aktivnog izvođača.",
@@ -418,7 +442,6 @@ export const sr = {
     clientCancelledBody: "{klijent} — {usluga}, {vreme}",
   },
   appointmentStatus: {
-    pending: "Čeka",
     confirmed: "Potvrđen",
     completed: "Obavljeno",
     no_show: "Izostanak",
@@ -482,7 +505,6 @@ export const sr = {
     today: "danas",
     tomorrow: "sutra",
     noSlots: "Nema slobodnih termina za ovu uslugu u narednim danima.",
-    noSlotsThatDay: "Tog dana nema slobodnih termina.",
     nameLabel: "Ime i prezime",
     namePlaceholder: "Jelena Petrović",
     phoneLabel: "Broj telefona",
@@ -516,8 +538,6 @@ export const sr = {
       outside_window: "Taj datum je van perioda za koji salon prima termine.",
       too_soon: "Taj termin je prerano da bi se sad zakazao. Izaberi kasniji.",
       outside_working_hours: "Salon tada ne radi. Izaberi drugi termin.",
-      off_grid: "Taj termin nije u ponudi. Osveži stranicu i izaberi ponovo.",
-      invalid_duration: "Trajanje termina nije ispravno.",
       time_off: "Salon tada ne radi. Izaberi drugi dan.",
       slot_taken: "Neko je upravo uzeo taj termin. Izaberi drugi.",
       blocked: "Sa ovog broja nije moguće zakazati preko interneta. Javi se salonu.",

@@ -7,6 +7,9 @@ const SERBIA_COUNTRY_CODE = "381";
 const SERBIA_NATIONAL_MIN = 8;
 const SERBIA_NATIONAL_MAX = 9;
 
+/** Mobilni broj je `06x`, pa nacionalni oblik počinje šesticom. */
+const SERBIA_MOBILE_PREFIX = "6";
+
 /** Ista provera koju radi ograničenje `clients_phone_e164_format` u bazi. */
 const E164 = /^\+[1-9][0-9]{7,14}$/;
 
@@ -27,8 +30,18 @@ export type PhoneProblem =
  * Gleda se pretplatnički deo, bez mrežnog prefiksa: u `641234567` to je
  * `1234567`. Stvaran broj takav praktično ne postoji, a upravo tako izgleda
  * ono što se otkuca kad se ne planira doći.
+ *
+ * Niz cifara je signal samo na mobilnom broju. Na fiksnom je pretplatnički
+ * deo kraći i pravilniji, pa bi `011 234 5678` — običan beogradski broj —
+ * ispao lažan. Sve iste cifre ostaje signal na svakoj mreži.
+ *
+ * Isto pravilo stoji i u `phone_looks_fake` u bazi; test
+ * `tests/db/fake-number.test.ts` pukne ako se raziđu.
  */
-function looksFake(subscriber: string): boolean {
+function looksFake(national: string): boolean {
+  // Prve dve cifre su mreža (`64`, `11`), ostalo je pretplatnik.
+  const subscriber = national.slice(2);
+
   if (subscriber.length >= 6 && /^(\d)\1+$/.test(subscriber)) {
     return true;
   }
@@ -36,6 +49,10 @@ function looksFake(subscriber: string): boolean {
   // Sedam, ne šest: u kraćem obliku broja (`064 123 456`) pretplatnički deo
   // ima tačno šest cifara, pa bi niz od šest odbio i stvaran broj.
   if (subscriber.length < 7) {
+    return false;
+  }
+
+  if (!national.startsWith(SERBIA_MOBILE_PREFIX)) {
     return false;
   }
 
@@ -118,8 +135,7 @@ export function normalizePhone(input: string): PhoneNormalization {
     return { ok: false, reason: "too_long" };
   }
 
-  // Prve dve cifre su mreža (`64`, `11`), ostalo je pretplatnik.
-  if (looksFake(national.slice(2))) {
+  if (looksFake(national)) {
     return { ok: false, reason: "looks_fake" };
   }
 

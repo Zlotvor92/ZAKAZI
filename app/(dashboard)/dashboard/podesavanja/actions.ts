@@ -20,6 +20,7 @@ import { setWorkingBlocks } from "@/lib/db/working-hours";
 import { selectedTenantId } from "@/lib/tenant";
 import { addDays, instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar";
 import { normalizePhone } from "@/lib/domain/phone";
+import { pluralize } from "@/lib/domain/plural";
 import { toBlocks, validateDay, type DayShape } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
 import { createClient } from "@/lib/supabase/server";
@@ -27,7 +28,30 @@ import { createClient } from "@/lib/supabase/server";
 export type SettingsState =
   | { status: "idle" }
   | { status: "saved" }
+  /** Upisano je, ali korisnica mora još nešto da uradi rukom. */
+  | { status: "warning"; message: string }
   | { status: "error"; message: string };
+
+/**
+ * Poruka za polje koje Zod nije primio.
+ *
+ * Bez ovoga svaka neispravna vrednost daje „Čuvanje nije uspelo. Pokušaj
+ * ponovo.", a ponavljanje ne pomaže jer greška nije prolazna — vrednost je
+ * pogrešna i korisnica ne zna koja.
+ */
+function fieldProblem<T extends Record<string, string>>(
+  error: z.ZodError,
+  messages: T,
+): string | null {
+  for (const issue of error.issues) {
+    const field = issue.path[0];
+    if (typeof field === "string" && field in messages) {
+      return messages[field]!;
+    }
+  }
+
+  return null;
+}
 
 /** Biraju se iz spiska, pa polje već nosi minute od ponoći. */
 function minutes(value: FormDataEntryValue | null): number | null {
@@ -160,7 +184,12 @@ export async function saveBookingRules(
   });
 
   if (!parsed.success) {
-    return { status: "error", message: sr.settings.failed };
+    return {
+      status: "error",
+      message:
+        fieldProblem(parsed.error, sr.settings.rulesProblem) ??
+        sr.settings.failed,
+    };
   }
 
   const tenant = await getCurrentTenant(await selectedTenantId());
@@ -375,6 +404,20 @@ export async function saveTimeOff(formData: FormData): Promise<SettingsState> {
   }
 
   revalidatePath("/dashboard/podesavanja");
+  revalidatePath("/dashboard");
+
+  // Odsustvo upisano preko već zakazanih termina se ne odbija — ali se ni ne
+  // preskače u tišini, jer klijentkinja i dalje planira da dođe.
+  if (result.overlapping > 0) {
+    return {
+      status: "warning",
+      message: sr.settings.timeOffOverlaps.replace(
+        "{termini}",
+        `${result.overlapping} ${pluralize(result.overlapping, sr.settings.timeOffAppointmentsCount)}`,
+      ),
+    };
+  }
+
   return { status: "saved" };
 }
 
@@ -422,7 +465,17 @@ export async function saveServiceEntry(
   });
 
   if (!parsed.success) {
-    return { status: "error", message: sr.settings.failed };
+    // Polja za trajanje i cenu su `text` sa numeričkom tastaturom, pa
+    // pregledač ne odbija ni nulu ni minus — poruka mora da stigne odavde.
+    return {
+      status: "error",
+      message:
+        fieldProblem(parsed.error, {
+          durationMin: sr.settings.serviceProblem.invalid_duration,
+          priceRsd: sr.settings.serviceProblem.invalid_price,
+          name: sr.settings.serviceProblem.invalid_name,
+        }) ?? sr.settings.failed,
+    };
   }
 
   const result = await saveService({

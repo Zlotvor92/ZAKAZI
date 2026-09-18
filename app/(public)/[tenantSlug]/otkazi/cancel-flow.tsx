@@ -40,7 +40,17 @@ function AppointmentRow({
       formData.set("phone", phone);
       formData.set("appointmentId", appointment.id);
 
-      const result = await cancelAppointment(formData);
+      // Prekinuta veza ili pad servera ne smeju da odvedu na granicu greške:
+      // otkazivanje je zadnji korak pre nego što salon ostane sa praznim
+      // satom, i mora da kaže da nije prošlo.
+      let result;
+      try {
+        result = await cancelAppointment(formData);
+      } catch {
+        setError(sr.error.unreachable);
+        setArmed(false);
+        return;
+      }
 
       if (result.status === "error") {
         setError(result.message);
@@ -101,7 +111,11 @@ export function CancelFlow({ slug, timeZone }: { slug: string; timeZone: string 
 
   function onLookup(formData: FormData) {
     startTransition(async () => {
-      setState(await lookupAppointments(formData));
+      try {
+        setState(await lookupAppointments(formData));
+      } catch {
+        setState({ status: "error", message: sr.error.unreachable });
+      }
     });
   }
 

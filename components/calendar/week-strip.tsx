@@ -13,6 +13,10 @@ export type StripDay = {
  * Sedam dana u jednom redu. Na telefonu je ovo cela navigacija kroz kalendar:
  * nedeljna mreža sa sedam kolona na 375px daje kolone od 45px, u koje ne staje
  * nijedno ime.
+ *
+ * Razmak je 4px, a traka ide bliže ivici ekrana od ostatka strane: na 360px
+ * širine sedam polja sa razmakom od 6px daje 41px po polju, ispod mete koju
+ * prst pouzdano pogađa.
  */
 export function WeekStrip({
   days,
@@ -34,20 +38,23 @@ export function WeekStrip({
               href={`/dashboard?dan=${day.date}`}
               aria-current={isSelected ? "date" : undefined}
               className={cn(
-                "flex min-h-14 flex-col items-center justify-center rounded-lg border",
+                "flex min-h-[62px] flex-col items-center justify-center gap-1 rounded-2xl border transition-colors",
                 isSelected
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border hover:bg-accent",
-                !isSelected && !day.working && "text-muted-foreground",
+                  ? "border-[#8C1D3F] bg-[#8C1D3F] text-[#FBF7F0]"
+                  : day.working
+                    ? "border-[#E4DAC9] bg-white text-[#211D1A]"
+                    : "border-[#E4DAC9]/60 bg-white/50 text-[#6B6055]",
               )}
             >
-              <span className="text-[0.625rem] leading-tight">
+              <span className="text-[9.5px] font-bold tracking-[0.1em] uppercase">
                 {sr.calendar.weekdaysShort[isoWeekday(day.date) - 1]}
               </span>
               <span
                 className={cn(
-                  "text-sm leading-tight tabular-nums",
-                  day.date === today && "font-bold underline underline-offset-2",
+                  "text-base leading-none font-semibold tabular-nums",
+                  day.date === today &&
+                    !isSelected &&
+                    "underline decoration-[#8C1D3F] decoration-2 underline-offset-[3px]",
                 )}
               >
                 {Number(day.date.slice(8, 10))}
@@ -55,11 +62,11 @@ export function WeekStrip({
               <span
                 aria-hidden
                 className={cn(
-                  "mt-0.5 h-1 w-1 rounded-full",
+                  "size-1 rounded-full",
                   day.appointments > 0
                     ? isSelected
-                      ? "bg-primary-foreground"
-                      : "bg-foreground"
+                      ? "bg-[#FBF7F0]"
+                      : "bg-[#8C1D3F]"
                     : "bg-transparent",
                 )}
               />

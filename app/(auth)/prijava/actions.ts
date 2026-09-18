@@ -78,6 +78,12 @@ export async function signInWithGoogle(): Promise<SignInState> {
  */
 const SEND_TIMEOUT_MS = 8_000;
 
+/**
+ * Kodovi kojima Supabase kaže „taj nalog ne postoji" kad je registracija
+ * isključena. Njih forma ne sme da razlikuje od uspeha.
+ */
+const NO_SUCH_USER = new Set(["otp_disabled", "signup_disabled", "user_not_found"]);
+
 function withTimeout<T>(work: Promise<T>): Promise<T> {
   return Promise.race([
     work,
@@ -115,14 +121,21 @@ export async function requestMagicLink(
     );
 
     if (error) {
-      // Korisniku namerno ide ista poruka bez obzira na razlog — inače bi se
-      // sa forme moglo saznati koje adrese postoje u sistemu. Pravi razlog
-      // ide u log servera.
       console.error(
         `signInWithOtp nije uspeo: ${error.message} (status ${error.status ?? "?"}), ` +
           `emailRedirectTo=${redirectTo}`,
       );
-      return { status: "error", message: sr.signIn.failed };
+
+      // Registracija je zatvorena, pa nepoznata adresa dobija grešku umesto
+      // linka. Razlika između te greške i „Proveri mejl" je spisak naloga:
+      // ko gađa adrese, sa forme pročita koje postoje. Zato ovde ishod izgleda
+      // isto kao da je link poslat — pravi razlog stoji u logu iznad.
+      //
+      // Ostale greške (SMTP, mreža, limit) i dalje javljaju da nije uspelo,
+      // jer tamo ponavljanje stvarno ima smisla.
+      return NO_SUCH_USER.has(error.code ?? "")
+        ? { status: "sent" }
+        : { status: "error", message: sr.signIn.failed };
     }
   } catch (cause) {
     console.error(`Slanje linka za prijavu je puklo: ${String(cause)}`);
