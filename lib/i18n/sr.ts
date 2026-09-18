@@ -230,6 +230,8 @@ export const sr = {
     nextWeek: "Sledeća nedelja",
     emptyDay: "Ovog dana nema zakazanih termina.",
     notWorking: "Ovog dana ne radiš.",
+    timeOff: "Odsustvo",
+    timeOffWholeDay: "ceo dan",
     fromPublicPage: "preko sajta",
     addAppointment: "Dodaj termin",
     call: "Pozovi",

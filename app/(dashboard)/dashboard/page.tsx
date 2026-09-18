@@ -18,6 +18,7 @@ import {
 } from "@/lib/domain/calendar";
 import { pluralize } from "@/lib/domain/plural";
 import { daysUntil, subscriptionState } from "@/lib/domain/subscription";
+import { timeOffOfDay } from "@/lib/domain/time-off";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import { selectedTenantId } from "@/lib/tenant";
@@ -124,7 +125,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
     );
   }
 
-  const { tenant, today } = week;
+  const { tenant, today, time_off: absences } = week;
   const selected = asked ?? today;
   // Dani se izvode iz ponedeljka koji je vratila baza, da se prikazana nedelja
   // i raspon po kom su termini birani ne mogu razići.
@@ -160,6 +161,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   const selectedDay = days.find((day) => day.date === selected);
   const ofDay = within(live, selected);
   const cancelledOfDay = within(cancelled, selected);
+  const absencesOfDay = timeOffOfDay(absences, selected, tenant.timezone);
   const previousWeek = addDays(week.week_start, -7);
   const nextWeek = addDays(week.week_start, 7);
 
@@ -262,12 +264,15 @@ export default async function DashboardPage({ searchParams }: PageProps) {
           </p>
         ) : null}
 
-        {/* I kad dan nema nijedan živ termin: otkazani se i dalje nude, jer
-            objašnjavaju zašto je dan prazan. */}
-        {ofDay.length > 0 || cancelledOfDay.length > 0 ? (
+        {/* I kad dan nema nijedan živ termin: otkazani i odsustva se i dalje
+            prikazuju, jer objašnjavaju zašto je dan prazan. */}
+        {ofDay.length > 0 ||
+        cancelledOfDay.length > 0 ||
+        absencesOfDay.length > 0 ? (
           <DayList
             appointments={ofDay}
             cancelled={cancelledOfDay}
+            timeOff={absencesOfDay}
             timeZone={tenant.timezone}
           />
         ) : null}

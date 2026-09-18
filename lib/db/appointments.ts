@@ -62,6 +62,15 @@ export const dashboardWeekSchema = z.object({
     }),
   ),
   appointments: appointmentListSchema,
+  /** Cela odsustva koja dodiruju nedelju; dan ih seče pri prikazu. */
+  time_off: z.array(
+    z.object({
+      id: z.uuid(),
+      start_at: z.string(),
+      end_at: z.string(),
+      reason: z.string().nullable(),
+    }),
+  ),
 });
 
 export type DashboardWeek = z.infer<typeof dashboardWeekSchema>;

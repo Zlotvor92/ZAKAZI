@@ -14,6 +14,7 @@ import type {
   AppointmentStatus,
   DashboardAppointment,
 } from "@/lib/db/appointments";
+import type { DayTimeOff } from "@/lib/domain/time-off";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 
@@ -263,28 +264,75 @@ function Row({
   );
 }
 
+/** Sivi red u danu: vreme koje je vlasnica sama uzela. */
+function TimeOffRow({
+  entry,
+  timeZone,
+}: {
+  entry: DayTimeOff;
+  timeZone: string;
+}) {
+  const label = [sr.dashboard.timeOff, entry.reason].filter(Boolean).join(" · ");
+
+  // Isti ritam kao red termina: `py-1` na redu, `py-2` unutra.
+  return (
+    <li className="py-1 opacity-60">
+      <div className="flex items-start gap-3 py-2">
+        <span className="w-12 shrink-0 text-sm tabular-nums">
+          {entry.wholeDay ? null : (
+            <>
+              <span className="block font-medium">
+                {formatInTimeZone(new Date(entry.startAt), timeZone, "HH:mm")}
+              </span>
+              <span className="block text-xs">
+                {formatInTimeZone(new Date(entry.endAt), timeZone, "HH:mm")}
+              </span>
+            </>
+          )}
+        </span>
+        <span className="min-w-0 flex-1 text-sm">
+          {entry.wholeDay ? `${label} · ${sr.dashboard.timeOffWholeDay}` : label}
+        </span>
+      </div>
+    </li>
+  );
+}
+
 export function DayList({
   appointments,
   cancelled,
+  timeOff,
   timeZone,
 }: {
   appointments: DashboardAppointment[];
   cancelled: DashboardAppointment[];
+  timeOff: DayTimeOff[];
   timeZone: string;
 }) {
   const [showCancelled, setShowCancelled] = useState(false);
 
+  // Odsustvo stoji u danu po vremenu, između termina, jer se tako i čita:
+  // šta te čeka od ujutru do uveče.
+  const rows = [
+    ...appointments.map((appointment) => ({
+      at: new Date(appointment.start_at).getTime(),
+      node: (
+        <Row
+          key={appointment.id}
+          appointment={appointment}
+          timeZone={timeZone}
+        />
+      ),
+    })),
+    ...timeOff.map((entry) => ({
+      at: new Date(entry.startAt).getTime(),
+      node: <TimeOffRow key={entry.id} entry={entry} timeZone={timeZone} />,
+    })),
+  ].sort((left, right) => left.at - right.at);
+
   return (
     <>
-      <ul className="divide-border divide-y">
-        {appointments.map((appointment) => (
-          <Row
-            key={appointment.id}
-            appointment={appointment}
-            timeZone={timeZone}
-          />
-        ))}
-      </ul>
+      <ul className="divide-border divide-y">{rows.map((row) => row.node)}</ul>
 
       {/* Otkazan termin je oslobodio svoje vreme, pa ne stoji u spisku dana —
           ali mora da postoji negde: bez ovoga u interfejsu ne ostaje nikakav

@@ -33,6 +33,7 @@ type Week = {
   week_start: string;
   blocks: { weekday: number; slot_minutes: number }[];
   appointments: Record<string, unknown>[];
+  time_off: { id: string; reason: string | null }[];
 };
 
 async function week(
@@ -185,6 +186,54 @@ describe("dashboard_week", () => {
       expect(data!.blocks).toEqual([
         { weekday: 1, start_minute: 540, end_minute: 720, slot_minutes: 90 },
       ]);
+    });
+  });
+
+  it("odsustvo te nedelje izlazi uz termine", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const staffId = await db.query<{ id: string }>(
+        "select id from staff where tenant_id = $1",
+        [base.tenantId],
+      );
+
+      await db.query(
+        `insert into time_off (tenant_id, staff_id, start_at, end_at, reason)
+         values ($1, $2, '2026-09-08T07:00:00Z', '2026-09-08T08:30:00Z', 'lekar')`,
+        [base.tenantId, staffId.rows[0]!.id],
+      );
+      // Odsustvo van nedelje ne sme da se pojavi u njoj.
+      await db.query(
+        `insert into time_off (tenant_id, staff_id, start_at, end_at, reason)
+         values ($1, $2, '2026-10-08T07:00:00Z', '2026-10-08T08:30:00Z', 'drugi put')`,
+        [base.tenantId, staffId.rows[0]!.id],
+      );
+
+      const data = await asUser(db, base.userId, () => week(db, SEPTEMBER));
+
+      expect(data!.time_off).toHaveLength(1);
+      expect(data!.time_off[0]!.reason).toBe("lekar");
+    });
+  });
+
+  it("vlasnica ne vidi tuđe odsustvo", async () => {
+    await withRollback(async (db) => {
+      const mine = await salon(db);
+      const theirs = await salon(db);
+      const theirStaff = await db.query<{ id: string }>(
+        "select id from staff where tenant_id = $1",
+        [theirs.tenantId],
+      );
+
+      await db.query(
+        `insert into time_off (tenant_id, staff_id, start_at, end_at, reason)
+         values ($1, $2, '2026-09-08T07:00:00Z', '2026-09-08T08:30:00Z', 'tuđe')`,
+        [theirs.tenantId, theirStaff.rows[0]!.id],
+      );
+
+      const data = await asUser(db, mine.userId, () => week(db, SEPTEMBER));
+
+      expect(data!.time_off).toEqual([]);
     });
   });
 
