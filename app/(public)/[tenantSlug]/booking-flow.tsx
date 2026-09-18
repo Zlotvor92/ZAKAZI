@@ -3,8 +3,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { useRouter } from "next/navigation";
 import { useMemo, useRef, useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { display } from "@/app/fonts";
 import type { PublicBookingData, PublicService } from "@/lib/db/public-booking";
 import {
   buildAvailability,
@@ -15,6 +14,24 @@ import { isoWeekday } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import { submitBooking, type BookingState } from "./actions";
+
+/**
+ * Pritisak koji se vidi. Na telefonu nema pokazivača ni `hover`-a, pa je ovo
+ * jedini trenutak u kom aplikacija može da odgovori na dodir — bez njega se
+ * čini da dugme nije primilo prst, pa se dodirne drugi put.
+ *
+ * `motion-reduce` gasi pomeranje: ko je u podešavanjima tražio manje pokreta,
+ * traži ga i ovde.
+ */
+const pressable =
+  "transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100";
+
+/** Novi korak ulazi odozdo. Korak koji bane bez pokreta izgleda kao greška. */
+const enter =
+  "animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none";
+
+const microLabel =
+  "text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase";
 
 function formatDuration(minutes: number): string {
   const hours = Math.floor(minutes / 60);
@@ -29,12 +46,18 @@ function formatDuration(minutes: number): string {
     : `${hours} ${sr.booking.hourShort} ${rest} ${sr.booking.minuteShort}`;
 }
 
-/** `null` za besplatnu uslugu — „0 RSD" izgleda kao greška, ne kao poklon. */
-function formatPrice(rsd: number): string | null {
+/** `null` za besplatnu uslugu — „0" izgleda kao greška, ne kao poklon. */
+function formatAmount(rsd: number): string | null {
   if (rsd === 0) {
     return null;
   }
-  return `${new Intl.NumberFormat("sr-RS").format(rsd)} ${sr.booking.currency}`;
+  return new Intl.NumberFormat("sr-RS").format(rsd);
+}
+
+/** Sa valutom: u spisku usluga piše samo broj, jer ispod stoji „Cene u RSD". */
+function formatPrice(rsd: number): string | null {
+  const amount = formatAmount(rsd);
+  return amount === null ? null : `${amount} ${sr.booking.currency}`;
 }
 
 /**
@@ -73,6 +96,10 @@ function dayLabel(date: string, today: string, tomorrow: string): string {
   return sr.calendar.weekdaysShort[isoWeekday(date) - 1]!;
 }
 
+function StepHeading({ children }: { children: React.ReactNode }) {
+  return <h2 className={`${microLabel} pb-1`}>{children}</h2>;
+}
+
 function ChosenRow({
   label,
   value,
@@ -83,14 +110,21 @@ function ChosenRow({
   onChange: () => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-2">
+    <div className="flex items-center justify-between gap-3 border-b border-[#E4DAC9] py-3">
       <div className="min-w-0">
-        <div className="text-muted-foreground text-xs">{label}</div>
+        <div className={microLabel}>{label}</div>
         <div className="truncate text-sm font-medium">{value}</div>
       </div>
-      <Button type="button" variant="ghost" size="sm" onClick={onChange}>
+      <button
+        type="button"
+        onClick={onChange}
+        className={cn(
+          "shrink-0 px-2 py-3 text-[11px] font-bold tracking-[0.14em] text-[#8C1D3F] uppercase",
+          pressable,
+        )}
+      >
         {sr.booking.change}
-      </Button>
+      </button>
     </div>
   );
 }
@@ -192,51 +226,66 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     const priceLabel = formatPrice(state.appointment.priceRsd);
 
     return (
-      <div className="space-y-6 py-6 text-center">
-        <div className="space-y-1">
+      <div className={cn("flex flex-col gap-6 py-2", enter)}>
+        <div className="flex flex-col items-start gap-3">
           {/* Jednokratan „uspelo je" trenutak — čisto CSS/SVG, bez biblioteke. */}
-          <div className="flex justify-center pb-1">
-            <span className="bg-primary text-primary-foreground animate-in zoom-in-50 fade-in flex size-16 items-center justify-center rounded-full duration-500">
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="size-8"
-                aria-hidden="true"
-              >
-                <path d="M5 12l5 5L19 8" />
-              </svg>
-            </span>
-          </div>
-          <h2 className="text-xl font-semibold">{sr.booking.confirmedTitle}</h2>
-          <p className="text-muted-foreground text-sm">
+          <span className="animate-in zoom-in-50 fade-in flex size-14 items-center justify-center rounded-full bg-[#8C1D3F] text-[#FBF7F0] duration-500 motion-reduce:animate-none">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="size-7"
+              aria-hidden="true"
+            >
+              <path d="M5 12l5 5L19 8" />
+            </svg>
+          </span>
+          <h2 className={`${display.className} text-[30px] leading-tight`}>
+            {sr.booking.confirmedTitle}
+          </h2>
+          <p className="text-sm leading-relaxed text-[#554C44]">
             {sr.booking.confirmedBody}
           </p>
         </div>
 
-        <dl className="bg-accent border-border space-y-1 rounded-xl border p-4 text-sm">
-          <div className="font-medium">{state.appointment.serviceName}</div>
-          <div className="tabular-nums">
-            {formatInTimeZone(startAt, timeZone, "dd.MM.yyyy.")}{" "}
-            {formatInTimeZone(startAt, timeZone, "HH:mm")}–
-            {formatInTimeZone(endAt, timeZone, "HH:mm")}
+        <dl className="flex flex-col border-t-2 border-[#211D1A] pt-3">
+          <div className="flex items-baseline justify-between gap-4 border-t border-[#E4DAC9] py-2.5 first:border-t-0">
+            <dt className={microLabel}>{sr.booking.summaryService}</dt>
+            <dd className="text-right text-[13.5px] font-medium">
+              {state.appointment.serviceName}
+            </dd>
+          </div>
+          <div className="flex items-baseline justify-between gap-4 border-t border-[#E4DAC9] py-2.5">
+            <dt className={microLabel}>{sr.booking.summaryWhen}</dt>
+            <dd className="text-right text-[13.5px] font-medium tabular-nums">
+              {formatInTimeZone(startAt, timeZone, "dd.MM.yyyy.")}{" "}
+              {formatInTimeZone(startAt, timeZone, "HH:mm")}–
+              {formatInTimeZone(endAt, timeZone, "HH:mm")}
+            </dd>
           </div>
           {priceLabel ? (
-            <div className="text-brand font-semibold">{priceLabel}</div>
+            <div className="flex items-baseline justify-between gap-4 border-t border-[#E4DAC9] py-2.5">
+              <dt className={microLabel}>{sr.booking.summaryPrice}</dt>
+              <dd
+                className={`${display.className} text-right text-lg tabular-nums`}
+              >
+                {priceLabel}
+              </dd>
+            </div>
           ) : null}
         </dl>
 
-        <div className="space-y-2">
+        <div className="flex flex-col gap-2">
           {/* Jedini podsetnik koji ne košta ništa: telefon sam javi. Zato ovo
               dugme sme da bude nametljivo — jedini put na strani gde je to
               namerno. */}
           <div className="relative">
             <span
               aria-hidden="true"
-              className="bg-primary/50 pointer-events-none absolute inset-0 animate-ping rounded-xl"
+              className="pointer-events-none absolute inset-0 animate-ping bg-[#8C1D3F]/40 motion-reduce:animate-none"
             />
             <a
               href={`/api/kalendar?${new URLSearchParams({
@@ -246,17 +295,25 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                 salon: data.tenant.name,
               }).toString()}`}
               onClick={() => setCalendarTapped(true)}
-              className="border-primary bg-primary text-primary-foreground hover:bg-primary/90 relative inline-flex h-12 w-full items-center justify-center rounded-xl border text-sm font-medium transition-colors"
+              className={cn(
+                "relative flex h-14 w-full items-center justify-center bg-[#8C1D3F] text-xs font-bold tracking-[0.18em] text-[#FBF7F0] uppercase active:bg-[#6E162F]",
+                pressable,
+              )}
             >
               {sr.booking.addToCalendar}
             </a>
           </div>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs leading-relaxed text-[#6B6055]">
             {sr.booking.addToCalendarHint}
           </p>
           {calendarTapped ? (
-            <p className="border-border rounded-lg border p-3 text-sm">
-              <span className="font-medium">
+            <p
+              className={cn(
+                "bg-[#F2EADC] px-4 py-3 text-[13px] leading-relaxed",
+                enter,
+              )}
+            >
+              <span className="font-semibold">
                 {sr.booking.addToCalendarStepsTitle}
               </span>{" "}
               {addToCalendarSteps()}
@@ -266,20 +323,30 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
 
         {/* Link ka otkazivanju je već u podnožju strane, ispod ovog toka —
             nema potrebe da stoji dvaput na istom ekranu. */}
-        <Button type="button" variant="outline" onClick={restart}>
+        <button
+          type="button"
+          onClick={restart}
+          className={cn(
+            "flex h-12 w-full items-center justify-center border border-[#211D1A] text-xs font-bold tracking-[0.18em] uppercase active:bg-[#F2EADC]",
+            pressable,
+          )}
+        >
           {sr.booking.bookAnother}
-        </Button>
+        </button>
       </div>
     );
   }
 
   if (!service) {
     return (
-      <section className="space-y-3 py-4">
-        <h2 className="text-base font-semibold">{sr.booking.chooseService}</h2>
-        <ul className="space-y-2">
+      <section className={cn("flex flex-col", enter)}>
+        <h2 className={`${microLabel} border-b-2 border-[#211D1A] pb-2.5`}>
+          {sr.booking.chooseService}
+        </h2>
+
+        <ul className="flex flex-col">
           {data.services.map((option) => {
-            const priceLabel = formatPrice(option.price_rsd);
+            const amount = formatAmount(option.price_rsd);
 
             return (
               <li key={option.id}>
@@ -287,19 +354,26 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                   type="button"
                   data-testid="service-option"
                   onClick={() => setService(option)}
-                  className="border-border hover:border-primary hover:bg-accent flex min-h-16 w-full items-center justify-between gap-3 rounded-xl border px-4 py-3 text-left transition-colors"
+                  className={cn(
+                    "flex min-h-[76px] w-full items-baseline justify-between gap-4 border-b border-[#E4DAC9] px-1 py-4 text-left active:bg-[#F2EADC]",
+                    pressable,
+                  )}
                 >
-                  <span className="min-w-0">
-                    <span className="block truncate text-sm font-medium">
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <span
+                      className={`${display.className} block text-[21px] leading-tight`}
+                    >
                       {option.name}
                     </span>
-                    <span className="text-muted-foreground block text-xs">
+                    <span className={microLabel}>
                       {formatDuration(option.duration_min)}
                     </span>
                   </span>
-                  {priceLabel ? (
-                    <span className="text-brand shrink-0 text-sm font-semibold tabular-nums">
-                      {priceLabel}
+                  {amount ? (
+                    <span
+                      className={`${display.className} shrink-0 text-[19px] tabular-nums`}
+                    >
+                      {amount}
                     </span>
                   ) : null}
                 </button>
@@ -307,6 +381,8 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             );
           })}
         </ul>
+
+        <span className={`${microLabel} pt-2.5`}>{sr.booking.pricesInRsd}</span>
       </section>
     );
   }
@@ -320,7 +396,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     .join(" · ");
 
   return (
-    <div className="divide-border divide-y py-2">
+    <div className="flex flex-col">
       {data.services.length > 1 ? (
         <ChosenRow
           label={sr.booking.chooseService}
@@ -332,7 +408,9 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           }}
         />
       ) : (
-        <div className="py-2 text-sm font-medium">{serviceSummary}</div>
+        <div className="border-b border-[#E4DAC9] py-3 text-sm font-medium">
+          {serviceSummary}
+        </div>
       )}
 
       {date && slot ? (
@@ -344,15 +422,17 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
       ) : null}
 
       {openDays.length === 0 ? (
-        <p className="text-muted-foreground py-6 text-sm">{sr.booking.noSlots}</p>
+        <p className="py-6 text-sm leading-relaxed text-[#554C44]">
+          {sr.booking.noSlots}
+        </p>
       ) : null}
 
       {openDays.length > 0 && !slot ? (
-        <section className="space-y-3 py-4">
-          <h2 className="text-base font-semibold">{sr.booking.chooseDay}</h2>
+        <section className={cn("flex flex-col gap-2.5 py-4", enter)}>
+          <StepHeading>{sr.booking.chooseDay}</StepHeading>
 
           {/* Traka dana: prst prevlači, ne bira iz padajuće liste. */}
-          <ul className="-mx-4 flex snap-x gap-2 overflow-x-auto px-4 pb-1">
+          <ul className="-mx-6 flex snap-x gap-1.5 overflow-x-auto px-6 pb-1">
             {openDays.map((day) => (
               <li key={day.date} className="snap-start">
                 <button
@@ -361,18 +441,21 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                   onClick={() => setDate(day.date)}
                   aria-pressed={day.date === date}
                   className={cn(
-                    "border-border flex min-h-16 w-[4.5rem] shrink-0 flex-col items-center justify-center rounded-xl border transition-colors",
+                    "flex min-h-[66px] w-[4.25rem] shrink-0 flex-col items-center justify-center gap-1 border",
                     day.date === date
-                      ? "bg-primary text-primary-foreground border-primary"
-                      : "hover:bg-accent",
+                      ? "border-[#211D1A] bg-[#211D1A] text-[#FBF7F0]"
+                      : "border-[#E4DAC9] bg-white/60 active:bg-[#F2EADC]",
+                    pressable,
                   )}
                 >
-                  <span className="text-[0.6875rem] leading-tight">
+                  <span className="text-[9.5px] font-bold tracking-[0.12em] uppercase">
                     {dayLabel(day.date, data.from_date, tomorrow)}
                   </span>
                   {/* Sa mesecom, jer spisak ume da pređe iz jednog u drugi i
                       goli broj tada ne kaže dovoljno. */}
-                  <span className="text-base leading-tight font-semibold tabular-nums">
+                  <span
+                    className={`${display.className} text-[17px] leading-none tabular-nums`}
+                  >
                     {dayAndMonth(day.date)}
                   </span>
                 </button>
@@ -383,18 +466,29 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
       ) : null}
 
       {chosenDay && !slot ? (
-        <section className="space-y-3 py-4">
-          <h2 className="text-base font-semibold">{sr.booking.chooseTime}</h2>
-          <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-            {chosenDay.slots.map((option: Slot) => {
+        <section className={cn("flex flex-col gap-2.5 py-4", enter)}>
+          <StepHeading>{sr.booking.chooseTime}</StepHeading>
+          <ul className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
+            {chosenDay.slots.map((option: Slot, index) => {
               const value = option.startAt.toISOString();
+
               return (
-                <li key={value}>
+                <li
+                  key={value}
+                  // Satnica se slaže red po red umesto da sva bljesne odjednom.
+                  // Kašnjenje je ograničeno, inače bi dan sa trideset termina
+                  // čekao skoro sekundu da se iscrta do kraja.
+                  style={{ animationDelay: `${Math.min(index, 11) * 25}ms` }}
+                  className="animate-in fade-in zoom-in-95 fill-mode-both duration-200 motion-reduce:animate-none"
+                >
                   <button
                     type="button"
                     data-testid="slot-option"
                     onClick={() => setSlot(value)}
-                    className="border-border hover:border-primary hover:bg-accent min-h-12 w-full rounded-xl border text-sm font-medium tabular-nums transition-colors"
+                    className={cn(
+                      "min-h-12 w-full border border-[#E4DAC9] bg-white/60 text-sm font-semibold tabular-nums active:bg-[#F2EADC]",
+                      pressable,
+                    )}
                   >
                     {formatInTimeZone(option.startAt, timeZone, "HH:mm")}
                   </button>
@@ -406,32 +500,33 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
       ) : null}
 
       {slot ? (
-        <form action={onSubmit} className="space-y-4 py-4">
-          <h2 className="text-base font-semibold">{sr.booking.yourDetails}</h2>
+        <form action={onSubmit} className={cn("flex flex-col gap-4 py-4", enter)}>
+          <StepHeading>{sr.booking.yourDetails}</StepHeading>
 
           <input type="hidden" name="slug" value={data.tenant.slug} />
           <input type="hidden" name="serviceId" value={service.id} />
           <input type="hidden" name="startAt" value={slot} />
 
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="name" className={microLabel}>
               {sr.booking.nameLabel}
             </label>
-            <Input
+            <input
               id="name"
               name="name"
               required
               autoComplete="name"
               maxLength={80}
               placeholder={sr.booking.namePlaceholder}
+              className="h-12 w-full border-b border-[#211D1A] bg-transparent text-base transition-colors outline-none placeholder:text-[#A2988C] focus:border-[#8C1D3F]"
             />
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="phone" className="text-sm font-medium">
+          <div className="flex flex-col gap-1.5">
+            <label htmlFor="phone" className={microLabel}>
               {sr.booking.phoneLabel}
             </label>
-            <Input
+            <input
               id="phone"
               name="phone"
               type="tel"
@@ -441,26 +536,36 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
               placeholder={sr.booking.phonePlaceholder}
               aria-describedby="phone-hint"
               onFocus={revealSubmit}
+              className="h-12 w-full border-b border-[#211D1A] bg-transparent text-base transition-colors outline-none placeholder:text-[#A2988C] focus:border-[#8C1D3F]"
             />
-            <p id="phone-hint" className="text-muted-foreground text-xs">
+            <p id="phone-hint" className="text-xs leading-relaxed text-[#6B6055]">
               {sr.booking.phoneHint}
             </p>
           </div>
 
           {state.status === "error" ? (
-            <p role="alert" className="text-destructive text-sm">
+            <p
+              role="alert"
+              className={cn(
+                "border-l-2 border-[#8C1D3F] pl-3 text-sm text-[#8C1D3F]",
+                enter,
+              )}
+            >
               {state.message}
             </p>
           ) : null}
 
-          <Button
+          <button
             ref={submitRef}
             type="submit"
-            className="h-12 w-full scroll-mb-4"
             disabled={pending}
+            className={cn(
+              "flex h-14 w-full scroll-mb-4 items-center justify-center bg-[#211D1A] text-xs font-bold tracking-[0.18em] text-[#FBF7F0] uppercase active:bg-[#3A332D] disabled:opacity-60",
+              pressable,
+            )}
           >
             {pending ? sr.booking.submitting : sr.booking.submit}
-          </Button>
+          </button>
         </form>
       ) : null}
     </div>

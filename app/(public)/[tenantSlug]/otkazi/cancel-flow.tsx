@@ -2,11 +2,20 @@
 
 import { formatInTimeZone } from "date-fns-tz";
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { display } from "@/app/fonts";
 import type { UpcomingAppointment } from "@/lib/db/public-cancel";
 import { sr } from "@/lib/i18n/sr";
+import { cn } from "@/lib/utils";
 import { cancelAppointment, lookupAppointments, type LookupState } from "./actions";
+
+const pressable =
+  "transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100";
+
+const enter =
+  "animate-in fade-in slide-in-from-bottom-2 duration-300 motion-reduce:animate-none";
+
+const microLabel =
+  "text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase";
 
 /** `null` za besplatnu uslugu — „0 RSD" izgleda kao greška, ne kao poklon. */
 function formatPrice(rsd: number): string | null {
@@ -66,40 +75,55 @@ function AppointmentRow({
     });
   }
 
+  const price = formatPrice(appointment.price_rsd);
+
   return (
-    <li className="border-border space-y-2 rounded-xl border p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="truncate text-sm font-medium">
+    <li className="flex flex-col gap-2.5 border-b border-[#E4DAC9] py-4">
+      <div className="flex items-baseline justify-between gap-4">
+        <span className="flex min-w-0 flex-col gap-1">
+          <span className={`${display.className} text-[19px] leading-tight`}>
             {appointment.service_name}
-          </div>
-          <div className="text-muted-foreground text-xs tabular-nums">
+          </span>
+          <span className={`${microLabel} tabular-nums`}>
             {formatWhen(appointment.start_at, timeZone)}
-          </div>
-        </div>
-        {formatPrice(appointment.price_rsd) ? (
-          <div className="text-brand shrink-0 text-sm font-semibold tabular-nums">
-            {formatPrice(appointment.price_rsd)}
-          </div>
+          </span>
+        </span>
+        {price ? (
+          <span
+            className={`${display.className} shrink-0 text-[17px] tabular-nums`}
+          >
+            {price}
+          </span>
         ) : null}
       </div>
 
-      <Button
+      <button
         type="button"
-        variant={armed ? "default" : "outline"}
-        size="sm"
         disabled={pending}
         onClick={() => (armed ? confirmCancel() : setArmed(true))}
+        className={cn(
+          "flex h-11 items-center justify-center self-start px-5 text-[11px] font-bold tracking-[0.16em] uppercase disabled:opacity-60",
+          armed
+            ? "bg-[#8C1D3F] text-[#FBF7F0] active:bg-[#6E162F]"
+            : "border border-[#211D1A] active:bg-[#F2EADC]",
+          pressable,
+        )}
       >
         {pending
           ? sr.cancel.cancelling
           : armed
             ? sr.cancel.cancelConfirm
             : sr.cancel.cancelButton}
-      </Button>
+      </button>
 
       {error ? (
-        <p role="alert" className="text-destructive text-xs">
+        <p
+          role="alert"
+          className={cn(
+            "border-l-2 border-[#8C1D3F] pl-3 text-xs text-[#8C1D3F]",
+            enter,
+          )}
+        >
           {error}
         </p>
       ) : null}
@@ -132,17 +156,25 @@ function CancelledRow({
   }).toString()}`;
 
   return (
-    <li className="border-border space-y-2 rounded-xl border border-dashed p-3">
-      <div className="text-muted-foreground min-w-0 text-sm">
-        <span className="line-through">{appointment.service_name}</span>{" "}
-        <span className="tabular-nums">
+    <li className="flex flex-col gap-2.5 border-b border-[#E4DAC9] py-4">
+      <span className="flex min-w-0 flex-col gap-1 text-[#6B6055]">
+        <span
+          className={`${display.className} text-[19px] leading-tight line-through`}
+        >
+          {appointment.service_name}
+        </span>
+        <span className={`${microLabel} tabular-nums`}>
           {formatWhen(appointment.start_at, timeZone)}
         </span>
-      </div>
+      </span>
 
       <a
         href={href}
-        className="border-border text-brand inline-flex h-11 w-full items-center justify-center rounded-xl border text-sm font-medium"
+        className={cn(
+          "flex h-11 items-center justify-center self-start px-5 text-[11px] font-bold tracking-[0.16em] text-[#8C1D3F] uppercase",
+          "border border-[#8C1D3F] active:bg-[#F2EADC]",
+          pressable,
+        )}
       >
         {sr.cancel.removeFromCalendar}
       </a>
@@ -179,27 +211,29 @@ export function CancelFlow({
     );
 
     return (
-      <div className="space-y-4 py-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-muted-foreground text-xs">{state.phone}</p>
-          <Button
+      <div className={cn("flex flex-col gap-4", enter)}>
+        <div className="flex items-center justify-between gap-3 border-b-2 border-[#211D1A] pb-2.5">
+          <p className={`${microLabel} tabular-nums`}>{state.phone}</p>
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
             onClick={() => setState({ status: "idle" })}
+            className={cn(
+              "shrink-0 px-2 py-3 text-[11px] font-bold tracking-[0.14em] text-[#8C1D3F] uppercase",
+              pressable,
+            )}
           >
             {sr.cancel.changePhone}
-          </Button>
+          </button>
         </div>
 
         {remaining.length === 0 && cancelled.length === 0 ? (
-          <p className="text-muted-foreground py-6 text-center text-sm">
+          <p className="py-6 text-center text-sm text-[#554C44]">
             {sr.cancel.empty}
           </p>
         ) : null}
 
         {remaining.length > 0 ? (
-          <ul className="space-y-2">
+          <ul className="flex flex-col">
             {remaining.map((appointment) => (
               <AppointmentRow
                 key={appointment.id}
@@ -216,13 +250,15 @@ export function CancelFlow({
         ) : null}
 
         {cancelled.length > 0 ? (
-          <div className="space-y-2">
-            <p className="text-sm font-medium">{sr.cancel.cancelledTitle}</p>
-            <p className="text-muted-foreground text-xs">
+          <div className={cn("flex flex-col gap-2", enter)}>
+            <h2 className={`${display.className} text-[22px] leading-tight`}>
+              {sr.cancel.cancelledTitle}
+            </h2>
+            <p className="text-xs leading-relaxed text-[#6B6055]">
               {sr.cancel.removeFromCalendarHint}
             </p>
 
-            <ul className="space-y-2">
+            <ul className="flex flex-col">
               {cancelled.map((appointment) => (
                 <CancelledRow
                   key={appointment.id}
@@ -233,7 +269,7 @@ export function CancelFlow({
               ))}
             </ul>
 
-            <p className="text-muted-foreground text-center text-xs">
+            <p className="text-center text-xs text-[#6B6055]">
               {sr.cancel.cancelledBody}
             </p>
           </div>
@@ -243,16 +279,18 @@ export function CancelFlow({
   }
 
   return (
-    <form action={onLookup} className="space-y-4 py-4">
+    <form action={onLookup} className="flex flex-col gap-4">
       <input type="hidden" name="slug" value={slug} />
 
-      <p className="text-muted-foreground text-sm">{sr.cancel.intro}</p>
+      <p className="text-sm leading-relaxed text-[#554C44]">
+        {sr.cancel.intro}
+      </p>
 
-      <div className="space-y-2">
-        <label htmlFor="cancel-phone" className="text-sm font-medium">
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="cancel-phone" className={microLabel}>
           {sr.booking.phoneLabel}
         </label>
-        <Input
+        <input
           id="cancel-phone"
           name="phone"
           type="tel"
@@ -260,18 +298,32 @@ export function CancelFlow({
           autoComplete="tel"
           required
           placeholder={sr.booking.phonePlaceholder}
+          className="h-12 w-full border-b border-[#211D1A] bg-transparent text-base transition-colors outline-none placeholder:text-[#A2988C] focus:border-[#8C1D3F]"
         />
       </div>
 
       {state.status === "error" ? (
-        <p role="alert" className="text-destructive text-sm">
+        <p
+          role="alert"
+          className={cn(
+            "border-l-2 border-[#8C1D3F] pl-3 text-sm text-[#8C1D3F]",
+            enter,
+          )}
+        >
           {state.message}
         </p>
       ) : null}
 
-      <Button type="submit" className="h-12 w-full" disabled={pending}>
+      <button
+        type="submit"
+        disabled={pending}
+        className={cn(
+          "flex h-14 w-full items-center justify-center bg-[#211D1A] text-xs font-bold tracking-[0.18em] text-[#FBF7F0] uppercase active:bg-[#3A332D] disabled:opacity-60",
+          pressable,
+        )}
+      >
         {pending ? sr.cancel.submitting : sr.cancel.submit}
-      </Button>
+      </button>
     </form>
   );
 }

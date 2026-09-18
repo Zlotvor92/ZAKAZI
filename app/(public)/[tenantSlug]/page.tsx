@@ -2,9 +2,9 @@ import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
+import { display } from "@/app/fonts";
 import { getPublicBookingData } from "@/lib/db/public-booking";
 import { getSalonSummary } from "@/lib/db/public-cancel";
-import { brandVariables } from "@/lib/domain/brand";
 import { sr } from "@/lib/i18n/sr";
 import { BookingFlow } from "./booking-flow";
 
@@ -26,44 +26,95 @@ export async function generateMetadata({
 }
 
 /**
- * Traka pretraživača na telefonu uzme boju salona, pa stranica ne izgleda kao
- * tuđa aplikacija sa njihovim imenom u njoj.
+ * Traka pretraživača nosi boju papira, istu za sve salone. Ranije je uzimala
+ * boju koju salon izabere; ta mogućnost više ne postoji, pa ni upit za nju.
  */
-export async function generateViewport({
-  params,
-}: PageProps): Promise<Viewport> {
-  const { tenantSlug } = await params;
-  const data = await bookingData(tenantSlug);
+export const viewport: Viewport = { themeColor: "#FBF7F0" };
 
-  return { themeColor: data?.tenant.brand_background ?? undefined };
+/**
+ * Papir na kom stoji sve što klijentkinja vidi.
+ *
+ * Boje su upisane kao heksadecimalne vrednosti, ne kao tokeni teme, iz istog
+ * razloga kao na početnoj strani: stranica izgleda isto i u tamnom režimu.
+ * Klijentkinja koja otvori link salona ne sme da dobije drugačiju stranu zato
+ * što je njen telefon podešen na tamno.
+ */
+export function PublicPage({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="min-h-dvh bg-[#FBF7F0] text-[#211D1A]">
+      <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pb-8">
+        {children}
+      </main>
+    </div>
+  );
 }
 
 /**
- * Boje salona se ubacuju kao `:root` pravilo, ne kao stil na elementu, jer
- * pozadinu strane crta `body` — stil na `<main>` bi ostavio belo oko nje.
- * Vrednosti prolaze kroz `brandVariables`, koja pušta samo heks boje.
+ * Logo salona, nadnaslov i ime. Jedino mesto na strani gde salon ostavlja
+ * svoj trag — sve ostalo izgleda isto kod svih.
  */
-export function Brand({
-  tenant,
+export function SalonHeader({
+  name,
+  logoUrl,
+  eyebrow,
 }: {
-  tenant: {
-    brand_background: string | null;
-    brand_primary: string | null;
-    brand_accent: string | null;
-  };
+  name: string;
+  logoUrl?: string | null;
+  eyebrow: string;
 }) {
-  const variables = brandVariables({
-    background: tenant.brand_background,
-    primary: tenant.brand_primary,
-    accent: tenant.brand_accent,
-  });
-
-  if (variables === null) {
-    return null;
-  }
-
   return (
-    <style dangerouslySetInnerHTML={{ __html: `:root{${variables}}` }} />
+    <header className="flex flex-col gap-3 pt-7">
+      {logoUrl ? (
+        // Obična slika, ne `next/image`: logo je jedna mala datoteka fiksne
+        // veličine, pa optimizacija ne bi uštedela ništa a tražila bi
+        // podešavanje spoljnog domena.
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={logoUrl}
+          alt={name}
+          width={144}
+          height={144}
+          className="size-[72px] rounded-full border-2 border-[#8C1D3F] object-cover"
+        />
+      ) : (
+        /* Bez logoa: prsten oko slova je isti potez kao prsten oko logoa. */
+        <span
+          className={`${display.className} flex size-[72px] items-center justify-center rounded-full border-2 border-[#8C1D3F] text-[30px] text-[#8C1D3F]`}
+        >
+          {name.trim().slice(0, 1).toUpperCase()}
+        </span>
+      )}
+
+      <span className="text-[11px] font-bold tracking-[0.2em] text-[#8C1D3F] uppercase">
+        {eyebrow}
+      </span>
+
+      <h1
+        className={`${display.className} text-[40px] leading-[1.04] tracking-[-0.02em] text-balance`}
+      >
+        {name}
+      </h1>
+
+      <span className="h-0.5 w-14 bg-[#211D1A]" />
+    </header>
+  );
+}
+
+/** Podnožje koje nosi svaka javna strana. */
+export function LegalLinks() {
+  return (
+    <p className="text-center text-xs text-[#7A6F63]">
+      <Link href="/uslovi-koriscenja" className="inline-block py-3.5 underline">
+        {sr.legal.terms}
+      </Link>{" "}
+      ·{" "}
+      <Link
+        href="/politika-privatnosti"
+        className="inline-block py-3.5 underline"
+      >
+        {sr.legal.privacy}
+      </Link>
+    </p>
   );
 }
 
@@ -77,11 +128,16 @@ export function Notice({
   children?: React.ReactNode;
 }) {
   return (
-    <main className="mx-auto min-h-dvh w-full max-w-md p-4">
-      <h1 className="pt-8 text-lg font-semibold">{title}</h1>
-      <p className="text-muted-foreground pt-2 text-sm">{message}</p>
+    <PublicPage>
+      <h1 className={`${display.className} pt-10 text-[32px] leading-tight`}>
+        {title}
+      </h1>
+      <p className="text-sm leading-relaxed text-[#554C44]">{message}</p>
       {children}
-    </main>
+      <div className="mt-auto">
+        <LegalLinks />
+      </div>
+    </PublicPage>
   );
 }
 
@@ -104,91 +160,52 @@ export default async function PublicBookingPage({ params }: PageProps) {
     }
 
     return (
-      <>
-        <Brand tenant={salon} />
-        <Notice title={salon.name} message={sr.booking.closed}>
-          <p className="text-muted-foreground pt-4 text-sm">
-            {sr.booking.haveAppointment}{" "}
-            <Link
-              href={`/${tenantSlug}/otkazi`}
-              className="text-brand inline-block py-3.5 underline"
-            >
-              {sr.booking.manageLink}
-            </Link>
-          </p>
-        </Notice>
-      </>
+      <Notice title={salon.name} message={sr.booking.closed}>
+        <p className="text-sm text-[#554C44]">
+          {sr.booking.haveAppointment}{" "}
+          <Link
+            href={`/${tenantSlug}/otkazi`}
+            className="inline-block py-3.5 text-[#8C1D3F] underline"
+          >
+            {sr.booking.manageLink}
+          </Link>
+        </p>
+      </Notice>
     );
   }
 
   if (data.services.length === 0) {
     return (
-      <>
-        <Brand tenant={data.tenant} />
-        <Notice title={data.tenant.name} message={sr.booking.noServices} />
-      </>
+      <Notice title={data.tenant.name} message={sr.booking.noServices} />
     );
   }
 
   return (
-    <>
-      <Brand tenant={data.tenant} />
-      <main className="mx-auto min-h-dvh w-full max-w-md px-4 pb-10">
-        <header className="flex flex-col items-center gap-3 pt-8 pb-2 text-center">
-          {data.tenant.logo_url ? (
-            // Obična slika, ne `next/image`: logo je jedna mala datoteka fiksne
-            // veličine, pa optimizacija ne bi uštedela ništa a tražila bi
-            // podešavanje spoljnog domena.
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={data.tenant.logo_url}
-              alt={data.tenant.name}
-              width={112}
-              height={112}
-              className="border-primary size-28 rounded-full border-2 object-cover"
-            />
-          ) : (
-            /* Bez logoa: prsten oko slova je isti potez kao prsten oko logoa. */
-            <span className="border-primary text-brand flex size-16 items-center justify-center rounded-full border-2 text-2xl font-bold">
-              {data.tenant.name.trim().slice(0, 1).toUpperCase()}
-            </span>
-          )}
-          <h1 className="text-2xl font-bold tracking-tight text-balance">
-            {data.tenant.name}
-          </h1>
-        </header>
+    <PublicPage>
+      <SalonHeader
+        name={data.tenant.name}
+        logoUrl={data.tenant.logo_url}
+        eyebrow={sr.booking.eyebrow}
+      />
 
-        <BookingFlow data={data} />
+      <BookingFlow data={data} />
 
-        {/* `inline-block` sa uspravnim razmakom: tekst ostaje u rečenici, a
-            dodirna zona naraste na 44px. Bez toga je meta visoka koliko i
-            slovo. */}
-        <p className="text-muted-foreground pt-2 text-center text-xs">
+      {/* `inline-block` sa uspravnim razmakom: tekst ostaje u rečenici, a
+          dodirna zona naraste na 44px. Bez toga je meta visoka koliko i
+          slovo. */}
+      <div className="mt-auto flex flex-col border-t border-[#DED5C7] pt-1">
+        <p className="text-center text-[12.5px] text-[#554C44]">
           {sr.booking.haveAppointment}{" "}
           <Link
             href={`/${tenantSlug}/otkazi`}
-            className="text-brand inline-block py-3.5 underline"
+            className="inline-block py-3.5 text-[#8C1D3F] underline"
           >
             {sr.booking.manageLink}
           </Link>
         </p>
 
-        <p className="text-muted-foreground text-center text-xs">
-          <Link
-            href="/uslovi-koriscenja"
-            className="inline-block py-3.5 underline"
-          >
-            {sr.legal.terms}
-          </Link>{" "}
-          ·{" "}
-          <Link
-            href="/politika-privatnosti"
-            className="inline-block py-3.5 underline"
-          >
-            {sr.legal.privacy}
-          </Link>
-        </p>
-      </main>
-    </>
+        <LegalLinks />
+      </div>
+    </PublicPage>
   );
 }

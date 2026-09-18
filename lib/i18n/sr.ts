@@ -315,21 +315,6 @@ export const sr = {
       not_found: "Ta usluga više ne postoji.",
     },
 
-    brandTitle: "Boje tvoje stranice",
-    brandHint:
-      "Boje se vide na stranici za zakazivanje koju deliš klijentima. Boju slova biramo sami, prema pozadini, da tekst uvek ostane čitljiv.",
-    brandUseOwn: "Koristi svoje boje",
-    brandBackground: "Pozadina",
-    brandPrimary: "Osnovna boja",
-    brandAccent: "Naglasak (cena, linkovi)",
-    brandAccentHint: "Ako je ne postaviš, koristi se osnovna boja.",
-    brandPreview: "Ovako izgleda",
-    brandPreviewService: "Nadogradnja trepavica",
-    brandPreviewButton: "Zakaži termin",
-    saveBrand: "Sačuvaj boje",
-    brandInvalid: "Boja nije ispravna.",
-    brandIncomplete: "Postavi i pozadinu i osnovnu boju, ili isključi svoje boje.",
-
     calendarTitle: "Termini u tvom kalendaru",
     calendarHint:
       "Zakači salon za kalendar na telefonu i termini se pojavljuju sami, čim ih neko zakaže. Ne moraš da otvaraš aplikaciju.",
@@ -497,6 +482,7 @@ export const sr = {
     unavailableTitle: "Zakazivanje nije dostupno",
     closed: "Ovaj salon trenutno ne prima zakazivanje preko interneta.",
     noServices: "Salon još nije uneo usluge koje nudi.",
+    eyebrow: "Zakazivanje termina",
     chooseService: "Šta zakazuješ?",
     chooseDay: "Kog dana?",
     chooseTime: "U koliko sati?",
@@ -505,6 +491,11 @@ export const sr = {
     today: "danas",
     tomorrow: "sutra",
     noSlots: "Nema slobodnih termina za ovu uslugu u narednim danima.",
+    /** Stoji ispod spiska usluga, gde uz cene ne piše valuta. */
+    pricesInRsd: "Cene u dinarima",
+    summaryService: "Usluga",
+    summaryWhen: "Kada",
+    summaryPrice: "Cena",
     nameLabel: "Ime i prezime",
     namePlaceholder: "Jelena Petrović",
     phoneLabel: "Broj telefona",

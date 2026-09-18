@@ -20,7 +20,7 @@ export default function NotFound() {
       <p className="text-muted-foreground text-sm">{sr.notFound.body}</p>
       <Link
         href="/"
-        className="text-brand inline-flex min-h-11 items-center text-sm underline"
+        className="text-primary inline-flex min-h-11 items-center text-sm underline"
       >
         {sr.notFound.home}
       </Link>
