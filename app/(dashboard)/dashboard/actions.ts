@@ -72,12 +72,14 @@ export async function changeStatus(
   });
 
   if (!result.ok) {
+    const reasons: Record<string, string> = {
+      invalid_transition: sr.dashboard.invalidTransition,
+      slot_taken: sr.dashboard.slotTaken,
+    };
+
     return {
       ok: false,
-      message:
-        result.reason === "invalid_transition"
-          ? sr.dashboard.invalidTransition
-          : sr.dashboard.actionFailed,
+      message: reasons[result.reason] ?? sr.dashboard.actionFailed,
     };
   }
 

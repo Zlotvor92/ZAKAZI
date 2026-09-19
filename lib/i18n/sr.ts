@@ -241,11 +241,16 @@ export const sr = {
     arrived: "Obavljeno",
     noShow: "Izostanak",
     cancel: "Otkaži",
+    /** Izlaz iz svakog stanja, uključujući promašeno dugme. */
+    restore: "Vrati na potvrđen",
     block: "Blokiraj broj",
     blockConfirm: "Sigurno blokiraj?",
     blocked: "Broj je blokiran",
     actionFailed: "Nije uspelo. Pokušaj ponovo.",
     invalidTransition: "Taj termin više ne može da promeni status.",
+    /** Otkazan termin je oslobodio svoj sat, a neko drugi ga je uzeo. */
+    slotTaken:
+      "To vreme je u međuvremenu zauzeto drugim terminom. Prvo oslobodi sat, pa vrati ovaj termin.",
   },
   settings: {
     title: "Podešavanja",
