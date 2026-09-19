@@ -271,7 +271,7 @@ export const sr = {
 
     hoursTitle: "Radno vreme",
     hoursHint:
-      "Pauzu ostavi praznu ako je nemaš. Termini se sami rasporede po radnom vremenu.",
+      "Pauzu ostavi praznu ako je nemaš. Termini se sami rasporede po radnom vremenu. Duga usluga sme da pređe pauzu ili kraj smene najviše 15 minuta — ako ne staje, taj termin se ne nudi.",
     slotModeLabel: "Kako unosiš termine",
     slotModeCount: "Koliko ih staje",
     slotModeMinutes: "Koliko traje jedan",

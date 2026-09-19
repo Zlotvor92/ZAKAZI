@@ -120,6 +120,7 @@ export async function cancelAppointment(
             ),
           ),
         url: `/dashboard?dan=${formatInTimeZone(new Date(cancelled.start_at), cancelled.timezone, "yyyy-MM-dd")}`,
+        tag: `otkazano:${cancelled.id}`,
       },
     });
   });
