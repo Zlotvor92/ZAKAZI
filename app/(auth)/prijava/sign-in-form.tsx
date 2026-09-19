@@ -4,6 +4,7 @@ import { useActionState, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
 import { display } from "@/app/fonts";
 import { sr } from "@/lib/i18n/sr";
+import { isRedirect } from "@/lib/utils";
 import {
   requestMagicLink,
   signInWithGoogle,
@@ -54,9 +55,19 @@ function GoogleButton() {
         className="flex h-14 w-full items-center justify-center gap-3 rounded-sm border border-[#DED5C7] bg-white text-[15px] font-medium text-[#211D1A] disabled:opacity-60"
         onClick={() => {
           startTransition(async () => {
-            const result = await signInWithGoogle();
-            if (result.status === "error") {
-              setMessage(result.message);
+            try {
+              const result = await signInWithGoogle();
+              if (result.status === "error") {
+                setMessage(result.message);
+              }
+            } catch (cause) {
+              // Uspeh iz ove akcije stiže kao `redirect()` na Google, a on do
+              // pregledača dolazi kao greška. Takva mora dalje do rutera —
+              // progutana bi značila da dugme za prijavu ne radi ništa.
+              if (isRedirect(cause)) {
+                throw cause;
+              }
+              setMessage(sr.error.unreachable);
             }
           });
         }}
@@ -103,8 +114,17 @@ function SubmitButton() {
 }
 
 export function SignInForm() {
+  // Poziv akcije ume da padne pre nego što ona išta vrati — mreža u liftu,
+  // prekinut zahtev. `useActionState` takav pad iznosi do granice greške, pa
+  // bi umesto jedne rečenice ispod polja pukla cela strana za prijavu.
   const [state, formAction] = useActionState<SignInState, FormData>(
-    requestMagicLink,
+    async (previous, formData) => {
+      try {
+        return await requestMagicLink(previous, formData);
+      } catch {
+        return { status: "error", message: sr.error.unreachable };
+      }
+    },
     { status: "idle" },
   );
 
