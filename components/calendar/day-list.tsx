@@ -34,11 +34,16 @@ const STATUS_COLOR: Record<AppointmentStatus, string> = {
 type Action = { label: string; status: AppointmentStatus };
 
 /**
- * Šta se nudi zavisi od toga gde je termin. `completed` i `no_show` smeju
- * jedno u drugo, jer je pogrešan dodir na telefonu svakodnevica, a pogrešno
- * upisan nedolazak kasnije nekoga košta.
+ * Šta se nudi zavisi od toga gde je termin, ali iz svakog stanja postoji put
+ * nazad: pogrešan dodir na telefonu je svakodnevica, a pogrešno upisan
+ * izostanak ili otkazan termin kasnije nekoga košta. Odluka je vlasničina.
  */
 function actionsFor(status: AppointmentStatus): Action[] {
+  const restore: Action = {
+    label: sr.dashboard.restore,
+    status: "confirmed",
+  };
+
   switch (status) {
     case "confirmed":
       return [
@@ -47,11 +52,11 @@ function actionsFor(status: AppointmentStatus): Action[] {
         { label: sr.dashboard.cancel, status: "cancelled_by_salon" },
       ];
     case "completed":
-      return [{ label: sr.dashboard.noShow, status: "no_show" }];
+      return [{ label: sr.dashboard.noShow, status: "no_show" }, restore];
     case "no_show":
-      return [{ label: sr.dashboard.arrived, status: "completed" }];
+      return [{ label: sr.dashboard.arrived, status: "completed" }, restore];
     default:
-      return [];
+      return [restore];
   }
 }
 

@@ -200,76 +200,83 @@ describe("ispravka pogrešnog ishoda", () => {
   });
 });
 
-describe("zabranjeni prelazi", () => {
-  it("otkazan termin se ne vraća u život", async () => {
+describe("salon vraća pogrešan dodir", () => {
+  // Promašeno dugme na telefonu je svakodnevica, a pogrešno upisan izostanak
+  // kasnije nekoga košta. Salon zato sme da vrati svaki status.
+  for (const from of [
+    "no_show",
+    "completed",
+    "cancelled_by_client",
+    "cancelled_by_salon",
+  ]) {
+    it(`iz \`${from}\` se vraća u potvrđen`, async () => {
+      await withRollback(async (db) => {
+        const base = await salon(db);
+        const appointment = await insertAppointment(db, {
+          ...base,
+          startAt: "2026-09-10T08:00:00Z",
+          status: from,
+        });
+
+        const result = await asUser(db, base.userId, () =>
+          change(db, appointment.id, "confirmed"),
+        );
+
+        expect(result).toMatchObject({ ok: true, to_status: "confirmed" });
+        expect(await statusOf(db, appointment.id)).toBe("confirmed");
+      });
+    });
+  }
+
+  it("vraćanje se upisuje u istoriju", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
       const appointment = await insertAppointment(db, {
         ...base,
         startAt: "2026-09-10T08:00:00Z",
-        status: "cancelled_by_client",
       });
 
-      const result = await asUser(db, base.userId, () =>
-        change(db, appointment.id, "confirmed"),
+      await asUser(db, base.userId, () => change(db, appointment.id, "no_show"));
+      await asUser(db, base.userId, () => change(db, appointment.id, "confirmed"));
+
+      const events = await db.query<{
+        from_status: string | null;
+        to_status: string;
+      }>(
+        `select from_status, to_status from appointment_events
+         where appointment_id = $1 order by created_at`,
+        [appointment.id],
       );
 
-      expect(result).toEqual({ ok: false, reason: "invalid_transition" });
-      expect(await statusOf(db, appointment.id)).toBe("cancelled_by_client");
+      expect(events.rows).toEqual([
+        { from_status: null, to_status: "confirmed" },
+        { from_status: "confirmed", to_status: "no_show" },
+        { from_status: "no_show", to_status: "confirmed" },
+      ]);
     });
   });
 
-  it("završen termin ne ide nazad u pending", async () => {
+  it("ne vraća termin u vreme koje je u međuvremenu zauzeto", async () => {
+    // Otkazan termin je oslobodio svoj sat i neko drugi ga je uzeo. Vraćanje
+    // tada mora da stigne kao poruka, ne kao pad iz baze.
     await withRollback(async (db) => {
       const base = await salon(db);
-      const appointment = await insertAppointment(db, {
-        ...base,
-        startAt: "2026-09-10T08:00:00Z",
-        status: "completed",
-      });
-
-      const result = await asUser(db, base.userId, () =>
-        change(db, appointment.id, "pending"),
-      );
-
-      expect(result).toEqual({ ok: false, reason: "invalid_transition" });
-    });
-  });
-
-  it("pending ne preskače potvrdu do završenog", async () => {
-    await withRollback(async (db) => {
-      const base = await salon(db);
-      const appointment = await insertAppointment(db, {
-        ...base,
-        startAt: "2026-09-10T08:00:00Z",
-        status: "pending",
-      });
-
-      const result = await asUser(db, base.userId, () =>
-        change(db, appointment.id, "completed"),
-      );
-
-      expect(result).toEqual({ ok: false, reason: "invalid_transition" });
-    });
-  });
-
-  it("zabranjen prelaz ne upisuje red u istoriju", async () => {
-    await withRollback(async (db) => {
-      const base = await salon(db);
-      const appointment = await insertAppointment(db, {
+      const otkazan = await insertAppointment(db, {
         ...base,
         startAt: "2026-09-10T08:00:00Z",
         status: "cancelled_by_salon",
       });
+      await insertAppointment(db, {
+        ...base,
+        startAt: "2026-09-10T08:00:00Z",
+      });
 
-      await asUser(db, base.userId, () => change(db, appointment.id, "confirmed"));
-
-      const events = await db.query(
-        "select 1 from appointment_events where appointment_id = $1",
-        [appointment.id],
+      const result = await asUser(db, base.userId, () =>
+        change(db, otkazan.id, "confirmed"),
       );
 
-      expect(events.rowCount).toBe(1);
+      expect(result).toEqual({ ok: false, reason: "slot_taken" });
+      expect(await statusOf(db, otkazan.id)).toBe("cancelled_by_salon");
     });
   });
 });

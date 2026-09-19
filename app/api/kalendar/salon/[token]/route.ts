@@ -14,13 +14,18 @@ import { sr } from "@/lib/i18n/sr";
  * Otkazan termin ostaje u odgovoru dok mu vreme ne prođe, ali kao poništen.
  * Aplikacija ga tada skloni zato što joj je rečeno, a ne zato što je red
  * nestao — to drugo ne ume svaka.
+ *
+ * Adresa sme da se završi sa `.ics`, i tako se i nudi. Deo kalendar
+ * aplikacija gleda nastavak u adresi umesto `Content-Type` zaglavlja, pa im
+ * adresa koja se završava tokenom ne liči na kalendar. Goli token i dalje
+ * radi: pretplate koje su već u tuđim telefonima ne smeju da stanu.
  */
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ token: string }> },
 ) {
   const { token } = await params;
-  const parsed = z.uuid().safeParse(token);
+  const parsed = z.uuid().safeParse(token.replace(/\.ics$/, ""));
 
   const rows = parsed.success ? await getCalendarFeed(parsed.data) : [];
 
@@ -47,8 +52,10 @@ export async function GET(
   return new Response(body, {
     headers: {
       "Content-Type": "text/calendar; charset=utf-8",
-      // Bez `attachment`: fajl treba da se pretplati, ne da se preuzme.
-      "Content-Disposition": 'inline; filename="salon.ics"',
+      // Bez `Content-Disposition`: ovo nije fajl koji se preuzima nego
+      // adresa na koju se kalendar pretplaćuje, a zaglavlje je deo
+      // aplikacija guralo ka preuzimanju. Kalendari koji svuda rade ga
+      // ne šalju.
       "Cache-Control": "private, max-age=300",
     },
   });
