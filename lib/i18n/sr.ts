@@ -332,6 +332,10 @@ export const sr = {
       "Android: kopiraj adresu, otvori calendar.google.com u pregledaču (ne aplikaciju), pa Drugi kalendari › + › Sa URL adrese. Termini stižu u Google kalendar na telefonu za nekoliko sati.",
     calendarSecretWarning:
       "Adresa je i lozinka — ko je ima, vidi tvoje termine sa imenima i brojevima klijenata. Ne deli je i ne stavljaj je nigde javno. Ako procuri, napravi novu i stara istog trena prestaje da radi.",
+    /** Jedini unos u kalendaru salona koji još nema nijedan termin. */
+    calendarEmptyTitle: "Doteraj Me — još nema termina",
+    calendarEmptyBody:
+      "Termini se pojavljuju ovde čim ih neko zakaže. Ako i posle zakazanog termina ostane prazno, proveri adresu u podešavanjima.",
     calendarDelay:
       "Kalendar sam povlači na nekoliko sati, pa nov termin ume da se pojavi sa zakašnjenjem. U aplikaciji je odmah.",
     pushTitle: "Obaveštenja o zakazivanju",
@@ -347,7 +351,10 @@ export const sr = {
     pushBlocked:
       "Obaveštenja su zabranjena u podešavanjima pregledača. Dozvoli ih pa pokušaj ponovo.",
     pushUnsupported: "Ovaj pregledač ne podržava obaveštenja.",
-    pushFailed: "Uključivanje nije uspelo. Pokušaj ponovo.",
+    pushBrowserFailed:
+      "Telefon nije dozvolio obaveštenja. Ako si u pregledaču unutar Instagrama ili Fejsbuka, otvori doterajme.rs u Chrome-u pa pokušaj tamo.",
+    pushSaveFailed:
+      "Telefon je dozvolio obaveštenja, ali upis nije uspeo. Pokušaj ponovo.",
 
     blockedTitle: "Blokirani brojevi",
     blockedEmpty: "Nijedan broj nije blokiran.",

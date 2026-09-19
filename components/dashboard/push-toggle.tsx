@@ -66,10 +66,15 @@ export function PushToggle({
   onDisable: (endpoint: string) => Promise<void>;
 }) {
   const [state, setState] = useState<State>("checking");
+  const [apple, setApple] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
+    // Tek ovde, ne pri prvom crtanju: server ne zna koji je telefon u pitanju,
+    // pa bi se prvi otisak razlikovao od onog u pregledaču.
+    setApple(isApplePhone());
+
     if (
       typeof window === "undefined" ||
       !("serviceWorker" in navigator) ||
@@ -95,6 +100,11 @@ export function PushToggle({
   function enable() {
     setMessage(null);
     startTransition(async () => {
+      let subscription: PushSubscription;
+
+      // Dva koraka, dve poruke. Pregledač i server padaju iz različitih
+      // razloga, a „Pokušaj ponovo" na oba je bilo tačno tek u polovini
+      // slučajeva — i nije davalo ništa što bi se moglo javiti dalje.
       try {
         const permission = await Notification.requestPermission();
         if (permission !== "granted") {
@@ -105,21 +115,36 @@ export function PushToggle({
         const registration = await navigator.serviceWorker.register("/sw.js");
         await navigator.serviceWorker.ready;
 
-        const subscription = await registration.pushManager.subscribe({
+        subscription = await registration.pushManager.subscribe({
           userVisibleOnly: true,
           applicationServerKey: decodeKey(publicKey),
         });
+      } catch (cause) {
+        // Ime greške je jedino po čemu se razlikuje telefon bez Google
+        // servisa od pogrešnog ključa, a ona nema prevod koji bi značio
+        // više — zato ide u zagradi, da može da se pročita i javi.
+        const name = cause instanceof Error ? cause.name : "";
+        setMessage(
+          name
+            ? `${sr.settings.pushBrowserFailed} (${name})`
+            : sr.settings.pushBrowserFailed,
+        );
+        return;
+      }
 
-        const input = toInput(subscription);
+      const input = toInput(subscription);
+
+      try {
         if (!input || !(await onEnable(input))) {
-          setMessage(sr.settings.pushFailed);
+          setMessage(sr.settings.pushSaveFailed);
           return;
         }
-
-        setState("on");
       } catch {
-        setMessage(sr.settings.pushFailed);
+        setMessage(sr.settings.pushSaveFailed);
+        return;
       }
+
+      setState("on");
     });
   }
 
@@ -185,7 +210,13 @@ export function PushToggle({
         </p>
       ) : null}
 
-      <p className="text-muted-foreground text-xs">{sr.settings.pushIosHint}</p>
+      {/* Uputstvo za iPhone je na Androidu bilo samo pogrešan savet ispod
+          poruke o grešci. */}
+      {apple ? (
+        <p className="text-muted-foreground text-xs">
+          {sr.settings.pushIosHint}
+        </p>
+      ) : null}
     </div>
   );
 }

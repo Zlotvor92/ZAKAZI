@@ -3,6 +3,11 @@ import { buildCalendarFeed } from "@/lib/domain/ics";
 
 const createdAt = new Date("2026-09-01T10:00:00Z");
 
+const empty = {
+  title: "Doteraj Me — još nema termina",
+  description: "Termini se pojavljuju ovde čim ih neko zakaže.",
+};
+
 function event(overrides: Partial<{ uid: string; title: string }> = {}) {
   return {
     uid: overrides.uid ?? "prvi@doterajme",
@@ -15,12 +20,30 @@ function event(overrides: Partial<{ uid: string; title: string }> = {}) {
 }
 
 describe("kalendar salona", () => {
-  it("prazan kalendar je i dalje ispravan fajl", () => {
-    const ics = buildCalendarFeed({ name: "Studio Milica", createdAt, events: [] });
+  it("salon bez termina dobija jedan unos umesto praznog fajla", () => {
+    // `VCALENDAR` bez ijedne komponente nije ispravan dokument (RFC 5545,
+    // `component = 1*(...)`), pa kalendar aplikacija odbije celu pretplatu.
+    const ics = buildCalendarFeed({ name: "Studio Milica", createdAt, events: [], empty });
 
     expect(ics.startsWith("BEGIN:VCALENDAR\r\n")).toBe(true);
     expect(ics.trimEnd().endsWith("END:VCALENDAR")).toBe(true);
-    expect(ics).not.toContain("BEGIN:VEVENT");
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(ics).toContain("SUMMARY:Doteraj Me — još nema termina");
+  });
+
+  it("oznaka praznog kalendara traje ceo dan i ne zauzima vreme", () => {
+    const ics = buildCalendarFeed({ name: "Studio Milica", createdAt, events: [], empty });
+
+    expect(ics).toContain("DTSTART;VALUE=DATE:20260901");
+    expect(ics).toContain("DTEND;VALUE=DATE:20260902");
+    expect(ics).toContain("TRANSP:TRANSPARENT");
+  });
+
+  it("čim ima termina, oznake nema", () => {
+    const ics = buildCalendarFeed({ name: "Studio Milica", createdAt, events: [event()], empty });
+
+    expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(1);
+    expect(ics).not.toContain("UID:prazan@doterajme");
   });
 
   it("svaki termin je zaseban unos", () => {
@@ -28,6 +51,7 @@ describe("kalendar salona", () => {
       name: "Studio Milica",
       createdAt,
       events: [event(), event({ uid: "drugi@doterajme", title: "Mila — Trepavice" })],
+      empty,
     });
 
     expect(ics.match(/BEGIN:VEVENT/g)).toHaveLength(2);
@@ -41,6 +65,7 @@ describe("kalendar salona", () => {
       name: "Studio Milica",
       createdAt,
       events: [event(), event({ uid: "drugi@doterajme" })],
+      empty,
     });
 
     expect(ics).not.toContain("BEGIN:VALARM");
@@ -51,13 +76,14 @@ describe("kalendar salona", () => {
       name: "Studio, Milica",
       createdAt,
       events: [],
+      empty,
     });
 
     expect(ics).toContain("X-WR-CALNAME:Studio\\, Milica");
   });
 
   it("vreme je u UTC-u, bez crtica i dvotačaka", () => {
-    const ics = buildCalendarFeed({ name: "Salon", createdAt, events: [event()] });
+    const ics = buildCalendarFeed({ name: "Salon", createdAt, events: [event()], empty });
 
     expect(ics).toContain("DTSTART:20260910T080000Z");
     expect(ics).toContain("DTEND:20260910T093000Z");
@@ -72,6 +98,7 @@ describe("kalendar salona", () => {
           title: "Klijentkinja sa dugačkim imenom — usluga sa još dužim nazivom",
         }),
       ],
+      empty,
     });
 
     for (const line of ics.split("\r\n")) {
