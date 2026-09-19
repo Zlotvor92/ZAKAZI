@@ -829,7 +829,10 @@ export function CalendarFeed({
   const [pending, startTransition] = useTransition();
   const [copyFailed, setCopyFailed] = useState(false);
 
-  const httpUrl = token ? `${origin}/api/kalendar/salon/${token}` : null;
+  // Nastavak `.ics` je deo aplikacija jedini nagoveštaj da je na drugom
+  // kraju kalendar; `Content-Type` ne gledaju sve. Ruta prima i goli
+  // token, pa stare pretplate nastavljaju da rade.
+  const httpUrl = token ? `${origin}/api/kalendar/salon/${token}.ics` : null;
   const webcalUrl = httpUrl
     ? httpUrl.replace(/^https?:\/\//, "webcal://")
     : null;
