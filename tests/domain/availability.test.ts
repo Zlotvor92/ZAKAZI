@@ -129,9 +129,9 @@ describe("slobodni termini", () => {
     expect(monday!.slots.map((slot) => slot.minutes)).toEqual([90, 90]);
   });
 
-  it("poslednji dolazak sme da se prelije preko kraja bloka", () => {
-    // 09–13 na razmak od 90: dolazi se u 9, 10:30 i 12, a poslednji se završi
-    // u 13:30. To je stvar salona, ne aplikacije.
+  it("dolazak koji bi se prelio preko granice se ne nudi", () => {
+    // 09–13 na razmak od 90: raspored bi dao 9, 10:30 i 12, ali poslednji
+    // traje do 13:30 — pola sata preko kraja smene, pa otpada.
     const [monday] = availability({
       fromDate: "2026-08-10",
       blocks: [
@@ -139,7 +139,27 @@ describe("slobodni termini", () => {
       ],
     });
 
-    expect(times(monday)).toEqual(["09:00", "10:30", "12:00"]);
+    expect(times(monday)).toEqual(["09:00", "10:30"]);
+  });
+
+  it("petnaest minuta preko kraja bloka prolazi", () => {
+    // 09–12 na razmak od 90, usluga od 105 minuta: drugi dolazak se završava
+    // tačno u 12:15, koliko tolerancija i dozvoljava.
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      serviceMinutes: 105,
+    });
+
+    expect(times(monday)).toEqual(["09:00", "10:30"]);
+  });
+
+  it("šesnaesti minut preko kraja bloka ne prolazi", () => {
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      serviceMinutes: 106,
+    });
+
+    expect(times(monday)).toEqual(["09:00"]);
   });
 
   it("pauza između blokova se ne nudi", () => {
@@ -353,7 +373,7 @@ describe("duga usluga gura ostatak dana", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
       blocks: SISTER,
-      serviceMinutes: 90,
+      serviceMinutes: 60,
       // 09:00–11:00 po Beogradu je 07:00–09:00 UTC leti.
       busy: [busy("2026-08-10T07:00:00Z", "2026-08-10T09:00:00Z")],
     });
@@ -371,12 +391,25 @@ describe("duga usluga gura ostatak dana", () => {
     expect(times(monday)).toEqual(["10:30", "17:00", "18:30"]);
   });
 
-  it("pomereni dolazak sme da se prelije preko kraja bloka", () => {
-    // Nadogradnja u 17 drži do 19; sledeći je u 19 i traje do 20:30.
+  it("pomereni dolazak koji prelazi granicu se ne nudi", () => {
+    // Nadogradnja u 17 drži do 19. Sledeći bi u 19 trajao do 20:30, pola sata
+    // preko kraja smene.
     const [monday] = availability({
       fromDate: "2026-08-10",
       blocks: SISTER,
       serviceMinutes: 90,
+      busy: [busy("2026-08-10T15:00:00Z", "2026-08-10T17:00:00Z")],
+    });
+
+    expect(times(monday)).not.toContain("19:00");
+  });
+
+  it("pomereni dolazak koji staje u toleranciju se nudi", () => {
+    // Isti pomak, ali usluga od 75 minuta: 19:00–20:15.
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      serviceMinutes: 75,
       busy: [busy("2026-08-10T15:00:00Z", "2026-08-10T17:00:00Z")],
     });
 
@@ -386,6 +419,7 @@ describe("duga usluga gura ostatak dana", () => {
   it("duga usluga se ne nudi tamo gde bi ušla u tuđi termin", () => {
     // Zauzeto 10:30–12:00. Nadogradnja od dva sata u 9 bi ušla u to, a u
     // 12:00 se ne može jer je tu kraj bloka — pre podne tog dana otpada celo.
+    // Po podne ostaje samo 17: dolazak u 18:30 bi trajao do 20:30.
     const [monday] = availability({
       fromDate: "2026-08-10",
       blocks: SISTER,
@@ -393,7 +427,7 @@ describe("duga usluga gura ostatak dana", () => {
       busy: [busy("2026-08-10T08:30:00Z", "2026-08-10T10:00:00Z")],
     });
 
-    expect(times(monday)).toEqual(["17:00", "18:30"]);
+    expect(times(monday)).toEqual(["17:00"]);
   });
 
   it("isti dan nudi različita vremena za usluge različite dužine", () => {
@@ -402,7 +436,7 @@ describe("duga usluga gura ostatak dana", () => {
     const short = availability({
       fromDate: "2026-08-10",
       blocks: SISTER,
-      serviceMinutes: 90,
+      serviceMinutes: 60,
       busy: taken,
     })[0]!;
     const long = availability({
@@ -412,8 +446,9 @@ describe("duga usluga gura ostatak dana", () => {
       busy: taken,
     })[0]!;
 
+    // Kratka usluga staje od 11 do 12, duga bi držala do 13.
     expect(times(short)).toContain("11:00");
-    expect(times(long)).toContain("11:00");
+    expect(times(long)).not.toContain("11:00");
     expect(long.slots.every((slot) => slot.minutes === 120)).toBe(true);
   });
 

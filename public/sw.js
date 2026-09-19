@@ -28,7 +28,9 @@ self.addEventListener("push", (event) => {
       badge: "/badge-96.png",
       // Vibracija je jedini deo koji radi i kad je telefon u džepu.
       vibrate: [80, 40, 80],
-      // Isti termin ne sme da napravi dva obaveštenja jedno preko drugog.
+      // Oznaka dolazi iz poruke i nosi i šta se desilo i koji je termin.
+      // Adresa kao rezervni izbor je ista za ceo dan, pa bi otkazivanje tiho
+      // zamenilo zakazivanje umesto da stigne kao novo obaveštenje.
       tag: data.tag || url,
       data: { url },
     }),

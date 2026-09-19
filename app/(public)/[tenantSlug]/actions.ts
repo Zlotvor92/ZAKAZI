@@ -101,6 +101,7 @@ export async function submitBooking(
             ),
           ),
         url: `/dashboard?dan=${formatInTimeZone(new Date(booked.start_at), timeZone, "yyyy-MM-dd")}`,
+        tag: `zakazano:${booked.id}`,
       },
     });
   });

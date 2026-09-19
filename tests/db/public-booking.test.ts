@@ -726,10 +726,28 @@ describe("public_book odbija ono što ne sme", () => {
     });
   });
 
-  it("poslednji termin sme da se prelije preko kraja bloka", async () => {
+  it("termin koji bi prešao kraj bloka za više od petnaest minuta", async () => {
     await withRollback(async (db) => {
-      // Blok do 18:00, dolazak u 16:30, usluga od dva sata: završava u 18:30.
+      // Blok do 18:00, dolazak u 16:30, usluga od dva sata: završila bi u
+      // 18:30, pola sata posle kraja smene.
       const salon = await openSalon(db, { serviceMinutes: 120 });
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "16:30"),
+        }),
+      );
+
+      expect(result).toEqual({ ok: false, reason: "outside_working_hours" });
+    });
+  });
+
+  it("termin koji staje u toleranciju od petnaest minuta prolazi", async () => {
+    await withRollback(async (db) => {
+      // Isti dolazak u 16:30, usluga od 105 minuta: završava tačno u 18:15.
+      const salon = await openSalon(db, { serviceMinutes: 105 });
 
       const result = await asAnon(db, async () =>
         book(db, {
@@ -1442,7 +1460,8 @@ describe("duga usluga pomera ostatak dana", () => {
       const tenantId = await createTenant(db);
       const staffId = await createStaff(db, tenantId);
       const long = await createService(db, tenantId, 120);
-      const short = await createService(db, tenantId, 90);
+      // Sat vremena, da stane od 11 do 12 — kraj smene je u 12.
+      const short = await createService(db, tenantId, 60);
 
       for (const serviceId of [long, short]) {
         await db.query(

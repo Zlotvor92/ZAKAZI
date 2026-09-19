@@ -6,6 +6,16 @@ export type PushPayload = {
   title: string;
   body: string;
   url: string;
+  /**
+   * Oznaka pod kojom telefon drži obaveštenje.
+   *
+   * Dva obaveštenja sa istom oznakom se ne ređaju — drugo tiho zameni prvo,
+   * bez zvuka i vibracije. Dok je oznaka bila adresa, zakazivanje i
+   * otkazivanje istog termina imali su istu (`/dashboard?dan=…`), pa je
+   * otkazivanje nestajalo preko zakazivanja. Isto se dešavalo i sa dva
+   * zakazivanja za isti dan.
+   */
+  tag: string;
 };
 
 /** Uređaj koji je pretplaćen, u obliku koji `web-push` očekuje. */
