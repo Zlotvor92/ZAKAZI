@@ -106,6 +106,7 @@ describe("kalendar salona", () => {
         name: "Studio Milica",
         createdAt,
         events: [{ ...rest, cancelled }],
+        empty: { title: "Nema termina", description: "Prazno." },
       }),
     );
   }

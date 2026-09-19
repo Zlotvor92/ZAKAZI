@@ -2,6 +2,7 @@ import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { getCalendarFeed } from "@/lib/db/calendar";
 import { buildCalendarFeed } from "@/lib/domain/ics";
+import { sr } from "@/lib/i18n/sr";
 
 /**
  * Kalendar salona, onako kako ga Google ili Apple povlače.
@@ -24,8 +25,12 @@ export async function GET(
   const rows = parsed.success ? await getCalendarFeed(parsed.data) : [];
 
   const body = buildCalendarFeed({
-    name: rows[0]?.tenant_name ?? "Doteraj Me",
+    name: rows[0]?.tenant_name ?? sr.app.name,
     createdAt: new Date(),
+    empty: {
+      title: sr.settings.calendarEmptyTitle,
+      description: sr.settings.calendarEmptyBody,
+    },
     events: rows.map((row) => ({
       // Isti termin mora uvek da da isti UID, inače kalendar pravi duplikat
       // umesto da osveži postojeći unos.

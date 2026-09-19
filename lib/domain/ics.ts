@@ -169,11 +169,18 @@ export function buildCalendarCancel(event: CalendarEvent): string {
  *
  * Otkazan termin izlazi sa `cancelled`, a ne tako što ispadne iz spiska:
  * nestanak reda je nagoveštaj, poništenje je poruka.
+ *
+ * `empty` je tekst jedinog unosa koji izlazi kad salon nema nijedan termin.
+ * Prazan kalendar nije prazan fajl: standard traži bar jednu komponentu
+ * unutar `VCALENDAR` (RFC 5545, `component = 1*(eventc / ...)`), pa bez toga
+ * dokument nije ispravan i kalendar aplikacija sme da odbije celu pretplatu.
+ * Android na to kaže samo „Uvoz nije uspeo", bez razloga.
  */
 export function buildCalendarFeed(input: {
   name: string;
   createdAt: Date;
   events: (Omit<CalendarEvent, "createdAt"> & { cancelled?: boolean })[];
+  empty: { title: string; description: string };
 }): string {
   const header = [
     `X-WR-CALNAME:${escapeText(input.name)}`,
@@ -181,9 +188,46 @@ export function buildCalendarFeed(input: {
     "X-PUBLISHED-TTL:PT1H",
   ];
 
-  const body = input.events.flatMap((event) =>
-    eventLines({ ...event, createdAt: input.createdAt, reminders: false }),
-  );
+  const body =
+    input.events.length === 0
+      ? emptyMarkerLines(input.createdAt, input.empty)
+      : input.events.flatMap((event) =>
+          eventLines({ ...event, createdAt: input.createdAt, reminders: false }),
+        );
 
   return wrap([...header, ...body]);
+}
+
+/** Datum kao `YYYYMMDD`, oblik koji celodnevni unos traži. */
+function dayStamp(value: Date): string {
+  return value.toISOString().slice(0, 10).replace(/-/g, "");
+}
+
+/**
+ * Jedan celodnevni unos, jedini sadržaj kalendara bez termina.
+ *
+ * `TRANSP:TRANSPARENT` znači da ne zauzima vreme, pa ne pravi rupu u danu.
+ * Datum je po UTC-u, a ne po tajmzoni salona, jer prazan odgovor ne nosi ni
+ * ime salona ni njegovu tajmzonu — a za oznaku koja nestane čim stigne prvi
+ * termin sat razlike ništa ne menja.
+ */
+function emptyMarkerLines(
+  createdAt: Date,
+  text: { title: string; description: string },
+): string[] {
+  const start = dayStamp(createdAt);
+  const end = dayStamp(new Date(createdAt.getTime() + 24 * 60 * 60 * 1000));
+
+  return [
+    "BEGIN:VEVENT",
+    "UID:prazan@doterajme",
+    `DTSTAMP:${stamp(createdAt)}`,
+    `DTSTART;VALUE=DATE:${start}`,
+    `DTEND;VALUE=DATE:${end}`,
+    `SUMMARY:${escapeText(text.title)}`,
+    `DESCRIPTION:${escapeText(text.description)}`,
+    "STATUS:CONFIRMED",
+    "TRANSP:TRANSPARENT",
+    "END:VEVENT",
+  ];
 }
