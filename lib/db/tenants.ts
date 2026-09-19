@@ -9,6 +9,8 @@ export type Tenant = {
   booking_horizon_days: number;
   min_lead_minutes: number;
   public_booking_enabled: boolean;
+  break_overrun_min: number;
+  shift_overrun_min: number;
   calendar_token: string | null;
 };
 
@@ -48,7 +50,7 @@ export async function getCurrentTenant(
   const query = supabase
     .from("tenants")
     .select(
-      "id, slug, name, timezone, booking_horizon_days, min_lead_minutes, public_booking_enabled, calendar_token",
+      "id, slug, name, timezone, booking_horizon_days, min_lead_minutes, public_booking_enabled, break_overrun_min, shift_overrun_min, calendar_token",
     );
 
   const { data, error } = await (tenantId === null
@@ -101,6 +103,8 @@ export async function updateBookingSettings(input: {
   horizonDays: number;
   minLeadMinutes: number;
   publicBookingEnabled: boolean;
+  breakOverrunMin: number;
+  shiftOverrunMin: number;
 }): Promise<void> {
   const supabase = await createClient();
 
@@ -110,6 +114,8 @@ export async function updateBookingSettings(input: {
       booking_horizon_days: input.horizonDays,
       min_lead_minutes: input.minLeadMinutes,
       public_booking_enabled: input.publicBookingEnabled,
+      break_overrun_min: input.breakOverrunMin,
+      shift_overrun_min: input.shiftOverrunMin,
     })
     .eq("id", input.tenantId);
 

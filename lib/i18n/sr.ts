@@ -271,7 +271,7 @@ export const sr = {
 
     hoursTitle: "Radno vreme",
     hoursHint:
-      "Pauzu ostavi praznu ako je nemaš. Termini se sami rasporede po radnom vremenu. Duga usluga sme da pređe pauzu ili kraj smene najviše 15 minuta — ako ne staje, taj termin se ne nudi.",
+      "Pauzu ostavi praznu ako je nemaš. Termini se sami rasporede po radnom vremenu. Koliko duga usluga sme da pređe pauzu ili kraj smene podešavaš u pravilima zakazivanja.",
     slotModeLabel: "Kako unosiš termine",
     slotModeCount: "Koliko ih staje",
     slotModeMinutes: "Koliko traje jedan",
@@ -294,10 +294,16 @@ export const sr = {
     horizonLabel: "Koliko dana unapred klijent može da zakaže",
     leadLabel: "Najranije koliko sati unapred",
     publicLabel: "Zakazivanje preko interneta je uključeno",
+    overrunHint:
+      "Koliko duga usluga sme da se prelije preko granice. Nula znači da termin mora da stane tačno.",
+    breakOverrunLabel: "U pauzu sme (min)",
+    shiftOverrunLabel: "Posle kraja smene sme (min)",
     saveRules: "Sačuvaj pravila",
     rulesProblem: {
       horizonDays: "Upiši između 1 i 90 dana.",
       leadHours: "Upiši između 0 i 168 sati.",
+      breakOverrunMin: "Upiši između 0 i 120 minuta.",
+      shiftOverrunMin: "Upiši između 0 i 120 minuta.",
     },
 
     servicesTitle: "Usluge",

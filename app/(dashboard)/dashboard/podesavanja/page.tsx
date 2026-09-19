@@ -152,6 +152,8 @@ export default async function SettingsPage() {
             horizonDays={tenant.booking_horizon_days}
             leadHours={Math.round(tenant.min_lead_minutes / 60)}
             publicEnabled={tenant.public_booking_enabled}
+            breakOverrunMin={tenant.break_overrun_min}
+            shiftOverrunMin={tenant.shift_overrun_min}
           />
         </Section>
 

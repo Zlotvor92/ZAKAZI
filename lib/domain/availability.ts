@@ -36,32 +36,36 @@ export type AvailabilityInput = {
   serviceMinutes: number;
   now: Date;
   minLeadMin: number;
+  /** Koliko usluga sme da pređe u pauzu, u minutima. */
+  breakOverrunMin: number;
+  /** Koliko usluga sme da pređe kraj radnog dana, u minutima. */
+  shiftOverrunMin: number;
 };
 
 const MINUTE = 60_000;
 
 /**
- * Koliko usluga sme da pređe kraj bloka.
+ * Da li posle ovog bloka istog dana sledi još rada.
  *
- * Bez ikakve granice je blok značio samo „kad se počinje": usluga od sat i po
- * koja krene u 11:30 u smeni do 12 završavala bi u 13, pola sata u pauzi, i
- * salon bi dobio treći termin tamo gde je tražio dva. Bez ijednog minuta
- * tolerancije bi pak ispalo obrnuto — termin koji se završava tačno u 12:05
- * ne ruši nikome dan, a izgubio bi se.
- *
- * Isti broj stoji i u bazi, u `is_bookable_start`. Provera ovde služi da se
- * takav termin ne ponudi; ona u bazi da se ne upiše.
+ * Kraj poslednjeg bloka je kraj radnog dana; kraj svakog ranijeg je početak
+ * pauze. Salon ta dva ograničava odvojeno: u pauzu se sme ući koliko i ona
+ * traje, a posle kraja dana se ostaje samo koliko se ostaje.
  */
-export const BLOCK_OVERRUN_GRACE_MIN = 15;
+function breakFollows(block: WorkingBlock, blocks: WorkingBlock[]): boolean {
+  return blocks.some(
+    (other) =>
+      other.weekday === block.weekday && other.startMinute > block.startMinute,
+  );
+}
 
 function overlaps(startMs: number, endMs: number, range: BusyRange): boolean {
   return startMs < range.endAt.getTime() && range.startAt.getTime() < endMs;
 }
 
 /**
- * Koliko se puta u bloku dolazi. Poslednji termin sme da pređe kraj bloka —
- * salon koji radi do 12 i završi u 12:30 nije prekršio ništa, pa se mesto
- * broji po tome kad se počinje, ne kad se završava.
+ * Koliko se puta u bloku dolazi. Mesto se broji po tome kad se počinje, ne
+ * kad se završava: koliko poslednji termin sme da pređe kraj bloka odlučuje
+ * salon svojim podešavanjem, a ne ovaj broj.
  */
 export function slotsInBlock(block: WorkingBlock): number {
   if (block.slotMinutes <= 0) {
@@ -91,8 +95,8 @@ export function slotMinutesForCount(
  * već zakazan termin. To drugo je ono što pomera dan: ako neko uzme dvočasovnu
  * nadogradnju u 9, u 10:30 se više ne može, ali se može u 11.
  *
- * Termin sme da pređe kraj bloka najviše za `BLOCK_OVERRUN_GRACE_MIN`. Ne sme
- * da pređe u tuđi.
+ * Termin sme da pređe kraj bloka onoliko koliko salon dozvoli — posebno za
+ * pauzu, posebno za kraj dana. Ne sme da pređe u tuđi.
  */
 export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
   const earliestMs = input.now.getTime() + input.minLeadMin * MINUTE;
@@ -142,7 +146,10 @@ export function buildAvailability(input: AvailabilityInput): DayAvailability[] {
         }
       }
 
-      const latestEndMs = closesMs + BLOCK_OVERRUN_GRACE_MIN * MINUTE;
+      const overrunMin = breakFollows(block, input.blocks)
+        ? input.breakOverrunMin
+        : input.shiftOverrunMin;
+      const latestEndMs = closesMs + overrunMin * MINUTE;
 
       for (const startMs of candidates) {
         if (startMs < opensMs || startMs >= closesMs) {

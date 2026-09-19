@@ -168,6 +168,8 @@ const rulesSchema = z.object({
   horizonDays: z.coerce.number().int().min(1).max(90),
   leadHours: z.coerce.number().int().min(0).max(168),
   publicEnabled: z.boolean(),
+  breakOverrunMin: z.coerce.number().int().min(0).max(120),
+  shiftOverrunMin: z.coerce.number().int().min(0).max(120),
 });
 
 export async function saveBookingRules(
@@ -177,6 +179,8 @@ export async function saveBookingRules(
     horizonDays: formData.get("horizonDays"),
     leadHours: formData.get("leadHours"),
     publicEnabled: formData.get("publicEnabled") === "on",
+    breakOverrunMin: formData.get("breakOverrunMin"),
+    shiftOverrunMin: formData.get("shiftOverrunMin"),
   });
 
   if (!parsed.success) {
@@ -198,7 +202,12 @@ export async function saveBookingRules(
     horizonDays: parsed.data.horizonDays,
     minLeadMinutes: parsed.data.leadHours * 60,
     publicBookingEnabled: parsed.data.publicEnabled,
+    breakOverrunMin: parsed.data.breakOverrunMin,
+    shiftOverrunMin: parsed.data.shiftOverrunMin,
   });
+
+  // Javna strana nudi termine po ovim granicama, pa mora da se osveži.
+  revalidatePath(`/${tenant.slug}`);
 
   revalidatePath("/dashboard/podesavanja");
   return { status: "saved" };

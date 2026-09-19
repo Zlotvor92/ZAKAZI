@@ -421,10 +421,14 @@ export function BookingRulesForm({
   horizonDays,
   leadHours,
   publicEnabled,
+  breakOverrunMin,
+  shiftOverrunMin,
 }: {
   horizonDays: number;
   leadHours: number;
   publicEnabled: boolean;
+  breakOverrunMin: number;
+  shiftOverrunMin: number;
 }) {
   const { pending, state, submit, reset } = useSettingsAction();
 
@@ -457,6 +461,38 @@ export function BookingRulesForm({
           defaultValue={leadHours}
         />
       </label>
+
+      <div className="space-y-1 pt-1">
+        <p className="text-[#554C44] text-xs">{sr.settings.overrunHint}</p>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">
+            {sr.settings.breakOverrunLabel}
+          </span>
+          <Input
+            type="number"
+            name="breakOverrunMin"
+            min={0}
+            max={120}
+            required
+            defaultValue={breakOverrunMin}
+          />
+        </label>
+
+        <label className="block space-y-1">
+          <span className="text-sm font-medium">
+            {sr.settings.shiftOverrunLabel}
+          </span>
+          <Input
+            type="number"
+            name="shiftOverrunMin"
+            min={0}
+            max={120}
+            required
+            defaultValue={shiftOverrunMin}
+          />
+        </label>
+      </div>
 
       <label className="flex min-h-11 items-center gap-2">
         <input

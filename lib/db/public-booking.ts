@@ -11,6 +11,8 @@ export const bookingDataSchema = z.object({
     slug: z.string(),
     timezone: z.string(),
     min_lead_minutes: z.number().int(),
+    break_overrun_min: z.number().int(),
+    shift_overrun_min: z.number().int(),
     logo_url: z.url().nullable(),
   }),
   now: z.string(),
