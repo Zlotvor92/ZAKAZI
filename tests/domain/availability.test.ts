@@ -34,6 +34,9 @@ function availability(
     serviceMinutes: 90,
     now: LONG_AGO,
     minLeadMin: 0,
+    // Petnaest minuta u oba smera; testovi koji mere granicu ih prepisuju.
+    breakOverrunMin: 15,
+    shiftOverrunMin: 15,
     ...overrides,
   });
 }
@@ -157,6 +160,32 @@ describe("slobodni termini", () => {
     const [monday] = availability({
       fromDate: "2026-08-10",
       serviceMinutes: 106,
+    });
+
+    expect(times(monday)).toEqual(["09:00"]);
+  });
+
+  it("pauza i kraj dana imaju svako svoju granicu", () => {
+    // Smene 09–12 i 17–20, usluga od 105 minuta. Salon ne pušta ništa u pauzu,
+    // a posle posla pušta sat: pre podne otpada 10:30 (do 12:15), po podne
+    // ostaje 18:30 (do 20:15).
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      blocks: SISTER,
+      serviceMinutes: 105,
+      breakOverrunMin: 0,
+      shiftOverrunMin: 60,
+    });
+
+    expect(times(monday)).toEqual(["09:00", "17:00", "18:30"]);
+  });
+
+  it("granica od nula minuta traži da termin stane tačno", () => {
+    const [monday] = availability({
+      fromDate: "2026-08-10",
+      serviceMinutes: 91,
+      breakOverrunMin: 0,
+      shiftOverrunMin: 0,
     });
 
     expect(times(monday)).toEqual(["09:00"]);
@@ -309,6 +338,8 @@ describe("prelazak na drugo računanje vremena", () => {
       serviceMinutes: 90,
       now: new Date("2026-03-30T12:00:00Z"),
       minLeadMin: 0,
+      breakOverrunMin: 15,
+      shiftOverrunMin: 15,
     });
 
     expect(days[0]!.slots[0]!.startAt.toISOString()).toBe(

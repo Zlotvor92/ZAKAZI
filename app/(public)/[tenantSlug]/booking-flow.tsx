@@ -209,6 +209,8 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
       serviceMinutes: service.duration_min,
       now: new Date(data.now),
       minLeadMin: data.tenant.min_lead_minutes,
+      breakOverrunMin: data.tenant.break_overrun_min,
+      shiftOverrunMin: data.tenant.shift_overrun_min,
     });
   }, [service, data, timeZone]);
 

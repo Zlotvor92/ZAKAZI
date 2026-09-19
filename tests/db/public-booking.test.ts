@@ -27,6 +27,8 @@ type BookingData = {
     slug: string;
     timezone: string;
     min_lead_minutes: number;
+    break_overrun_min: number;
+    shift_overrun_min: number;
   };
   now: string;
   from_date: string;
@@ -71,6 +73,8 @@ async function openSalon(
     minLeadMinutes?: number;
     enabled?: boolean;
     linkService?: boolean;
+    breakOverrunMin?: number;
+    shiftOverrunMin?: number;
   } = {},
 ) {
   const tenantId = await createTenant(db);
@@ -95,13 +99,17 @@ async function openSalon(
     `update tenants
         set booking_horizon_days = $2,
             min_lead_minutes = $3,
-            public_booking_enabled = $4
+            public_booking_enabled = $4,
+            break_overrun_min = $5,
+            shift_overrun_min = $6
       where id = $1`,
     [
       tenantId,
       options.horizonDays ?? 90,
       options.minLeadMinutes ?? 0,
       options.enabled ?? true,
+      options.breakOverrunMin ?? 30,
+      options.shiftOverrunMin ?? 30,
     ],
   );
 
@@ -726,11 +734,14 @@ describe("public_book odbija ono što ne sme", () => {
     });
   });
 
-  it("termin koji bi prešao kraj bloka za više od petnaest minuta", async () => {
+  it("termin koji bi prešao kraj smene više nego što salon dozvoli", async () => {
     await withRollback(async (db) => {
-      // Blok do 18:00, dolazak u 16:30, usluga od dva sata: završila bi u
-      // 18:30, pola sata posle kraja smene.
-      const salon = await openSalon(db, { serviceMinutes: 120 });
+      // Smena do 18:00, dolazak u 16:30, usluga od dva sata: završila bi u
+      // 18:30, a salon pušta petnaest minuta.
+      const salon = await openSalon(db, {
+        serviceMinutes: 120,
+        shiftOverrunMin: 15,
+      });
 
       const result = await asAnon(db, async () =>
         book(db, {
@@ -744,10 +755,12 @@ describe("public_book odbija ono što ne sme", () => {
     });
   });
 
-  it("termin koji staje u toleranciju od petnaest minuta prolazi", async () => {
+  it("isti termin prolazi kad salon pusti pola sata", async () => {
     await withRollback(async (db) => {
-      // Isti dolazak u 16:30, usluga od 105 minuta: završava tačno u 18:15.
-      const salon = await openSalon(db, { serviceMinutes: 105 });
+      const salon = await openSalon(db, {
+        serviceMinutes: 120,
+        shiftOverrunMin: 30,
+      });
 
       const result = await asAnon(db, async () =>
         book(db, {
@@ -758,6 +771,87 @@ describe("public_book odbija ono što ne sme", () => {
       );
 
       expect(result.ok).toBe(true);
+    });
+  });
+
+  it("pauza i kraj dana se ograničavaju odvojeno", async () => {
+    await withRollback(async (db) => {
+      // Smene 09–12 i 17–20: kraj prve je početak pauze, kraj druge je kraj
+      // dana. Salon ne pušta ništa u pauzu, a posle posla pušta sat vremena.
+      const tenantId = await createTenant(db);
+      const staffId = await createStaff(db, tenantId);
+      const serviceId = await createService(db, tenantId, 105);
+
+      await db.query(
+        "insert into staff_services (tenant_id, staff_id, service_id) values ($1, $2, $3)",
+        [tenantId, staffId, serviceId],
+      );
+      for (const [from, to] of [
+        ["09:00", "12:00"],
+        ["17:00", "20:00"],
+      ]) {
+        await db.query(
+          `insert into working_hours
+             (tenant_id, staff_id, weekday, start_time, end_time, slot_minutes)
+           values ($1, $2, 1, $3, $4, 90)`,
+          [tenantId, staffId, from, to],
+        );
+      }
+      await db.query(
+        `update tenants
+            set min_lead_minutes = 0,
+                booking_horizon_days = 90,
+                break_overrun_min = 0,
+                shift_overrun_min = 60
+          where id = $1`,
+        [tenantId],
+      );
+      const slug = (
+        await db.query<{ slug: string }>("select slug from tenants where id = $1", [
+          tenantId,
+        ])
+      ).rows[0]!.slug;
+
+      // 10:30 + 105 min = 12:15, petnaest minuta u pauzu.
+      const intoBreak = await asAnon(db, async () =>
+        book(db, {
+          slug,
+          serviceId,
+          startAt: await nextMonday(db, "10:30"),
+          phone: "+381645553001",
+        }),
+      );
+      expect(intoBreak).toEqual({ ok: false, reason: "outside_working_hours" });
+
+      // 18:30 + 105 min = 20:15, petnaest minuta posle kraja dana.
+      const afterWork = await asAnon(db, async () =>
+        book(db, {
+          slug,
+          serviceId,
+          startAt: await nextMonday(db, "18:30"),
+          phone: "+381645553002",
+        }),
+      );
+      expect(afterWork.ok).toBe(true);
+    });
+  });
+
+  it("salon koji ne pušta ni minut dobija tačan kraj", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db, {
+        serviceMinutes: 105,
+        shiftOverrunMin: 0,
+      });
+
+      const result = await asAnon(db, async () =>
+        book(db, {
+          slug: salon.slug,
+          serviceId: salon.serviceId,
+          startAt: await nextMonday(db, "16:30"),
+        }),
+      );
+
+      expect(result).toEqual({ ok: false, reason: "outside_working_hours" });
     });
   });
 
@@ -823,6 +917,8 @@ describe("public_book odbija ono što ne sme", () => {
           serviceMinutes: 90,
           now: new Date(data!.now),
           minLeadMin: data!.tenant.min_lead_minutes,
+          breakOverrunMin: data!.tenant.break_overrun_min,
+          shiftOverrunMin: data!.tenant.shift_overrun_min,
         })
           .flatMap((day) => day.slots)
           .map((slot) => slot.startAt.getTime());
