@@ -78,3 +78,28 @@ export async function removeService(
 
   return removeResultSchema.parse(data);
 }
+
+const moveResultSchema = z.discriminatedUnion("ok", [
+  z.object({ ok: z.literal(true) }),
+  z.object({ ok: z.literal(false), reason: z.string() }),
+]);
+
+export async function moveService(input: {
+  id: string;
+  direction: "up" | "down";
+  tenantId: string | null;
+}): Promise<z.infer<typeof moveResultSchema>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("move_service", {
+    p_id: input.id,
+    p_direction: input.direction,
+    p_tenant_id: input.tenantId,
+  });
+
+  if (error) {
+    throw new Error(`Pomeranje usluge nije uspelo: ${error.message}`);
+  }
+
+  return moveResultSchema.parse(data);
+}

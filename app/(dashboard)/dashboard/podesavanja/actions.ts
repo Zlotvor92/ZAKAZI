@@ -10,7 +10,7 @@ import {
   savePushSubscription,
 } from "@/lib/db/push";
 import { getCurrentTenant, updateBookingSettings } from "@/lib/db/tenants";
-import { removeService, saveService } from "@/lib/db/services";
+import { moveService, removeService, saveService } from "@/lib/db/services";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
 import { setWorkingBlocks } from "@/lib/db/working-hours";
 import { selectedTenantId } from "@/lib/tenant";
@@ -461,6 +461,40 @@ export async function deleteServiceEntry(id: string): Promise<SettingsState> {
   if (!result.ok) {
     return { status: "error", message: sr.settings.failed };
   }
+
+  revalidatePath("/dashboard/podesavanja");
+  revalidatePath("/dashboard/termin/novi");
+  return { status: "saved" };
+}
+
+const moveSchema = z.object({
+  id: z.uuid(),
+  direction: z.enum(["up", "down"]),
+});
+
+export async function moveServiceEntry(
+  id: string,
+  direction: "up" | "down",
+): Promise<SettingsState> {
+  const parsed = moveSchema.safeParse({ id, direction });
+
+  if (!parsed.success) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  const tenant = await getCurrentTenant(await selectedTenantId());
+  if (!tenant) {
+    return { status: "error", message: sr.dashboard.noTenant };
+  }
+
+  const result = await moveService({ ...parsed.data, tenantId: tenant.id });
+
+  if (!result.ok) {
+    return { status: "error", message: sr.settings.failed };
+  }
+
+  // Klijent bira sa javne strane, pa i ona mora da vidi novi redosled.
+  revalidatePath(`/${tenant.slug}`);
 
   revalidatePath("/dashboard/podesavanja");
   revalidatePath("/dashboard/termin/novi");

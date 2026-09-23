@@ -199,7 +199,149 @@ describe("uklanjanje usluge", () => {
   });
 });
 
+async function move(
+  db: pg.PoolClient,
+  id: string,
+  direction: "up" | "down",
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const result = await db.query<{
+    result: { ok: true } | { ok: false; reason: string };
+  }>("select move_service($1, $2) as result", [id, direction]);
+  return result.rows[0]!.result;
+}
+
+async function listedNames(db: pg.PoolClient, userId: string) {
+  return asUser(db, userId, async () => {
+    const result = await db.query<{ name: string }>(
+      "select name from tenant_services()",
+    );
+    return result.rows.map((row) => row.name);
+  });
+}
+
+describe("redosled usluga", () => {
+  it("nova usluga ide na kraj spiska, ne po abecedi", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      await asUser(db, base.userId, async () => {
+        await save(db, { name: "Pedikir" });
+        await save(db, { name: "Manikir" });
+        await save(db, { name: "Depilacija" });
+      });
+
+      expect(await listedNames(db, base.userId)).toEqual([
+        "Pedikir",
+        "Manikir",
+        "Depilacija",
+      ]);
+    });
+  });
+
+  it("usluga se pomera gore i dole za po jedno mesto", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const ids = await asUser(db, base.userId, async () => [
+        await save(db, { name: "A" }),
+        await save(db, { name: "B" }),
+        await save(db, { name: "C" }),
+      ]);
+      const [, b, c] = ids.map((r) => (r as { ok: true; id: string }).id);
+
+      const up = await asUser(db, base.userId, () => move(db, c!, "up"));
+      expect(up).toEqual({ ok: true });
+      expect(await listedNames(db, base.userId)).toEqual(["A", "C", "B"]);
+
+      await asUser(db, base.userId, () => move(db, b!, "up"));
+      await asUser(db, base.userId, () => move(db, b!, "up"));
+      expect(await listedNames(db, base.userId)).toEqual(["B", "A", "C"]);
+    });
+  });
+
+  it("prva ne ide gore, poslednja ne ide dole", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const ids = await asUser(db, base.userId, async () => [
+        await save(db, { name: "A" }),
+        await save(db, { name: "B" }),
+      ]);
+      const [a, b] = ids.map((r) => (r as { ok: true; id: string }).id);
+
+      await asUser(db, base.userId, async () => {
+        expect(await move(db, a!, "up")).toEqual({ ok: true });
+        expect(await move(db, b!, "down")).toEqual({ ok: true });
+      });
+
+      expect(await listedNames(db, base.userId)).toEqual(["A", "B"]);
+    });
+  });
+
+  it("jednak redni broj ne zaglavljuje pomeranje", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const a = await createService(db, base.tenantId);
+      const b = await createService(db, base.tenantId);
+      await db.query("update services set name = 'A' where id = $1", [a]);
+      await db.query("update services set name = 'B' where id = $1", [b]);
+      await db.query(
+        "update services set sort_order = 5 where tenant_id = $1",
+        [base.tenantId],
+      );
+
+      await asUser(db, base.userId, () => move(db, b, "up"));
+
+      expect(await listedNames(db, base.userId)).toEqual(["B", "A"]);
+    });
+  });
+
+  it("javna strana prikazuje usluge redom koji je salon složio", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const ids = await asUser(db, base.userId, async () => [
+        await save(db, { name: "A" }),
+        await save(db, { name: "B" }),
+      ]);
+      const b = (ids[1] as { ok: true; id: string }).id;
+      await asUser(db, base.userId, () => move(db, b, "up"));
+
+      const slug = await db.query<{ slug: string }>(
+        "select slug from tenants where id = $1",
+        [base.tenantId],
+      );
+      const data = await asAnon(db, async () => {
+        const result = await db.query<{
+          data: { services: { name: string }[] } | null;
+        }>("select public_booking_data($1) as data", [slug.rows[0]!.slug]);
+        return result.rows[0]!.data;
+      });
+
+      expect(data?.services.map((s) => s.name)).toEqual(["B", "A"]);
+    });
+  });
+});
+
 describe("granica salona", () => {
+  it("vlasnica ne pomera tuđu uslugu", async () => {
+    await withRollback(async (db) => {
+      const mine = await salon(db);
+      const theirs = await salon(db);
+      const first = await createService(db, theirs.tenantId);
+      const second = await createService(db, theirs.tenantId);
+
+      const result = await asUser(db, mine.userId, () =>
+        move(db, second, "up"),
+      );
+
+      expect(result).toEqual({ ok: false, reason: "not_found" });
+
+      const order = await db.query<{ id: string }>(
+        "select id from services where tenant_id = $1 order by sort_order",
+        [theirs.tenantId],
+      );
+      expect(order.rows.map((row) => row.id)).toEqual([first, second]);
+    });
+  });
+
   it("vlasnica ne menja tuđu uslugu", async () => {
     await withRollback(async (db) => {
       const mine = await salon(db);
@@ -241,6 +383,9 @@ describe("granica salona", () => {
         await expect(inSavepoint(db, () => remove(db, id))).rejects.toThrow(
           /permission denied/i,
         );
+        await expect(
+          inSavepoint(db, () => move(db, id, "up")),
+        ).rejects.toThrow(/permission denied/i);
       });
     });
   });
