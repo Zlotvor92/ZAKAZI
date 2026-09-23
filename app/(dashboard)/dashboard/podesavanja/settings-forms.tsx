@@ -1,6 +1,7 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState, useTransition } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +23,7 @@ import {
   addBlockedNumber,
   deleteServiceEntry,
   deleteTimeOff,
+  moveServiceEntry,
   removeBlockedNumber,
   saveBookingRules,
   saveServiceEntry,
@@ -727,7 +729,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
         </p>
       ) : null}
 
-      {services.map((service) => (
+      {services.map((service, index) => (
         <form
           key={service.id}
           action={submit(saveServiceEntry)}
@@ -735,13 +737,40 @@ export function ServicesSection({ services }: { services: Service[] }) {
         >
           <input type="hidden" name="id" value={service.id} />
 
-          <Input
-            name="name"
-            defaultValue={service.name}
-            maxLength={60}
-            required
-            aria-label={sr.settings.serviceName}
-          />
+          <div className="flex items-center gap-1">
+            <Input
+              name="name"
+              defaultValue={service.name}
+              maxLength={60}
+              required
+              aria-label={sr.settings.serviceName}
+              className="min-w-0"
+            />
+            {/* Kartice su vezane ključem za uslugu, pa neposlata izmena u
+                poljima putuje sa karticom umesto da pređe na susednu. */}
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="shrink-0"
+              aria-label={sr.settings.moveServiceUp}
+              disabled={pending || index === 0}
+              onClick={() => call(() => moveServiceEntry(service.id, "up"))}
+            >
+              <ChevronUp />
+            </Button>
+            <Button
+              type="button"
+              size="icon"
+              variant="ghost"
+              className="shrink-0"
+              aria-label={sr.settings.moveServiceDown}
+              disabled={pending || index === services.length - 1}
+              onClick={() => call(() => moveServiceEntry(service.id, "down"))}
+            >
+              <ChevronDown />
+            </Button>
+          </div>
 
           <div className="grid grid-cols-2 gap-2">
             <Field label={sr.settings.serviceDuration}>

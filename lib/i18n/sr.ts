@@ -317,6 +317,8 @@ export const sr = {
     saveService: "Sačuvaj",
     addService: "Dodaj uslugu",
     removeService: "Ukloni",
+    moveServiceUp: "Pomeri gore",
+    moveServiceDown: "Pomeri dole",
     removeServiceConfirm:
       "Ukloni ovu uslugu? Nestaje iz ponude za zakazivanje. Već zakazani termini ostaju.",
     serviceProblem: {
