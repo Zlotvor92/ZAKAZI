@@ -9,6 +9,11 @@ import {
   setAppointmentStatus,
   type AppointmentHistoryEntry,
 } from "@/lib/db/appointments";
+import {
+  getClientCard,
+  saveClientNotes,
+  type ClientCard,
+} from "@/lib/db/clients";
 import { getMyTenants } from "@/lib/db/tenants";
 import { deviceId } from "@/lib/device";
 import { sr } from "@/lib/i18n/sr";
@@ -122,5 +127,59 @@ export async function blockClient(appointmentId: string): Promise<ActionState> {
   }
 
   revalidatePath("/dashboard");
+  return { ok: true };
+}
+
+export type ClientCardState =
+  | { ok: true; card: ClientCard }
+  | { ok: false; message: string };
+
+/** Kao i istorija, učitava se tek na dodir. */
+export async function loadClientCard(
+  appointmentId: string,
+): Promise<ClientCardState> {
+  const parsed = z.uuid().safeParse(appointmentId);
+
+  if (!parsed.success) {
+    return { ok: false, message: sr.clientCard.failed };
+  }
+
+  try {
+    const card = await getClientCard(parsed.data);
+    return card
+      ? { ok: true, card }
+      : { ok: false, message: sr.clientCard.failed };
+  } catch {
+    return { ok: false, message: sr.clientCard.failed };
+  }
+}
+
+const notesSchema = z.object({
+  clientId: z.uuid(),
+  notes: z.string().max(500),
+});
+
+export async function saveClientNote(
+  clientId: string,
+  notes: string,
+): Promise<ActionState> {
+  const parsed = notesSchema.safeParse({ clientId, notes });
+
+  if (!parsed.success) {
+    return { ok: false, message: sr.clientCard.notesTooLong };
+  }
+
+  const result = await saveClientNotes(parsed.data);
+
+  if (!result.ok) {
+    return {
+      ok: false,
+      message:
+        result.reason === "too_long"
+          ? sr.clientCard.notesTooLong
+          : sr.dashboard.actionFailed,
+    };
+  }
+
   return { ok: true };
 }
