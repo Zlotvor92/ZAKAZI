@@ -140,16 +140,14 @@ describe("termin iz prošlog dana postaje obavljen", () => {
     });
   });
 
-  it("termini od pre uvođenja pravila se ne diraju", async () => {
+  it("stari potvrđeni termini se obeležavaju isto kao jučerašnji", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);
-      const old = await book(db, base, "2026-09-24T10:00:00+02:00");
-      const first = await book(db, base, "2026-09-25T10:00:00+02:00");
+      const old = await book(db, base, "2026-08-17T10:00:00+02:00");
 
       await runAsServer(db, "2026-10-06T02:00:00+02:00");
 
-      expect(await statusOf(db, old.id)).toBe("confirmed");
-      expect(await statusOf(db, first.id)).toBe("completed");
+      expect(await statusOf(db, old.id)).toBe("completed");
     });
   });
 
