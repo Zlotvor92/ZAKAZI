@@ -235,6 +235,8 @@ export const sr = {
     timeOffUntil: "do",
     /** Jednina, paukal, množina — vidi `pluralize` u `lib/domain/plural.ts`. */
     appointmentsCount: ["termin", "termina", "termina"],
+    /** `{puta}` je broj ranijih izostanaka klijentkinje. */
+    priorNoShows: "Ranije nije došla {puta}×",
     fromPublicPage: "preko sajta",
     addAppointment: "Dodaj termin",
     call: "Pozovi",
@@ -442,6 +444,13 @@ export const sr = {
     newBookingTitle: "Novo zakazivanje",
     /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
     newBookingBody: "{klijent} — {usluga}, {vreme}",
+    /**
+     * Dodaje se ispod teksta zakazivanja kad klijentkinja ranije nije došla.
+     * `{puta}` je ukupan broj, `{termini}` poslednja do tri: „12.09. u 14:00
+     * (Gel nokti)".
+     */
+    priorNoShows: "Ranije nije došla {puta}×: {termini}",
+    priorNoShowEntry: "{vreme} ({usluga})",
     clientCancelledTitle: "Termin otkazan",
     /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
     clientCancelledBody: "{klijent} — {usluga}, {vreme}",
