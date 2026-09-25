@@ -3,8 +3,10 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { after } from "next/server";
 import { z } from "zod";
+import { getPriorNoShows } from "@/lib/db/appointments";
 import { bookPublicAppointment } from "@/lib/db/public-booking";
 import { deviceId } from "@/lib/device";
+import { priorNoShowsLine } from "@/lib/domain/no-shows";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sr } from "@/lib/i18n/sr";
 import { notifyTenant } from "@/lib/messaging/push";
@@ -83,6 +85,15 @@ export async function submitBooking(
   const booked = result.appointment;
   const timeZone = booked.timezone;
   after(async () => {
+    // Obaveštenje mora da ode i kad ovo ne uspe: zakazivanje je važnije od
+    // napomene uz njega.
+    let warning: string | null = null;
+    try {
+      warning = priorNoShowsLine(await getPriorNoShows(booked.id), timeZone);
+    } catch {
+      warning = null;
+    }
+
     await notifyTenant({
       tenantId: booked.tenant_id,
       appointmentId: booked.id,
@@ -99,7 +110,8 @@ export async function submitBooking(
               timeZone,
               "dd.MM. 'u' HH:mm",
             ),
-          ),
+          )
+          .concat(warning ? `\n${warning}` : ""),
         url: `/dashboard?dan=${formatInTimeZone(new Date(booked.start_at), timeZone, "yyyy-MM-dd")}`,
         tag: `zakazano:${booked.id}`,
       },

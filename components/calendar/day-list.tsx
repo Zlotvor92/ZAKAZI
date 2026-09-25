@@ -420,6 +420,14 @@ function Row({
                 ? ` · ${sr.dashboard.fromPublicPage}`
                 : ""}
             </span>
+            {appointment.client_no_shows > 0 ? (
+              <span className="block pt-0.5 text-[9.5px] font-bold tracking-[0.12em] text-[#B3261E] uppercase">
+                {sr.dashboard.priorNoShows.replace(
+                  "{puta}",
+                  String(appointment.client_no_shows),
+                )}
+              </span>
+            ) : null}
             {/* Potvrđen je podrazumevano stanje svakog budućeg termina, pa se
                 ne ispisuje: red bi na svakom terminu dobio treću liniju koja
                 ne kaže ništa. Ispisuje se ono što se razlikuje. */}

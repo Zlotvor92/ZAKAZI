@@ -22,6 +22,8 @@ const appointmentSchema = z.object({
   client_name: z.string(),
   client_phone: z.string(),
   service_name: z.string(),
+  /** Koliko puta ova klijentkinja ranije nije došla, bez ovog termina. */
+  client_no_shows: z.number().int(),
 });
 
 export const appointmentListSchema = z.array(appointmentSchema);
@@ -227,4 +229,33 @@ export async function completePastAppointments(): Promise<number> {
   }
 
   return z.number().int().parse(data);
+}
+
+const priorNoShowsSchema = z.object({
+  total: z.number().int(),
+  latest: z.array(z.object({ start_at: z.string(), service_name: z.string() })),
+});
+
+export type PriorNoShows = z.infer<typeof priorNoShowsSchema>;
+
+/**
+ * Raniji izostanci klijentkinje termina, za obaveštenje salonu.
+ *
+ * Preko `service_role` klijenta, jer se zove posle javnog zakazivanja, kad
+ * niko nije prijavljen.
+ */
+export async function getPriorNoShows(
+  appointmentId: string,
+): Promise<PriorNoShows> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc("prior_no_shows", {
+    p_appointment_id: appointmentId,
+  });
+
+  if (error) {
+    throw new Error(`Čitanje ranijih izostanaka nije uspelo: ${error.message}`);
+  }
+
+  return priorNoShowsSchema.parse(data);
 }
