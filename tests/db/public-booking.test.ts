@@ -1420,6 +1420,35 @@ describe("zaštita od lažnih zakazivanja", () => {
       });
     });
   });
+
+  it("prijavljen nalog drugog salona ne može da pita za tuđe limite", async () => {
+    // Inače bi vlasnica jednog salona saznala da li je broj blokiran kod
+    // drugog, i koliko termina taj broj tamo ima.
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const otherTenantId = await createTenant(db);
+      const otherUserId = await createUser(db, otherTenantId);
+
+      await asUser(db, otherUserId, async () => {
+        await expect(
+          inSavepoint(db, () =>
+            db.query(
+              "select booking_limit_reason($1, $2, now(), null, null)",
+              [salon.tenantId, "+381641234567"],
+            ),
+          ),
+        ).rejects.toThrow(/permission denied/i);
+        await expect(
+          inSavepoint(db, () =>
+            db.query("select phone_lookup_limit_reason($1, $2)", [
+              salon.tenantId,
+              "edge:abc",
+            ]),
+          ),
+        ).rejects.toThrow(/permission denied/i);
+      });
+    });
+  });
 });
 
 describe("blokirani broj", () => {
