@@ -171,3 +171,58 @@ export function withSlotCount(day: DayShape, count: number): DayShape {
 export function slotCounts(day: DayShape): number[] {
   return blocksOfDay(day).map(slotsInBlock);
 }
+
+function clock(minute: number): string {
+  const hours = String(Math.floor(minute / 60)).padStart(2, "0");
+  const rest = minute % 60;
+  return rest === 0 ? hours : `${hours}:${String(rest).padStart(2, "0")}`;
+}
+
+/**
+ * Nedelja u jednom redu, za sažetak iznad forme:
+ * „Pon–Pet 09–12 i 17–20, Sub 09–14".
+ *
+ * Uzastopni dani sa istim satima se spajaju u niz; dva dana se pišu odvojeno
+ * jer „Pon–Uto" izgleda kao greška u kucanju. `null` kad salon ne radi
+ * nijedan dan.
+ */
+export function describeWeek(
+  days: DayShape[],
+  weekdayNames: readonly string[],
+): string | null {
+  const working = days
+    .filter((day) => day.working)
+    .sort((left, right) => left.weekday - right.weekday);
+
+  if (working.length === 0) {
+    return null;
+  }
+
+  const hoursOf = (day: DayShape) =>
+    blocksOfDay(day)
+      .map((block) => `${clock(block.startMinute)}–${clock(block.endMinute)}`)
+      .join(" i ");
+
+  const runs: { weekdays: number[]; hours: string }[] = [];
+  for (const day of working) {
+    const hours = hoursOf(day);
+    const last = runs.at(-1);
+    if (last && last.hours === hours && last.weekdays.at(-1) === day.weekday - 1) {
+      last.weekdays.push(day.weekday);
+    } else {
+      runs.push({ weekdays: [day.weekday], hours });
+    }
+  }
+
+  const name = (weekday: number) => weekdayNames[weekday - 1] ?? String(weekday);
+
+  return runs
+    .map(({ weekdays, hours }) => {
+      const dayText =
+        weekdays.length >= 3
+          ? `${name(weekdays[0]!)}–${name(weekdays.at(-1)!)}`
+          : weekdays.map(name).join(", ");
+      return `${dayText} ${hours}`;
+    })
+    .join(", ");
+}

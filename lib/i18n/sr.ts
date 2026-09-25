@@ -271,6 +271,22 @@ export const sr = {
     /** Kad pregledač odbije pristup ostavi, korisniku ostaje ručni put. */
     copyFailed: "Kopiranje nije uspelo. Dodirni i drži link, pa „Kopiraj”.",
 
+    /** Tri celine na strani podešavanja. */
+    groupSalon: "Salon",
+    groupBooking: "Zakazivanje preko sajta",
+    groupNotifications: "Obaveštenja",
+    /** Sažeci u zaglavlju zatvorene sekcije. */
+    weekdaysShort: ["Pon", "Uto", "Sre", "Čet", "Pet", "Sub", "Ned"],
+    hoursNone: "Nije uneto",
+    rulesSummary: "{dana} dana unapred · najkasnije {sati} h ranije",
+    rulesClosed: "Sajt trenutno ne prima termine",
+    timeOffNone: "Nema zakazanog odsustva",
+    timeOffCount: ["zakazano odsustvo", "zakazana odsustva", "zakazanih odsustava"],
+    blockedNone: "Nijedan",
+    blockedCount: ["broj", "broja", "brojeva"],
+    pushSummary: "Na ovom telefonu",
+    calendarOn: "Uključen",
+    calendarOff: "Isključen",
     hoursTitle: "Radno vreme",
     hoursHint:
       "Pauzu ostavi praznu ako je nemaš. Termini se sami rasporede po radnom vremenu. Koliko duga usluga sme da pređe pauzu ili kraj smene podešavaš u pravilima zakazivanja.",
