@@ -59,6 +59,8 @@ export const bookResultSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(false),
     reason: z.string(),
+    window_days: z.number().int().optional(),
+    required_service_name: z.string().optional(),
   }),
 ]);
 

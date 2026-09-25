@@ -400,6 +400,11 @@ const serviceSchema = z.object({
   durationMin: z.coerce.number().int().min(1).max(1440),
   priceRsd: z.coerce.number().int().min(0).max(10_000_000),
   description: z.string().max(300),
+  requiresServiceId: z.union([z.uuid(), z.literal("")]),
+  requiresWithinDays: z.union([
+    z.literal(""),
+    z.coerce.number().int().min(1).max(365),
+  ]),
 });
 
 export async function saveServiceEntry(
@@ -411,6 +416,8 @@ export async function saveServiceEntry(
     durationMin: formData.get("durationMin"),
     priceRsd: formData.get("priceRsd"),
     description: formData.get("description") ?? "",
+    requiresServiceId: formData.get("requiresServiceId") ?? "",
+    requiresWithinDays: String(formData.get("requiresWithinDays") ?? "").trim(),
   });
 
   if (!parsed.success) {
@@ -424,6 +431,8 @@ export async function saveServiceEntry(
           priceRsd: sr.settings.serviceProblem.invalid_price,
           name: sr.settings.serviceProblem.invalid_name,
           description: sr.settings.serviceProblem.invalid_description,
+          requiresServiceId: sr.settings.serviceProblem.invalid_window,
+          requiresWithinDays: sr.settings.serviceProblem.invalid_window,
         }) ?? sr.settings.failed,
     };
   }
@@ -434,6 +443,10 @@ export async function saveServiceEntry(
     durationMin: parsed.data.durationMin,
     priceRsd: parsed.data.priceRsd,
     description: parsed.data.description,
+    requiresServiceId:
+      parsed.data.requiresServiceId === "" ? null : parsed.data.requiresServiceId,
+    requiresWithinDays:
+      parsed.data.requiresWithinDays === "" ? null : parsed.data.requiresWithinDays,
     tenantId: await selectedTenantId(),
   });
 

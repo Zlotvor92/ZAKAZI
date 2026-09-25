@@ -716,6 +716,55 @@ function describeTimeOff(entry: TimeOff, timeZone: string): string {
     : `${fromDay} ${fromTime} – ${toDay} ${toTime}`;
 }
 
+/**
+ * „Važi samo do N dana od poslednjeg dolaska na ovu uslugu ili na drugu."
+ * Za korekciju koja posle roka postaje nov set.
+ */
+function WindowFields({
+  others,
+  requiresServiceId,
+  requiresWithinDays,
+}: {
+  others: Service[];
+  requiresServiceId: string | null;
+  requiresWithinDays: number | null;
+}) {
+  if (others.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-1">
+      <div className="grid grid-cols-[5.5rem_1fr] gap-2">
+        <Field label={sr.settings.serviceWindowLabel}>
+          <Input
+            name="requiresWithinDays"
+            type="text"
+            inputMode="numeric"
+            defaultValue={requiresWithinDays ?? ""}
+            placeholder="21"
+          />
+        </Field>
+        <Field label={sr.settings.serviceWindowServiceLabel}>
+          <select
+            name="requiresServiceId"
+            defaultValue={requiresServiceId ?? ""}
+            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
+          >
+            <option value="">{sr.settings.serviceWindowNone}</option>
+            {others.map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceWindowHint}</p>
+    </div>
+  );
+}
+
 /** Kratko objašnjenje za klijentkinju, ispod naziva usluge na javnoj strani. */
 function DescriptionField({ defaultValue }: { defaultValue: string }) {
   return (
@@ -813,6 +862,11 @@ export function ServicesSection({ services }: { services: Service[] }) {
           </div>
 
           <DescriptionField defaultValue={service.description ?? ""} />
+          <WindowFields
+            others={services.filter((other) => other.id !== service.id)}
+            requiresServiceId={service.requires_service_id}
+            requiresWithinDays={service.requires_within_days}
+          />
 
           {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
               osam piksela razmaka, od kojih jedno briše uslugu, na telefonu su
@@ -882,6 +936,11 @@ export function ServicesSection({ services }: { services: Service[] }) {
         </div>
 
         <DescriptionField defaultValue="" />
+        <WindowFields
+          others={services}
+          requiresServiceId={null}
+          requiresWithinDays={null}
+        />
 
         <Button
           type="submit"
