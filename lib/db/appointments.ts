@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 const appointmentSchema = z.object({
@@ -208,4 +209,22 @@ export async function blockClientOfAppointment(
   }
 
   return blockResultSchema.parse(data);
+}
+
+/**
+ * Potvrđeni termini iz dana koji je prošao postaju obavljeni.
+ *
+ * Ide preko `service_role` klijenta jer ga pokreće noćni posao, bez
+ * prijavljenog korisnika, i to za sve salone odjednom.
+ */
+export async function completePastAppointments(): Promise<number> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc("complete_past_appointments");
+
+  if (error) {
+    throw new Error(`Obeležavanje obavljenih termina nije uspelo: ${error.message}`);
+  }
+
+  return z.number().int().parse(data);
 }
