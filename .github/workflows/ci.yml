@@ -89,14 +89,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: npm
-
-      - name: Instalacija (npm ci)
-        run: npm ci
-
       - uses: supabase/setup-cli@v1
         with:
           version: latest
@@ -109,17 +101,30 @@ jobs:
       # Studio, storage, realtime, sandučić za poštu i ostalo javna strana ne
       # otvara nijednom.
       #
+      # `-x` ne pokreće kontejnere, ali CLI i dalje povlači slike za realtime
+      # i storage da bi napravio njihove šeme u bazi — to je bilo četrdeset
+      # sekundi od ukupno osamdeset pet. Tek `enabled = false` to preskače.
+      # Menja se samo kopija u CI-ju; lokalno oba ostaju uključena, jer se
+      # logo salona čuva u storage-u.
+      #
+      # Stek se diže u pozadini, dok se paralelno instaliraju paketi i
+      # pregledač, a čeka se tek pre testova.
+      #
       # Ovo je isključivo lokalni stek za testove; produkcijski Supabase se
       # ovim ne dodiruje, a RLS i površina za neprijavljenog se ionako
       # proveravaju u poslu „Baza", nad čistim Postgresom.
-      - name: Podizanje Supabase-a
-        run: >-
-          supabase start
-          -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
-
-      - name: Anon ključ u okruženje
+      - name: Podizanje Supabase-a (u pozadini)
         run: |
-          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
+          printf '\n[realtime]\nenabled = false\n\n[storage]\nenabled = false\n' >> supabase/config.toml
+          nohup sh -c 'supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor; echo $? > /tmp/supabase-exit' > /tmp/supabase.log 2>&1 &
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Instalacija (npm ci)
+        run: npm ci
 
       # `--with-deps` je preko `apt`-a instalirao sistemske biblioteke i fontove
       # i na to trošio četiri minuta, dok samo preuzimanje pregledača traje
@@ -136,6 +141,17 @@ jobs:
       - name: Instalacija pregledača
         if: steps.browser-cache.outputs.cache-hit != 'true'
         run: npx playwright install chromium
+
+      - name: Čekanje na Supabase
+        timeout-minutes: 5
+        run: |
+          while [ ! -f /tmp/supabase-exit ]; do sleep 1; done
+          grep -vE 'Pulling fs layer|Waiting|Verifying Checksum|Download complete|Pull complete|Downloading|Extracting|Already exists' /tmp/supabase.log || true
+          exit "$(cat /tmp/supabase-exit)"
+
+      - name: Anon ključ u okruženje
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
 
       - name: Playwright
         run: npm run test:e2e
