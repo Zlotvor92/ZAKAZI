@@ -121,6 +121,13 @@ vlasnice, a zakazuje neprijavljena klijentkinja koja te uređaje po RLS-u ne
 sme ni da vidi; i nalog vlasnice se pravi kroz Supabase Auth, kome anonimni
 ključ ne daje pravo. Sve ostalo radi sa anonimnim ključem i RLS-om.
 
+Za noćni posao koji termine iz prošlog dana obeležava kao obavljene potrebna
+je još `CRON_SECRET` — bilo koji dug nasumičan tekst (`openssl rand -hex 32`).
+Vercel ga sam šalje ruti `/api/cron/obavljeni-termini`, koju zove svake noći u
+01:00 UTC (02:00 ili 03:00 u Beogradu, zavisno od letnjeg računanja vremena).
+Bez te promenljive posao se ne izvršava, a termini ostaju „potvrđeni" dok ih
+vlasnica ne obeleži sama.
+
 Bez `VAPID_*` ključeva obaveštenja se prosto ne uključuju i ostatak
 aplikacije radi normalno. `VAPID_SUBJECT` je `mailto:` adresa za koju ti
 pretplatnički servisi pišu u slučaju problema. Par ključeva se pravi jednom:
