@@ -3,6 +3,7 @@ import {
   Bell,
   CalendarDays,
   CalendarOff,
+  ChevronDown,
   ChevronLeft,
   Scissors,
   Clock,
@@ -18,7 +19,8 @@ import { getCurrentTenant } from "@/lib/db/tenants";
 import { getUpcomingTimeOff } from "@/lib/db/time-off";
 import { getWorkingBlocks } from "@/lib/db/working-hours";
 import { currentDateInTimeZone } from "@/lib/domain/calendar";
-import { toDayShapes } from "@/lib/domain/working-hours";
+import { pluralize } from "@/lib/domain/plural";
+import { describeWeek, toDayShapes } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
 import { selectedTenantId } from "@/lib/tenant";
 import {
@@ -45,34 +47,52 @@ async function publicUrl(slug: string): Promise<string> {
 }
 
 /**
- * Sekcija je bela kartica na papiru, sa krugom i znakom levo od naslova.
+ * Sekcija je bela kartica koja se otvara dodirom.
  *
- * Forme unutra ostaju gde su bile — podešavanja su jedna strana, ne spisak
- * pod-strana. Krug nosi znak da bi se sekcija našla prstom, bez čitanja svih
- * naslova od početka.
+ * Zatvorena pokazuje sažetak — koliko usluga, kad radiš — pa se cela strana
+ * vidi bez skrolovanja, a forma se otvara tek kad treba nešto promeniti.
+ * `<details>` radi i bez JavaScript-a, a čitač ekrana zna da je rasklopivo.
  */
 function Section({
   title,
+  summary,
   icon,
   children,
 }: {
   title: string;
+  summary: string;
   icon: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-[22px] border border-[#E4DAC9] bg-white p-4">
-      <div className="flex items-center gap-3 pb-3">
-        <span
-          aria-hidden
-          className="grid size-10 shrink-0 place-items-center rounded-full bg-[#FBF7F0] text-[#8C1D3F]"
-        >
+    <details className="group rounded-[20px] border border-[#E4DAC9] bg-white">
+      <summary className="flex min-h-[64px] cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
+        <span aria-hidden className="shrink-0 text-[#8C1D3F]">
           {icon}
         </span>
-        <h2 className={`${display.className} min-w-0 text-[19px]`}>{title}</h2>
-      </div>
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold">{title}</span>
+          <span className="block truncate pt-0.5 text-[13px] text-[#6B6055]">
+            {summary}
+          </span>
+        </span>
+        <ChevronDown
+          size={19}
+          strokeWidth={1.8}
+          aria-hidden
+          className="shrink-0 text-[#9A8F80] transition-transform group-open:rotate-180"
+        />
+      </summary>
+      <div className="border-t border-[#EFE7DA] px-4 pt-3 pb-4">{children}</div>
+    </details>
+  );
+}
+
+function GroupLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="px-1 pt-3 text-[11px] font-bold tracking-[0.14em] text-[#6B6055] uppercase">
       {children}
-    </section>
+    </h2>
   );
 }
 
@@ -106,6 +126,8 @@ export default async function SettingsPage() {
   ]);
 
   const link = await publicUrl(tenant.slug);
+  const week = toDayShapes(blocks);
+  const leadHours = Math.round(tenant.min_lead_minutes / 60);
   // Javni deo VAPID para; bez njega pregledač ne ume da se pretplati, a strana
   // ne sme da padne samo zato što obaveštenja još nisu podešena.
   const vapidPublicKey = process.env["NEXT_PUBLIC_VAPID_PUBLIC_KEY"] ?? "";
@@ -130,27 +152,42 @@ export default async function SettingsPage() {
             stoji izdvojeno i u boji, iznad svega ostalog. */}
         <PublicLink url={link} />
 
+        <GroupLabel>{sr.settings.groupSalon}</GroupLabel>
+
         <Section
           title={sr.settings.servicesTitle}
-          icon={<Scissors size={18} strokeWidth={1.8} />}
+          summary={`${services.length} ${pluralize(services.length, sr.admin.servicesCount)}`}
+          icon={<Scissors size={19} strokeWidth={1.8} />}
         >
           <ServicesSection services={services} />
         </Section>
 
         <Section
           title={sr.settings.hoursTitle}
-          icon={<Clock size={18} strokeWidth={1.8} />}
+          summary={
+            describeWeek(week, sr.settings.weekdaysShort) ?? sr.settings.hoursNone
+          }
+          icon={<Clock size={19} strokeWidth={1.8} />}
         >
-          <WorkingHoursForm week={toDayShapes(blocks)} />
+          <WorkingHoursForm week={week} />
         </Section>
+
+        <GroupLabel>{sr.settings.groupBooking}</GroupLabel>
 
         <Section
           title={sr.settings.rulesTitle}
-          icon={<SlidersHorizontal size={18} strokeWidth={1.8} />}
+          summary={
+            tenant.public_booking_enabled
+              ? sr.settings.rulesSummary
+                  .replace("{dana}", String(tenant.booking_horizon_days))
+                  .replace("{sati}", String(leadHours))
+              : sr.settings.rulesClosed
+          }
+          icon={<SlidersHorizontal size={19} strokeWidth={1.8} />}
         >
           <BookingRulesForm
             horizonDays={tenant.booking_horizon_days}
-            leadHours={Math.round(tenant.min_lead_minutes / 60)}
+            leadHours={leadHours}
             publicEnabled={tenant.public_booking_enabled}
             breakOverrunMin={tenant.break_overrun_min}
             shiftOverrunMin={tenant.shift_overrun_min}
@@ -159,7 +196,12 @@ export default async function SettingsPage() {
 
         <Section
           title={sr.settings.timeOffTitle}
-          icon={<CalendarOff size={18} strokeWidth={1.8} />}
+          summary={
+            timeOff.length === 0
+              ? sr.settings.timeOffNone
+              : `${timeOff.length} ${pluralize(timeOff.length, sr.settings.timeOffCount)}`
+          }
+          icon={<CalendarOff size={19} strokeWidth={1.8} />}
         >
           <TimeOffSection
             entries={timeOff}
@@ -169,8 +211,23 @@ export default async function SettingsPage() {
         </Section>
 
         <Section
+          title={sr.settings.blockedTitle}
+          summary={
+            blocked.length === 0
+              ? sr.settings.blockedNone
+              : `${blocked.length} ${pluralize(blocked.length, sr.settings.blockedCount)}`
+          }
+          icon={<Ban size={19} strokeWidth={1.8} />}
+        >
+          <BlockedNumbers numbers={blocked} />
+        </Section>
+
+        <GroupLabel>{sr.settings.groupNotifications}</GroupLabel>
+
+        <Section
           title={sr.settings.pushTitle}
-          icon={<Bell size={18} strokeWidth={1.8} />}
+          summary={sr.settings.pushSummary}
+          icon={<Bell size={19} strokeWidth={1.8} />}
         >
           <p className="pb-3 text-sm text-[#554C44]">{sr.settings.pushHint}</p>
           {vapidPublicKey === "" ? (
@@ -188,19 +245,17 @@ export default async function SettingsPage() {
 
         <Section
           title={sr.settings.calendarTitle}
-          icon={<CalendarDays size={18} strokeWidth={1.8} />}
+          summary={
+            tenant.calendar_token
+              ? sr.settings.calendarOn
+              : sr.settings.calendarOff
+          }
+          icon={<CalendarDays size={19} strokeWidth={1.8} />}
         >
           <CalendarFeed
             token={tenant.calendar_token}
             origin={await siteOrigin()}
           />
-        </Section>
-
-        <Section
-          title={sr.settings.blockedTitle}
-          icon={<Ban size={18} strokeWidth={1.8} />}
-        >
-          <BlockedNumbers numbers={blocked} />
         </Section>
       </main>
     </div>
