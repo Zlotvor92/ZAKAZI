@@ -219,6 +219,101 @@ async function listedNames(db: pg.PoolClient, userId: string) {
   });
 }
 
+async function saveWithDescription(
+  db: pg.PoolClient,
+  id: string | null,
+  description: string,
+): Promise<WriteResult> {
+  const result = await db.query<{ result: WriteResult }>(
+    "select upsert_service($1, 'Korekcija trepavica', 90, 2200, null, $2) as result",
+    [id, description],
+  );
+  return result.rows[0]!.result;
+}
+
+describe("opis usluge", () => {
+  it("opis se čuva, a prazan se briše", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      const created = await asUser(db, base.userId, () =>
+        saveWithDescription(db, null, "  Do 21 dan od prethodnog dolaska.  "),
+      );
+      const id = (created as { ok: true; id: string }).id;
+
+      const saved = await db.query<{ description: string | null }>(
+        "select description from services where id = $1",
+        [id],
+      );
+      expect(saved.rows[0]!.description).toBe("Do 21 dan od prethodnog dolaska.");
+
+      await asUser(db, base.userId, () => saveWithDescription(db, id, "   "));
+      const cleared = await db.query<{ description: string | null }>(
+        "select description from services where id = $1",
+        [id],
+      );
+      expect(cleared.rows[0]!.description).toBeNull();
+    });
+  });
+
+  it("predugačak opis se odbija", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+
+      const result = await asUser(db, base.userId, () =>
+        saveWithDescription(db, null, "a".repeat(301)),
+      );
+
+      expect(result).toEqual({ ok: false, reason: "invalid_description" });
+    });
+  });
+
+  it("izmena bez opisa briše stari opis, jer forma uvek šalje celu uslugu", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      const created = await asUser(db, base.userId, () =>
+        saveWithDescription(db, null, "Opis"),
+      );
+      const id = (created as { ok: true; id: string }).id;
+
+      await asUser(db, base.userId, () => save(db, { id }));
+
+      const row = await db.query<{ description: string | null }>(
+        "select description from services where id = $1",
+        [id],
+      );
+      expect(row.rows[0]!.description).toBeNull();
+    });
+  });
+
+  it("klijent vidi opis na javnoj strani", async () => {
+    await withRollback(async (db) => {
+      const base = await salon(db);
+      await asUser(db, base.userId, () =>
+        saveWithDescription(db, null, "Posle 21 dan radi se nov set."),
+      );
+
+      const slug = await db.query<{ slug: string }>(
+        "select slug from tenants where id = $1",
+        [base.tenantId],
+      );
+      const data = await asAnon(db, async () => {
+        const result = await db.query<{
+          data: { services: { name: string; description: string | null }[] };
+        }>("select public_booking_data($1) as data", [slug.rows[0]!.slug]);
+        return result.rows[0]!.data;
+      });
+
+      expect(data.services).toEqual([
+        expect.objectContaining({
+          name: "Korekcija trepavica",
+          description: "Posle 21 dan radi se nov set.",
+        }),
+      ]);
+    });
+  });
+});
+
 describe("redosled usluga", () => {
   it("nova usluga ide na kraj spiska, ne po abecedi", async () => {
     await withRollback(async (db) => {

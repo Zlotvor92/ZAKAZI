@@ -24,6 +24,7 @@ export const bookingDataSchema = z.object({
       name: z.string(),
       duration_min: z.number().int(),
       price_rsd: z.number().int(),
+      description: z.string().nullable(),
     }),
   ),
   blocks: z.array(

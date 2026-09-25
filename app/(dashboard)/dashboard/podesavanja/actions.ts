@@ -399,6 +399,7 @@ const serviceSchema = z.object({
   name: z.string(),
   durationMin: z.coerce.number().int().min(1).max(1440),
   priceRsd: z.coerce.number().int().min(0).max(10_000_000),
+  description: z.string().max(300),
 });
 
 export async function saveServiceEntry(
@@ -409,6 +410,7 @@ export async function saveServiceEntry(
     name: formData.get("name"),
     durationMin: formData.get("durationMin"),
     priceRsd: formData.get("priceRsd"),
+    description: formData.get("description") ?? "",
   });
 
   if (!parsed.success) {
@@ -421,6 +423,7 @@ export async function saveServiceEntry(
           durationMin: sr.settings.serviceProblem.invalid_duration,
           priceRsd: sr.settings.serviceProblem.invalid_price,
           name: sr.settings.serviceProblem.invalid_name,
+          description: sr.settings.serviceProblem.invalid_description,
         }) ?? sr.settings.failed,
     };
   }
@@ -430,6 +433,7 @@ export async function saveServiceEntry(
     name: parsed.data.name,
     durationMin: parsed.data.durationMin,
     priceRsd: parsed.data.priceRsd,
+    description: parsed.data.description,
     tenantId: await selectedTenantId(),
   });
 

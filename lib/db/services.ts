@@ -6,6 +6,7 @@ const serviceSchema = z.object({
   name: z.string(),
   duration_min: z.number().int(),
   price_rsd: z.number().int(),
+  description: z.string().nullable(),
 });
 
 export const serviceListSchema = z.array(serviceSchema);
@@ -41,6 +42,7 @@ export async function saveService(input: {
   name: string;
   durationMin: number;
   priceRsd: number;
+  description: string;
   tenantId: string | null;
 }): Promise<ServiceWriteResult> {
   const supabase = await createClient();
@@ -51,6 +53,7 @@ export async function saveService(input: {
     p_duration_min: input.durationMin,
     p_price_rsd: input.priceRsd,
     p_tenant_id: input.tenantId,
+    p_description: input.description,
   });
 
   if (error) {

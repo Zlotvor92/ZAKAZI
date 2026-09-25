@@ -316,6 +316,8 @@ export const sr = {
     serviceNamePlaceholder: "Nadogradnja trepavica",
     serviceDuration: "Traje (min)",
     servicePrice: "Cena (RSD)",
+    serviceDescription: "Opis za klijente (nije obavezno)",
+    serviceDescriptionPlaceholder: "Npr. Važi do 21 dan od prethodnog dolaska.",
     saveService: "Sačuvaj",
     addService: "Dodaj uslugu",
     removeService: "Ukloni",
@@ -327,6 +329,7 @@ export const sr = {
       invalid_name: "Upiši naziv usluge.",
       invalid_duration: "Trajanje nije ispravno.",
       invalid_price: "Cena nije ispravna.",
+      invalid_description: "Opis može imati najviše 300 znakova.",
       not_found: "Ta usluga više ne postoji.",
     },
 
