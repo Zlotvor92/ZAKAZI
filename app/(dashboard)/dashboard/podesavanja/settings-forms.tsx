@@ -716,6 +716,25 @@ function describeTimeOff(entry: TimeOff, timeZone: string): string {
     : `${fromDay} ${fromTime} – ${toDay} ${toTime}`;
 }
 
+/** Kratko objašnjenje za klijentkinju, ispod naziva usluge na javnoj strani. */
+function DescriptionField({ defaultValue }: { defaultValue: string }) {
+  return (
+    <label className="block space-y-1">
+      <span className="text-xs text-[#554C44]">
+        {sr.settings.serviceDescription}
+      </span>
+      <textarea
+        name="description"
+        defaultValue={defaultValue}
+        maxLength={300}
+        rows={2}
+        placeholder={sr.settings.serviceDescriptionPlaceholder}
+        className="w-full rounded-xl border border-[#E4DAC9] bg-white px-3 py-2 text-base outline-none focus:border-[#8C1D3F]"
+      />
+    </label>
+  );
+}
+
 export function ServicesSection({ services }: { services: Service[] }) {
   const { pending, state, submit, call, reset } = useSettingsAction();
 
@@ -793,6 +812,8 @@ export function ServicesSection({ services }: { services: Service[] }) {
             </Field>
           </div>
 
+          <DescriptionField defaultValue={service.description ?? ""} />
+
           {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
               osam piksela razmaka, od kojih jedno briše uslugu, na telefonu su
               ista meta. Potvrda je isti postupak kao kod blokiranja broja. */}
@@ -859,6 +880,8 @@ export function ServicesSection({ services }: { services: Service[] }) {
             />
           </Field>
         </div>
+
+        <DescriptionField defaultValue="" />
 
         <Button
           type="submit"

@@ -370,6 +370,11 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                     <span className={microLabel}>
                       {formatDuration(option.duration_min)}
                     </span>
+                    {option.description ? (
+                      <span className="block text-[13px] leading-snug whitespace-pre-line text-[#554C44]">
+                        {option.description}
+                      </span>
+                    ) : null}
                   </span>
                   {amount ? (
                     <span
