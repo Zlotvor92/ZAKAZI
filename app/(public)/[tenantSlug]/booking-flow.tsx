@@ -371,7 +371,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                       {formatDuration(option.duration_min)}
                     </span>
                     {option.description ? (
-                      <span className="block text-[13px] leading-snug whitespace-pre-line text-[#554C44]">
+                      <span className="block text-[14px] leading-snug whitespace-pre-line text-[#8C1D3F]">
                         {option.description}
                       </span>
                     ) : null}
