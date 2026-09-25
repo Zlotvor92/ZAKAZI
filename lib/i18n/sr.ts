@@ -318,6 +318,12 @@ export const sr = {
     servicePrice: "Cena (RSD)",
     serviceDescription: "Opis za klijente (nije obavezno)",
     serviceDescriptionPlaceholder: "Npr. Važi do 21 dan od prethodnog dolaska.",
+    /** Pravilo „važi do N dana od poslednjeg dolaska na ovu ili drugu uslugu". */
+    serviceWindowLabel: "Važi samo do (dana od poslednjeg dolaska)",
+    serviceWindowServiceLabel: "Dolazak na ovu uslugu ili na",
+    serviceWindowNone: "— bez ograničenja —",
+    serviceWindowHint:
+      "Posle toga klijentkinja preko sajta mora da izabere tu drugu uslugu.",
     saveService: "Sačuvaj",
     addService: "Dodaj uslugu",
     removeService: "Ukloni",
@@ -330,6 +336,8 @@ export const sr = {
       invalid_duration: "Trajanje nije ispravno.",
       invalid_price: "Cena nije ispravna.",
       invalid_description: "Opis može imati najviše 300 znakova.",
+      invalid_window:
+        "Za rok upiši broj dana (1–365) i izaberi uslugu, ili ostavi oba prazna.",
       not_found: "Ta usluga više ne postoji.",
     },
 
@@ -431,6 +439,10 @@ export const sr = {
     phonePlaceholder: "064 512 3480",
     submit: "Sačuvaj termin",
     submitting: "Čuvam…",
+    /** `{datum}`, `{dana}` i `{usluga}` se zamenjuju. */
+    serviceWindowWarning:
+      "Poslednji dolazak ove klijentkinje bio je {datum}, pre više od {dana} dana — po pravilu usluge sada ide „{usluga}“.",
+    saveAnyway: "Sačuvaj svejedno",
     noServices: "Prvo unesi bar jednu uslugu.",
     hint: "Termin van radnog vremena je dozvoljen — kalendar je tvoj.",
     failed: "Upis nije uspeo. Pokušaj ponovo.",
@@ -594,6 +606,9 @@ export const sr = {
         "Sa ove mreže je upravo zakazano previše termina. Pokušaj ponovo za sat vremena ili se javi salonu.",
       too_fast: "Sačekaj pola minuta pa pokušaj ponovo.",
     },
+    /** `{dana}` i `{usluga}` se zamenjuju. */
+    serviceWindow:
+      "Ova usluga važi do {dana} dana od poslednjeg dolaska, a od tvog je prošlo više. Izaberi „{usluga}“.",
     /** Problemi koje vraća `normalizePhone`. */
     phoneProblem: {
       empty: "Upiši broj telefona.",

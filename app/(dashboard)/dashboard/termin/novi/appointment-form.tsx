@@ -42,13 +42,20 @@ export function AppointmentForm({
 
   return (
     // `onSubmit`, ne `action`: forma sa funkcijom kao akcijom posle svakog
-    // slanja sama isprazni polja, pa je posle greške („to vreme je zauzeto")
-    // vlasnica morala sve da kuca ponovo.
+    // slanja sama isprazni polja. Kad se vrati greška ili upozorenje, vlasnica
+    // bi sve morala da kuca ponovo — a „Sačuvaj svejedno" ne bi imalo šta da
+    // pošalje.
     <form
       onSubmit={(event) => {
         event.preventDefault();
         onSubmit(new FormData(event.currentTarget));
       }}
+      // Upozorenje važi za ono što je bilo upisano; posle izmene mora ponovo.
+      onChange={() =>
+        setState((current) =>
+          current.status === "warning" ? { status: "idle" } : current,
+        )
+      }
       className="space-y-4"
     >
       <div className="grid grid-cols-2 gap-3">
@@ -139,6 +146,23 @@ export function AppointmentForm({
         <p role="alert" className="text-destructive text-sm">
           {state.message}
         </p>
+      ) : null}
+
+      {state.status === "warning" ? (
+        <div role="status" className="space-y-2 border-l-2 border-l-[#8C1D3F] pl-3">
+          <p className="text-sm">{state.message}</p>
+          {/* Skriveno polje, ne ime na dugmetu: React forma sa funkcijom kao
+              akcijom ne šalje uvek koje je dugme pritisnuto. */}
+          <input type="hidden" name="ignoreWindow" value="1" />
+          <Button
+            type="submit"
+            variant="outline"
+            className="h-11 w-full"
+            disabled={pending}
+          >
+            {sr.newAppointment.saveAnyway}
+          </Button>
+        </div>
       ) : null}
 
       <Button type="submit" className="h-12 w-full" disabled={pending}>

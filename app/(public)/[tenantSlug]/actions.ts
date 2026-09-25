@@ -77,6 +77,19 @@ export async function submitBooking(
   });
 
   if (!result.ok) {
+    if (
+      result.reason === "service_window" &&
+      result.window_days !== undefined &&
+      result.required_service_name !== undefined
+    ) {
+      return {
+        status: "error",
+        message: sr.booking.serviceWindow
+          .replace("{dana}", String(result.window_days))
+          .replace("{usluga}", result.required_service_name),
+      };
+    }
+
     return { status: "error", message: rejectionMessage(result.reason) };
   }
 
