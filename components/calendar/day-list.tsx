@@ -179,7 +179,18 @@ function Stat({ label, value }: { label: string; value: number }) {
   );
 }
 
-function ClientNotes({ card }: { card: ClientCard }) {
+/**
+ * `onSaved` vraća sačuvan tekst kartici iznad: ona ostaje upamćena i kad se
+ * zatvori, pa bi ponovo otvorena prikazala staru belešku — a sledeće
+ * „Sačuvaj" bi njome pregazilo novu.
+ */
+function ClientNotes({
+  card,
+  onSaved,
+}: {
+  card: ClientCard;
+  onSaved: (notes: string) => void;
+}) {
   const [saving, startSaving] = useTransition();
   const [notes, setNotes] = useState(card.notes ?? "");
   const [result, setResult] = useState<ActionState | null>(null);
@@ -187,7 +198,11 @@ function ClientNotes({ card }: { card: ClientCard }) {
   function save() {
     startSaving(async () => {
       try {
-        setResult(await saveClientNote(card.client_id, notes));
+        const saved = await saveClientNote(card.client_id, notes);
+        setResult(saved);
+        if (saved.ok) {
+          onSaved(notes);
+        }
       } catch {
         setResult({ ok: false, message: sr.error.unreachable });
       }
@@ -341,7 +356,12 @@ function ClientPanel({
                 {`${sr.clientCard.since} ${date(card.first_seen)}`}
               </p>
 
-              <ClientNotes card={card} />
+              <ClientNotes
+                card={card}
+                onSaved={(notes) =>
+                  setCard({ ...card, notes: notes.trim() === "" ? null : notes.trim() })
+                }
+              />
             </>
           ) : null}
         </div>
