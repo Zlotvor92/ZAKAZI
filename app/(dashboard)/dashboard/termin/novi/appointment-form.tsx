@@ -41,7 +41,16 @@ export function AppointmentForm({
   }
 
   return (
-    <form action={onSubmit} className="space-y-4">
+    // `onSubmit`, ne `action`: forma sa funkcijom kao akcijom posle svakog
+    // slanja sama isprazni polja, pa je posle greške („to vreme je zauzeto")
+    // vlasnica morala sve da kuca ponovo.
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit(new FormData(event.currentTarget));
+      }}
+      className="space-y-4"
+    >
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <label htmlFor="date" className="text-sm font-medium">
