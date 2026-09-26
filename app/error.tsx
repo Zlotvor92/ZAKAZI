@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { sr } from "@/lib/i18n/sr";
+import { reloadIfStaleBuild } from "@/lib/reload-stale-build";
 
 /**
  * Granica greške za sve što se prikaže unutar `layout`-a.
@@ -20,6 +21,13 @@ export default function ErrorBoundary({
   reset: () => void;
 }) {
   useEffect(() => {
+    // Posle nove objave telefon sa otvorenom starom verzijom ne nađe delove
+    // koda po starim imenima. Nije greška u kodu — strana se sama osveži i
+    // učita novu verziju, a u spisak grešaka to ne ide.
+    if (reloadIfStaleBuild(error)) {
+      return;
+    }
+
     // `keepalive` jer se strana ume zatvoriti pre nego što prijava stigne.
     void fetch("/api/greske", {
       method: "POST",
