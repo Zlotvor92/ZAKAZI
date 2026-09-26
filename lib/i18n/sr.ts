@@ -340,11 +340,13 @@ export const sr = {
     serviceWindowNone: "— bez ograničenja —",
     serviceWindowHint:
       "Posle toga klijentkinja preko sajta mora da izabere tu drugu uslugu.",
-    /** Pravilo „ne može posle [skidanja]", dok ga ne pokrije usluga iznad. */
+    /** Pravilo „ne može posle [skidanja], umesto nje [izlivanje]". */
     serviceNotAfterLabel: "Ne može posle usluge",
     serviceNotAfterNone: "— bez ograničenja —",
+    serviceNotAfterInsteadLabel: "Umesto nje klijentkinja bira",
+    serviceNotAfterInsteadNone: "— izaberi uslugu —",
     serviceNotAfterHint:
-      "Npr. korekcija posle skidanja. Važi dok klijentkinja ponovo ne dođe na uslugu iz polja iznad.",
+      "Npr. korekcija posle skidanja — umesto nje izlivanje. Posle dolaska na tu uslugu korekcija je opet moguća.",
     saveService: "Sačuvaj",
     addService: "Dodaj uslugu",
     removeService: "Ukloni",
@@ -360,7 +362,7 @@ export const sr = {
       invalid_window:
         "Za rok upiši broj dana (1–365) i izaberi uslugu, ili ostavi oba prazna.",
       invalid_not_after:
-        "„Ne može posle“ radi samo uz popunjen rok iznad, i mora biti treća usluga — ne ova i ne ona iz roka.",
+        "Za „Ne može posle“ izaberi obe usluge, i onu koju klijentkinja bira umesto — ili ostavi obe prazne. Ne mogu biti ova usluga ni međusobno iste.",
       not_found: "Ta usluga više ne postoji.",
     },
 

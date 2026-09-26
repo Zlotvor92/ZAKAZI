@@ -725,11 +725,13 @@ function WindowFields({
   requiresServiceId,
   requiresWithinDays,
   notAfterServiceId,
+  notAfterInsteadServiceId,
 }: {
   others: Service[];
   requiresServiceId: string | null;
   requiresWithinDays: number | null;
   notAfterServiceId: string | null;
+  notAfterInsteadServiceId: string | null;
 }) {
   if (others.length === 0) {
     return null;
@@ -763,20 +765,36 @@ function WindowFields({
         </Field>
       </div>
       <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceWindowHint}</p>
-      <Field label={sr.settings.serviceNotAfterLabel}>
-        <select
-          name="notAfterServiceId"
-          defaultValue={notAfterServiceId ?? ""}
-          className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
-        >
-          <option value="">{sr.settings.serviceNotAfterNone}</option>
-          {others.map((other) => (
-            <option key={other.id} value={other.id}>
-              {other.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label={sr.settings.serviceNotAfterLabel}>
+          <select
+            name="notAfterServiceId"
+            defaultValue={notAfterServiceId ?? ""}
+            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
+          >
+            <option value="">{sr.settings.serviceNotAfterNone}</option>
+            {others.map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={sr.settings.serviceNotAfterInsteadLabel}>
+          <select
+            name="notAfterInsteadServiceId"
+            defaultValue={notAfterInsteadServiceId ?? ""}
+            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
+          >
+            <option value="">{sr.settings.serviceNotAfterInsteadNone}</option>
+            {others.map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceNotAfterHint}</p>
     </div>
   );
@@ -884,6 +902,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
             requiresServiceId={service.requires_service_id}
             requiresWithinDays={service.requires_within_days}
             notAfterServiceId={service.not_after_service_id}
+            notAfterInsteadServiceId={service.not_after_instead_service_id}
           />
 
           {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
@@ -959,6 +978,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
           requiresServiceId={null}
           requiresWithinDays={null}
           notAfterServiceId={null}
+          notAfterInsteadServiceId={null}
         />
 
         <Button
