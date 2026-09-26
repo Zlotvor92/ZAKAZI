@@ -60,7 +60,7 @@ describe("pokrivenost", () => {
 
       // Broj je namerno zakucan: nova tabela obara ovaj test i tera da se
       // politika napiše sada, a ne kad se primeti da nešto curi.
-      expect(result.rows.length).toBe(16);
+      expect(result.rows.length).toBe(17);
 
       // Tabele bez ijedne politike, i to je najstroža moguća postavka: uz
       // uključen RLS bez politike im kroz API ne pristupa niko, samo
@@ -70,10 +70,13 @@ describe("pokrivenost", () => {
       // `error_events` je telemetrija platforme, ne podatak salona: u steku
       // ume da završi put do tuđeg salona, pa je ne sme videti nijedna
       // vlasnica — ni svoju.
+      // `limit_exempt_phones` puni vlasnik platforme ručno; vlasnica ne sme
+      // ni da zna da joj je neki broj izuzet od ograničenja.
       const closed = new Set([
         "platform_owners",
         "phone_lookup_attempts",
         "error_events",
+        "limit_exempt_phones",
       ]);
 
       for (const row of result.rows) {
