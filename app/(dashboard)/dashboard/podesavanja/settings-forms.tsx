@@ -3,7 +3,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
 import Link from "next/link";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TimeSelect } from "@/components/ui/time-select";
@@ -199,10 +199,37 @@ function slotSummary(day: DayShape): string {
   );
 }
 
+const SLOT_MODE_KEY = "podesavanja.nacinTermina";
+
+/** Način unosa koji je vlasnica poslednji put izabrala na ovom telefonu. */
+function rememberedSlotMode(): SlotMode {
+  try {
+    return window.localStorage.getItem(SLOT_MODE_KEY) === "count"
+      ? "count"
+      : "minutes";
+  } catch {
+    return "minutes";
+  }
+}
+
 export function WorkingHoursForm({ week }: { week: DayShape[] }) {
   const { pending, state, submit, reset } = useSettingsAction();
   const [days, setDays] = useState(week);
   const [mode, setMode] = useState<SlotMode>("minutes");
+
+  // Tek posle prvog prikaza: server ne zna šta je ovaj telefon zapamtio, a
+  // različit prvi prikaz na serveru i telefonu React ne prašta.
+  useEffect(() => {
+    setMode(rememberedSlotMode());
+  }, []);
+
+  function chooseMode(next: SlotMode) {
+    setMode(next);
+    // Samo pogodnost ovog telefona; bez ostave se svaki put kreće od minuta.
+    try {
+      window.localStorage.setItem(SLOT_MODE_KEY, next);
+    } catch {}
+  }
 
   function update(weekday: number, patch: Partial<DayShape>) {
     setDays((current) =>
@@ -240,7 +267,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
             size="sm"
             variant={mode === option ? "default" : "outline"}
             className="rounded-full"
-            onClick={() => setMode(option)}
+            onClick={() => chooseMode(option)}
           >
             {option === "minutes"
               ? sr.settings.slotModeMinutes
@@ -316,9 +343,11 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
 
               <Field
                 label={
-                  mode === "count"
-                    ? sr.settings.slotCountLabel
-                    : sr.settings.slotMinutesLabel
+                  mode === "minutes"
+                    ? sr.settings.slotMinutesLabel
+                    : day.breakStartMinute === null
+                      ? sr.settings.slotCountLabelNoBreak
+                      : sr.settings.slotCountLabel
                 }
               >
                 {mode === "count" ? (

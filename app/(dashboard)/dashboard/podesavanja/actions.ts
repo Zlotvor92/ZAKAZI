@@ -12,9 +12,13 @@ import {
 import { getCurrentTenant, updateBookingSettings } from "@/lib/db/tenants";
 import { moveService, removeService, saveService } from "@/lib/db/services";
 import { addTimeOff, removeTimeOff } from "@/lib/db/time-off";
-import { setWorkingBlocks } from "@/lib/db/working-hours";
+import {
+  getAppointmentsOutsideHours,
+  setWorkingBlocks,
+} from "@/lib/db/working-hours";
 import { selectedTenantId } from "@/lib/tenant";
 import { addDays, instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar";
+import { outsideHoursMessage } from "@/lib/domain/outside-hours";
 import { normalizePhone } from "@/lib/domain/phone";
 import { pluralize } from "@/lib/domain/plural";
 import { toBlocks, validateDay, type DayShape } from "@/lib/domain/working-hours";
@@ -161,6 +165,24 @@ export async function saveWorkingHours(
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/podesavanja");
+
+  // Termini ostaju gde su; vlasnica samo mora da zna da su sad van smene.
+  // Provera je dodatak: ako ne uspe, radno vreme je svejedno sačuvano.
+  try {
+    const tenant = await getCurrentTenant(await selectedTenantId());
+    if (tenant) {
+      const warning = outsideHoursMessage(
+        await getAppointmentsOutsideHours(tenant.id),
+        tenant.timezone,
+      );
+      if (warning) {
+        return { status: "warning", message: warning };
+      }
+    }
+  } catch {
+    return { status: "saved" };
+  }
+
   return { status: "saved" };
 }
 

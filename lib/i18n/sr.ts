@@ -307,6 +307,19 @@ export const sr = {
     breakTo: "Pauza do",
     useTemplate: "Popuni šablonom",
     saveHours: "Sačuvaj radno vreme",
+    slotCountLabelNoBreak: "Termina u danu",
+    /**
+     * Posle čuvanja, kad već zakazani termini ostanu van novog radnog vremena.
+     * `{ostaje}`, `{broj}`, `{termina}` i `{spisak}` se zamenjuju.
+     */
+    hoursOutside:
+      "Sačuvano. Van novog radnog vremena {ostaje} {broj} {termina}: {spisak}. Termini nisu otkazani — javi klijentkinjama ako treba.",
+    hoursOutsideVerb: ["ostaje", "ostaju", "ostaje"],
+    hoursOutsideNoun: ["zakazan termin", "zakazana termina", "zakazanih termina"],
+    /** `{dan}`, `{datum}`, `{vreme}` i `{klijent}` se zamenjuju. */
+    hoursOutsideEntry: "{dan} {datum} u {vreme} ({klijent})",
+    /** `{broj}` se zamenjuje. */
+    hoursOutsideMore: "i još {broj}",
 
     rulesTitle: "Pravila zakazivanja",
     horizonLabel: "Koliko dana unapred klijent može da zakaže",
