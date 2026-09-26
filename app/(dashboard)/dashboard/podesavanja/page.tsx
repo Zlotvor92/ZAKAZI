@@ -28,7 +28,7 @@ import {
   BookingRulesForm,
   CalendarFeed,
   PublicLink,
-  ServicesSection,
+  ServicesList,
   TimeOffSection,
   WorkingHoursForm,
 } from "./settings-forms";
@@ -57,15 +57,21 @@ function Section({
   title,
   summary,
   icon,
+  open = false,
   children,
 }: {
   title: string;
   summary: string;
   icon: React.ReactNode;
+  /** Otvorena odmah — kad se vraća sa ekrana jedne usluge na spisak. */
+  open?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <details className="group rounded-[20px] border border-[#E4DAC9] bg-white">
+    <details
+      open={open}
+      className="group rounded-[20px] border border-[#E4DAC9] bg-white"
+    >
       <summary className="flex min-h-[64px] cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
         <span aria-hidden className="shrink-0 text-[#8C1D3F]">
           {icon}
@@ -96,7 +102,9 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default async function SettingsPage() {
+type PageProps = { searchParams: Promise<{ deo?: string }> };
+
+export default async function SettingsPage({ searchParams }: PageProps) {
   const tenant = await getCurrentTenant(await selectedTenantId());
 
   if (!tenant) {
@@ -126,6 +134,7 @@ export default async function SettingsPage() {
   ]);
 
   const link = await publicUrl(tenant.slug);
+  const openPart = (await searchParams).deo;
   const week = toDayShapes(blocks);
   const leadHours = Math.round(tenant.min_lead_minutes / 60);
   // Javni deo VAPID para; bez njega pregledač ne ume da se pretplati, a strana
@@ -158,8 +167,9 @@ export default async function SettingsPage() {
           title={sr.settings.servicesTitle}
           summary={`${services.length} ${pluralize(services.length, sr.admin.servicesCount)}`}
           icon={<Scissors size={19} strokeWidth={1.8} />}
+          open={openPart === "usluge"}
         >
-          <ServicesSection services={services} />
+          <ServicesList services={services} />
         </Section>
 
         <Section
