@@ -11,6 +11,7 @@ const serviceSchema = z.object({
   requires_service_id: z.uuid().nullable(),
   requires_within_days: z.number().int().nullable(),
   not_after_service_id: z.uuid().nullable(),
+  not_after_instead_service_id: z.uuid().nullable(),
 });
 
 export const serviceListSchema = z.array(serviceSchema);
@@ -50,6 +51,7 @@ export async function saveService(input: {
   requiresServiceId: string | null;
   requiresWithinDays: number | null;
   notAfterServiceId: string | null;
+  notAfterInsteadServiceId: string | null;
   tenantId: string | null;
 }): Promise<ServiceWriteResult> {
   const supabase = await createClient();
@@ -64,6 +66,7 @@ export async function saveService(input: {
     p_requires_service_id: input.requiresServiceId,
     p_requires_within_days: input.requiresWithinDays,
     p_not_after_service_id: input.notAfterServiceId,
+    p_not_after_instead_service_id: input.notAfterInsteadServiceId,
   });
 
   if (error) {

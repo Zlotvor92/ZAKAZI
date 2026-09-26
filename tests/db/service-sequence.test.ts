@@ -49,15 +49,33 @@ async function lashSalon(db: pg.PoolClient) {
   const tenantId = await createTenant(db);
   const userId = await createUser(db, tenantId);
   const staffId = await createStaff(db, tenantId);
-  const fullSet = await service(db, tenantId, staffId, "Nadogradnja trepavica", 120);
-  const refill = await service(db, tenantId, staffId, "Korekcija trepavica", 90);
-  const removal = await service(db, tenantId, staffId, "Skidanje trepavica", 30);
+  const fullSet = await service(
+    db,
+    tenantId,
+    staffId,
+    "Nadogradnja trepavica",
+    120,
+  );
+  const refill = await service(
+    db,
+    tenantId,
+    staffId,
+    "Korekcija trepavica",
+    90,
+  );
+  const removal = await service(
+    db,
+    tenantId,
+    staffId,
+    "Skidanje trepavica",
+    30,
+  );
   const nails = await service(db, tenantId, staffId, "Gel nokti", 90);
 
   await db.query(
     `update services
         set requires_service_id = $2, requires_within_days = 21,
-            not_after_service_id = $3
+            not_after_service_id = $3, not_after_instead_service_id = $2
       where id = $1`,
     [refill, fullSet, removal],
   );
@@ -92,7 +110,11 @@ async function lashSalon(db: pg.PoolClient) {
 type Salon = Awaited<ReturnType<typeof lashSalon>>;
 
 /** Ponedeljak u 09:00, šest nedelja unapred, pomeren za `days` dana. */
-async function at(db: pg.PoolClient, days = 0, hour = "09:00"): Promise<string> {
+async function at(
+  db: pg.PoolClient,
+  days = 0,
+  hour = "09:00",
+): Promise<string> {
   const result = await db.query<{ at: string }>(
     `select to_char(
        (date_trunc('week', (now() at time zone 'Europe/Belgrade')::date + 42)::date
@@ -142,7 +164,14 @@ describe("korekcija ne može posle skidanja", () => {
       const base = await lashSalon(db);
       const client = await createClient(db, base.tenantId, PHONE);
       await visit(db, base, client, base.fullSet, await at(db, -14));
-      await visit(db, base, client, base.removal, await at(db, -1), "confirmed");
+      await visit(
+        db,
+        base,
+        client,
+        base.removal,
+        await at(db, -1),
+        "confirmed",
+      );
 
       expect(await book(db, base, base.refill, await at(db))).toMatchObject({
         ok: false,
@@ -256,16 +285,75 @@ describe("skidanje pred već zakazanu korekciju", () => {
   });
 });
 
+describe("pravilo bez roka od N dana", () => {
+  it("radi samo sa zamenskom uslugom, kao kod noktiju", async () => {
+    await withRollback(async (db) => {
+      const base = await lashSalon(db);
+      await db.query(
+        `update services set requires_service_id = null, requires_within_days = null
+          where id = $1`,
+        [base.refill],
+      );
+      const client = await createClient(db, base.tenantId, PHONE);
+      await visit(
+        db,
+        base,
+        client,
+        base.removal,
+        await at(db, -1),
+        "confirmed",
+      );
+
+      expect(await book(db, base, base.refill, await at(db))).toMatchObject({
+        ok: false,
+        reason: "service_sequence",
+        kind: "after",
+        required_service_name: "Nadogradnja trepavica",
+      });
+    });
+  });
+
+  it("zamenska usluga se nudi i zatvara skidanje, a ne usluga iz roka", async () => {
+    await withRollback(async (db) => {
+      const base = await lashSalon(db);
+      await db.query(
+        "update services set not_after_instead_service_id = $2 where id = $1",
+        [base.refill, base.nails],
+      );
+      const client = await createClient(db, base.tenantId, PHONE);
+      await visit(db, base, client, base.removal, await at(db, -10));
+      await visit(db, base, client, base.fullSet, await at(db, -5));
+
+      // Nadogradnja više ne zatvara skidanje — to sada radi zamenska usluga.
+      expect(await book(db, base, base.refill, await at(db))).toMatchObject({
+        ok: false,
+        required_service_name: "Gel nokti",
+      });
+
+      await visit(db, base, client, base.nails, await at(db, -2));
+      expect((await book(db, base, base.refill, await at(db))).ok).toBe(true);
+    });
+  });
+});
+
 describe("usluge bez pravila", () => {
   it("salon koji ništa nije podesio ne primećuje razliku", async () => {
     await withRollback(async (db) => {
       const base = await lashSalon(db);
-      await db.query("update services set not_after_service_id = null where id = $1", [
-        base.refill,
-      ]);
+      await db.query(
+        "update services set not_after_service_id = null where id = $1",
+        [base.refill],
+      );
       const client = await createClient(db, base.tenantId, PHONE);
       await visit(db, base, client, base.fullSet, await at(db, -14));
-      await visit(db, base, client, base.removal, await at(db, -1), "confirmed");
+      await visit(
+        db,
+        base,
+        client,
+        base.removal,
+        await at(db, -1),
+        "confirmed",
+      );
 
       expect((await book(db, base, base.refill, await at(db))).ok).toBe(true);
     });
@@ -289,12 +377,21 @@ describe("podešavanje pravila", () => {
     requiresServiceId: string | null,
     days: number | null,
     notAfterServiceId: string | null,
+    insteadServiceId: string | null = notAfterServiceId ? base.fullSet : null,
   ) {
     return asUser(db, base.userId, async () => {
-      const result = await db.query<{ result: { ok: boolean; reason?: string } }>(
-        `select upsert_service($1, 'Korekcija trepavica', 90, 2200, null, null, $2, $3, $4)
+      const result = await db.query<{
+        result: { ok: boolean; reason?: string };
+      }>(
+        `select upsert_service($1, 'Korekcija trepavica', 90, 2200, null, null, $2, $3, $4, $5)
            as result`,
-        [base.refill, requiresServiceId, days, notAfterServiceId],
+        [
+          base.refill,
+          requiresServiceId,
+          days,
+          notAfterServiceId,
+          insteadServiceId,
+        ],
       );
       return result.rows[0]!.result;
     });
@@ -313,23 +410,110 @@ describe("podešavanje pravila", () => {
       });
 
       const row = await db.query(
-        "select not_after_service_id from services where id = $1",
+        `select not_after_service_id, not_after_instead_service_id
+           from services where id = $1`,
         [base.refill],
       );
-      expect(row.rows[0]).toEqual({ not_after_service_id: null });
+      expect(row.rows[0]).toEqual({
+        not_after_service_id: null,
+        not_after_instead_service_id: null,
+      });
     });
   });
 
-  it("odbija pravilo bez roka, samu sebe, uslugu iz roka i tuđu uslugu", async () => {
+  it("čuva se i bez roka od N dana", async () => {
+    await withRollback(async (db) => {
+      const base = await lashSalon(db);
+
+      expect(
+        await saveRule(db, base, null, null, base.removal, base.fullSet),
+      ).toEqual({
+        ok: true,
+        id: base.refill,
+      });
+    });
+  });
+
+  it("odbija pola pravila, samu sebe, iste dve usluge i tuđu uslugu", async () => {
     await withRollback(async (db) => {
       const base = await lashSalon(db);
       const other = await lashSalon(db);
       const invalid = { ok: false, reason: "invalid_not_after" };
 
-      expect(await saveRule(db, base, null, null, base.removal)).toEqual(invalid);
-      expect(await saveRule(db, base, base.fullSet, 21, base.refill)).toEqual(invalid);
-      expect(await saveRule(db, base, base.fullSet, 21, base.fullSet)).toEqual(invalid);
-      expect(await saveRule(db, base, base.fullSet, 21, other.removal)).toEqual(invalid);
+      expect(await saveRule(db, base, null, null, base.removal, null)).toEqual(
+        invalid,
+      );
+      expect(await saveRule(db, base, null, null, null, base.fullSet)).toEqual(
+        invalid,
+      );
+      expect(
+        await saveRule(db, base, null, null, base.refill, base.fullSet),
+      ).toEqual(invalid);
+      expect(
+        await saveRule(db, base, null, null, base.removal, base.refill),
+      ).toEqual(invalid);
+      expect(
+        await saveRule(db, base, null, null, base.removal, base.removal),
+      ).toEqual(invalid);
+      expect(
+        await saveRule(db, base, null, null, other.removal, base.fullSet),
+      ).toEqual(invalid);
+      expect(
+        await saveRule(db, base, null, null, base.removal, other.fullSet),
+      ).toEqual(invalid);
+    });
+  });
+
+  it("brisanje zamenske usluge gasi pravilo, ne puca", async () => {
+    await withRollback(async (db) => {
+      const base = await lashSalon(db);
+      await db.query(
+        "update services set requires_service_id = null, requires_within_days = null where id = $1",
+        [base.refill],
+      );
+
+      await asUser(db, base.userId, () =>
+        db.query("select remove_service($1)", [base.fullSet]),
+      );
+
+      const client = await createClient(db, base.tenantId, PHONE);
+      await visit(
+        db,
+        base,
+        client,
+        base.removal,
+        await at(db, -1),
+        "confirmed",
+      );
+      expect((await book(db, base, base.refill, await at(db))).ok).toBe(true);
+    });
+  });
+
+  it("deaktivirana zamenska usluga se ne nudi, pravilo se gasi", async () => {
+    await withRollback(async (db) => {
+      const base = await lashSalon(db);
+      await db.query("update services set active = false where id = $1", [
+        base.fullSet,
+      ]);
+      const client = await createClient(db, base.tenantId, PHONE);
+      await visit(
+        db,
+        base,
+        client,
+        base.removal,
+        await at(db, -1),
+        "confirmed",
+      );
+
+      expect(
+        await asUser(db, base.userId, async () => {
+          const result = await db.query<{ problem: unknown }>(
+            "select service_sequence_problem($1, $2, $3, $4) as problem",
+            [base.refill, PHONE, base.tenantId, await at(db)],
+          );
+          return result.rows[0]!.problem;
+        }),
+      ).toBeNull();
     });
   });
 
@@ -354,16 +538,18 @@ describe("podešavanje pravila", () => {
       const base = await lashSalon(db);
 
       const rows = await asUser(db, base.userId, async () => {
-        const result = await db.query<{ id: string; not_after_service_id: string | null }>(
-          "select id, not_after_service_id from tenant_services($1)",
-          [base.tenantId],
-        );
+        const result = await db.query<{
+          id: string;
+          not_after_service_id: string | null;
+        }>("select id, not_after_service_id from tenant_services($1)", [
+          base.tenantId,
+        ]);
         return result.rows;
       });
 
-      expect(rows.find((row) => row.id === base.refill)?.not_after_service_id).toBe(
-        base.removal,
-      );
+      expect(
+        rows.find((row) => row.id === base.refill)?.not_after_service_id,
+      ).toBe(base.removal);
     });
   });
 });
@@ -374,7 +560,14 @@ describe("provera za vlasnicu", () => {
       const base = await lashSalon(db);
       const other = await lashSalon(db);
       const client = await createClient(db, base.tenantId, PHONE);
-      await visit(db, base, client, base.removal, await at(db, -1), "confirmed");
+      await visit(
+        db,
+        base,
+        client,
+        base.removal,
+        await at(db, -1),
+        "confirmed",
+      );
       const target = await at(db);
 
       const check = (userId: string) =>

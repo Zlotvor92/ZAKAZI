@@ -127,10 +127,29 @@ function useSettingsAction() {
     }));
   }
 
-  function submit(action: (formData: FormData) => Promise<SettingsState>) {
-    return (formData: FormData) => {
+  /**
+   * `onSubmit`, ne `action`: forma sa funkcijom kao akcijom posle svakog
+   * slanja sama vrati polja na početne vrednosti. Kad čuvanje ne uspe, izbor
+   * nestane, a poruka o grešci ostane ispod praznih polja — pa izgleda kao da
+   * je sačuvano ono čega više nema.
+   *
+   * Forme koje dodaju novi red (usluga, blokiran broj, odsustvo) posle
+   * uspeha treba da se isprazne; one to traže sa `clearOnSave`.
+   */
+  function submit(
+    action: (formData: FormData) => Promise<SettingsState>,
+    { clearOnSave = false }: { clearOnSave?: boolean } = {},
+  ) {
+    return (event: React.FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      const form = event.currentTarget;
+      const formData = new FormData(form);
       startTransition(async () => {
-        setState(await guard(action(formData)));
+        const result = await guard(action(formData));
+        setState(result);
+        if (clearOnSave && result.status !== "error") {
+          form.reset();
+        }
       });
     };
   }
@@ -203,7 +222,7 @@ export function WorkingHoursForm({ week }: { week: DayShape[] }) {
 
   return (
     <form
-      action={submit(saveWorkingHours)}
+      onSubmit={submit(saveWorkingHours)}
       onChange={reset}
       className="space-y-3"
     >
@@ -436,7 +455,7 @@ export function BookingRulesForm({
 
   return (
     <form
-      action={submit(saveBookingRules)}
+      onSubmit={submit(saveBookingRules)}
       onChange={reset}
       className="space-y-3"
     >
@@ -559,7 +578,10 @@ export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
         </ul>
       )}
 
-      <form action={submit(addBlockedNumber)} className="flex flex-wrap gap-2">
+      <form
+        onSubmit={submit(addBlockedNumber, { clearOnSave: true })}
+        className="flex flex-wrap gap-2"
+      >
         <Input
           name="phone"
           type="tel"
@@ -637,7 +659,10 @@ export function TimeOffSection({
         </ul>
       )}
 
-      <form action={submit(saveTimeOff)} className="space-y-2">
+      <form
+        onSubmit={submit(saveTimeOff, { clearOnSave: true })}
+        className="space-y-2"
+      >
         <div className="grid grid-cols-2 gap-2">
           <label className="space-y-1">
             <span className="text-[#554C44] block text-xs">
@@ -725,11 +750,13 @@ function WindowFields({
   requiresServiceId,
   requiresWithinDays,
   notAfterServiceId,
+  notAfterInsteadServiceId,
 }: {
   others: Service[];
   requiresServiceId: string | null;
   requiresWithinDays: number | null;
   notAfterServiceId: string | null;
+  notAfterInsteadServiceId: string | null;
 }) {
   if (others.length === 0) {
     return null;
@@ -763,20 +790,36 @@ function WindowFields({
         </Field>
       </div>
       <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceWindowHint}</p>
-      <Field label={sr.settings.serviceNotAfterLabel}>
-        <select
-          name="notAfterServiceId"
-          defaultValue={notAfterServiceId ?? ""}
-          className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
-        >
-          <option value="">{sr.settings.serviceNotAfterNone}</option>
-          {others.map((other) => (
-            <option key={other.id} value={other.id}>
-              {other.name}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <div className="grid grid-cols-2 gap-2">
+        <Field label={sr.settings.serviceNotAfterLabel}>
+          <select
+            name="notAfterServiceId"
+            defaultValue={notAfterServiceId ?? ""}
+            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
+          >
+            <option value="">{sr.settings.serviceNotAfterNone}</option>
+            {others.map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label={sr.settings.serviceNotAfterInsteadLabel}>
+          <select
+            name="notAfterInsteadServiceId"
+            defaultValue={notAfterInsteadServiceId ?? ""}
+            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
+          >
+            <option value="">{sr.settings.serviceNotAfterInsteadNone}</option>
+            {others.map((other) => (
+              <option key={other.id} value={other.id}>
+                {other.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceNotAfterHint}</p>
     </div>
   );
@@ -801,8 +844,23 @@ function DescriptionField({ defaultValue }: { defaultValue: string }) {
   );
 }
 
+/** Oznaka forme za novu uslugu, koja još nema svoj `id`. */
+const NEW_SERVICE = "new";
+
 export function ServicesSection({ services }: { services: Service[] }) {
   const { pending, state, submit, call, reset } = useSettingsAction();
+  // Ishod se piše na kartici koja je poslata. Ispod cele liste, na telefonu
+  // je bio ekranima daleko, pa se greška nije ni videla.
+  const [target, setTarget] = useState<string | null>(null);
+  const shownOnCard =
+    target === NEW_SERVICE || services.some((service) => service.id === target);
+
+  function on<T extends unknown[]>(id: string, handler: (...args: T) => void) {
+    return (...args: T) => {
+      setTarget(id);
+      handler(...args);
+    };
+  }
 
   return (
     <div className="space-y-3" onChange={reset}>
@@ -817,7 +875,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
       {services.map((service, index) => (
         <form
           key={service.id}
-          action={submit(saveServiceEntry)}
+          onSubmit={on(service.id, submit(saveServiceEntry))}
           className="space-y-2 rounded-2xl border border-[#E4DAC9] bg-[#FBF7F0] p-3"
         >
           <input type="hidden" name="id" value={service.id} />
@@ -840,7 +898,9 @@ export function ServicesSection({ services }: { services: Service[] }) {
               className="shrink-0"
               aria-label={sr.settings.moveServiceUp}
               disabled={pending || index === 0}
-              onClick={() => call(() => moveServiceEntry(service.id, "up"))}
+              onClick={on(service.id, () =>
+                call(() => moveServiceEntry(service.id, "up")),
+              )}
             >
               <ChevronUp />
             </Button>
@@ -851,7 +911,9 @@ export function ServicesSection({ services }: { services: Service[] }) {
               className="shrink-0"
               aria-label={sr.settings.moveServiceDown}
               disabled={pending || index === services.length - 1}
-              onClick={() => call(() => moveServiceEntry(service.id, "down"))}
+              onClick={on(service.id, () =>
+                call(() => moveServiceEntry(service.id, "down")),
+              )}
             >
               <ChevronDown />
             </Button>
@@ -884,7 +946,10 @@ export function ServicesSection({ services }: { services: Service[] }) {
             requiresServiceId={service.requires_service_id}
             requiresWithinDays={service.requires_within_days}
             notAfterServiceId={service.not_after_service_id}
+            notAfterInsteadServiceId={service.not_after_instead_service_id}
           />
+
+          {target === service.id ? <Feedback state={state} /> : null}
 
           {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
               osam piksela razmaka, od kojih jedno briše uslugu, na telefonu su
@@ -909,6 +974,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
                 if (!window.confirm(sr.settings.removeServiceConfirm)) {
                   return;
                 }
+                setTarget(service.id);
                 call(() => deleteServiceEntry(service.id));
               }}
             >
@@ -919,7 +985,10 @@ export function ServicesSection({ services }: { services: Service[] }) {
       ))}
 
       <form
-        action={submit(saveServiceEntry)}
+        onSubmit={on(
+          NEW_SERVICE,
+          submit(saveServiceEntry, { clearOnSave: true }),
+        )}
         className="space-y-2 rounded-2xl border border-dashed border-[#DED5C7] p-3"
       >
         <input type="hidden" name="id" value="" />
@@ -959,7 +1028,10 @@ export function ServicesSection({ services }: { services: Service[] }) {
           requiresServiceId={null}
           requiresWithinDays={null}
           notAfterServiceId={null}
+          notAfterInsteadServiceId={null}
         />
+
+        {target === NEW_SERVICE ? <Feedback state={state} /> : null}
 
         <Button
           type="submit"
@@ -971,7 +1043,8 @@ export function ServicesSection({ services }: { services: Service[] }) {
         </Button>
       </form>
 
-      <Feedback state={state} />
+      {/* Uklonjena usluga više nema karticu na kojoj bi se ishod pokazao. */}
+      {shownOnCard ? null : <Feedback state={state} />}
     </div>
   );
 }

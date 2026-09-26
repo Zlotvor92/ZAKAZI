@@ -406,6 +406,7 @@ const serviceSchema = z.object({
     z.coerce.number().int().min(1).max(365),
   ]),
   notAfterServiceId: z.union([z.uuid(), z.literal("")]),
+  notAfterInsteadServiceId: z.union([z.uuid(), z.literal("")]),
 });
 
 export async function saveServiceEntry(
@@ -420,6 +421,7 @@ export async function saveServiceEntry(
     requiresServiceId: formData.get("requiresServiceId") ?? "",
     requiresWithinDays: String(formData.get("requiresWithinDays") ?? "").trim(),
     notAfterServiceId: formData.get("notAfterServiceId") ?? "",
+    notAfterInsteadServiceId: formData.get("notAfterInsteadServiceId") ?? "",
   });
 
   if (!parsed.success) {
@@ -436,6 +438,7 @@ export async function saveServiceEntry(
           requiresServiceId: sr.settings.serviceProblem.invalid_window,
           requiresWithinDays: sr.settings.serviceProblem.invalid_window,
           notAfterServiceId: sr.settings.serviceProblem.invalid_not_after,
+          notAfterInsteadServiceId: sr.settings.serviceProblem.invalid_not_after,
         }) ?? sr.settings.failed,
     };
   }
@@ -452,6 +455,10 @@ export async function saveServiceEntry(
       parsed.data.requiresWithinDays === "" ? null : parsed.data.requiresWithinDays,
     notAfterServiceId:
       parsed.data.notAfterServiceId === "" ? null : parsed.data.notAfterServiceId,
+    notAfterInsteadServiceId:
+      parsed.data.notAfterInsteadServiceId === ""
+        ? null
+        : parsed.data.notAfterInsteadServiceId,
     tenantId: await selectedTenantId(),
   });
 
