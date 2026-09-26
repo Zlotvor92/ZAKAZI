@@ -5,9 +5,11 @@ import { after } from "next/server";
 import { z } from "zod";
 import { getPriorNoShows } from "@/lib/db/appointments";
 import { bookPublicAppointment } from "@/lib/db/public-booking";
+import { sequenceProblemSchema } from "@/lib/db/services";
 import { deviceId } from "@/lib/device";
 import { priorNoShowsLine } from "@/lib/domain/no-shows";
 import { normalizePhone } from "@/lib/domain/phone";
+import { sequenceMessage } from "@/lib/domain/service-sequence";
 import { sr } from "@/lib/i18n/sr";
 import { notifyTenant } from "@/lib/messaging/push";
 import { networkHash } from "@/lib/network";
@@ -88,6 +90,16 @@ export async function submitBooking(
           .replace("{dana}", String(result.window_days))
           .replace("{usluga}", result.required_service_name),
       };
+    }
+
+    if (result.reason === "service_sequence" && result.timezone !== undefined) {
+      const problem = sequenceProblemSchema.safeParse(result);
+      if (problem.success) {
+        return {
+          status: "error",
+          message: sequenceMessage(problem.data, result.timezone, "client"),
+        };
+      }
     }
 
     return { status: "error", message: rejectionMessage(result.reason) };

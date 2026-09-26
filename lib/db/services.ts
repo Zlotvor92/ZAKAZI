@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { SequenceProblem } from "@/lib/domain/service-sequence";
 import { createClient } from "@/lib/supabase/server";
 
 const serviceSchema = z.object({
@@ -9,6 +10,7 @@ const serviceSchema = z.object({
   description: z.string().nullable(),
   requires_service_id: z.uuid().nullable(),
   requires_within_days: z.number().int().nullable(),
+  not_after_service_id: z.uuid().nullable(),
 });
 
 export const serviceListSchema = z.array(serviceSchema);
@@ -47,6 +49,7 @@ export async function saveService(input: {
   description: string;
   requiresServiceId: string | null;
   requiresWithinDays: number | null;
+  notAfterServiceId: string | null;
   tenantId: string | null;
 }): Promise<ServiceWriteResult> {
   const supabase = await createClient();
@@ -60,6 +63,7 @@ export async function saveService(input: {
     p_description: input.description,
     p_requires_service_id: input.requiresServiceId,
     p_requires_within_days: input.requiresWithinDays,
+    p_not_after_service_id: input.notAfterServiceId,
   });
 
   if (error) {
@@ -149,4 +153,46 @@ export async function checkServiceWindow(input: {
   }
 
   return windowProblemSchema.parse(data);
+}
+
+export const sequenceProblemSchema = z.discriminatedUnion("kind", [
+  z.object({
+    kind: z.literal("after"),
+    service_name: z.string(),
+    blocking_service_name: z.string(),
+    blocking_at: z.string(),
+    required_service_name: z.string(),
+  }),
+  z.object({
+    kind: z.literal("before"),
+    service_name: z.string(),
+    later_service_name: z.string(),
+    later_at: z.string(),
+  }),
+]) satisfies z.ZodType<SequenceProblem>;
+
+/**
+ * Da li usluga za ovaj broj ide tim redom — korekcija posle skidanja ili
+ * skidanje pred već zakazanu korekciju. `null` kad je u redu.
+ */
+export async function checkServiceSequence(input: {
+  serviceId: string;
+  phoneE164: string;
+  tenantId: string;
+  startAt: Date;
+}): Promise<SequenceProblem | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("service_sequence_problem", {
+    p_service_id: input.serviceId,
+    p_phone_e164: input.phoneE164,
+    p_tenant_id: input.tenantId,
+    p_start_at: input.startAt.toISOString(),
+  });
+
+  if (error) {
+    throw new Error(`Provera redosleda usluga nije uspela: ${error.message}`);
+  }
+
+  return sequenceProblemSchema.nullable().parse(data);
 }

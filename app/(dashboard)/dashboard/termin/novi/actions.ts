@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { formatInTimeZone } from "date-fns-tz";
 import { createAppointment } from "@/lib/db/appointments";
-import { checkServiceWindow } from "@/lib/db/services";
+import { checkServiceSequence, checkServiceWindow } from "@/lib/db/services";
 import { getCurrentTenant } from "@/lib/db/tenants";
 import { deviceId } from "@/lib/device";
 import { instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar";
 import { normalizePhone } from "@/lib/domain/phone";
+import { sequenceMessage } from "@/lib/domain/service-sequence";
 import { sr } from "@/lib/i18n/sr";
 import { selectedTenantId } from "@/lib/tenant";
 
@@ -96,6 +97,20 @@ export async function saveAppointment(
           )
           .replace("{dana}", String(problem.window_days))
           .replace("{usluga}", problem.required_service_name),
+      };
+    }
+
+    const sequence = await checkServiceSequence({
+      serviceId: parsed.data.serviceId,
+      phoneE164: phone.e164,
+      tenantId: tenant.id,
+      startAt,
+    });
+
+    if (sequence) {
+      return {
+        status: "warning",
+        message: sequenceMessage(sequence, tenant.timezone, "owner"),
       };
     }
   }
