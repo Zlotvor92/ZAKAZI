@@ -354,6 +354,30 @@ export const sr = {
     moveServiceDown: "Pomeri dole",
     removeServiceConfirm:
       "Ukloni ovu uslugu? Nestaje iz ponude za zakazivanje. Već zakazani termini ostaju.",
+    /** Spisak usluga: svaki red vodi na zaseban ekran za izmenu. */
+    servicesOpenHint: "Dodirni uslugu da je izmeniš.",
+    servicesReorder: "Redosled",
+    servicesReorderDone: "Gotovo",
+    servicesReorderHint: "Ovim redom usluge vidi i klijentkinja.",
+    serviceNew: "Nova usluga",
+    /** `{dana}` (sa rečju „dan"/„dana") i `{usluga}` se zamenjuju. */
+    serviceRuleWindow: "Rok {dana} od: {usluga}",
+    serviceRuleDays: ["dan", "dana", "dana"],
+    /** `{posle}` i `{umesto}` se zamenjuju. */
+    serviceRuleNotAfter: "Ne posle: {posle} → {umesto}",
+    /** Ekran jedne usluge. */
+    serviceBackToList: "Usluge",
+    serviceNewTitle: "Nova usluga",
+    serviceBasics: "Osnovno",
+    serviceDescriptionTitle: "Opis za klijentkinje",
+    serviceWindowTitle: "Rok",
+    serviceWindowIntro:
+      "Usluga važi samo do određenog broja dana od poslednjeg dolaska.",
+    serviceSequenceTitle: "Redosled usluga",
+    serviceSequenceIntro: "Npr. posle skidanja nema korekcije.",
+    serviceWindowDays: "Dana",
+    removeServiceLong: "Ukloni uslugu",
+    serviceMissing: "Ta usluga više ne postoji.",
     serviceProblem: {
       invalid_name: "Upiši naziv usluge.",
       invalid_duration: "Trajanje nije ispravno.",

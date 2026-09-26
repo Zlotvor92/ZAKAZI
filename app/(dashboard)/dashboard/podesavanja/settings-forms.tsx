@@ -1,7 +1,8 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
+import Link from "next/link";
 import { useState, useTransition } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +10,7 @@ import { TimeSelect } from "@/components/ui/time-select";
 import type { BlockedNumber } from "@/lib/db/blocklist";
 import type { Service } from "@/lib/db/services";
 import type { TimeOff } from "@/lib/db/time-off";
+import { serviceLine, serviceRules } from "@/lib/domain/service-summary";
 import {
   defaultWeek,
   slotCounts,
@@ -21,12 +23,10 @@ import {
   disableCalendarFeed,
   enableCalendarFeed,
   addBlockedNumber,
-  deleteServiceEntry,
   deleteTimeOff,
   moveServiceEntry,
   removeBlockedNumber,
   saveBookingRules,
-  saveServiceEntry,
   saveTimeOff,
   saveWorkingHours,
   type SettingsState,
@@ -83,7 +83,7 @@ function CopyButton({
   );
 }
 
-function Feedback({ state }: { state: SettingsState }) {
+export function Feedback({ state }: { state: SettingsState }) {
   if (state.status === "saved") {
     return <p className="text-sm text-[#554C44]">{sr.settings.saved}</p>;
   }
@@ -111,7 +111,7 @@ function Feedback({ state }: { state: SettingsState }) {
  * akcije, jer svaka od njih zove `revalidatePath` — dodatno osvežavanje bi bio
  * pun zahtev više za podatke koji su već stigli.
  */
-function useSettingsAction() {
+export function useSettingsAction() {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<SettingsState>({ status: "idle" });
 
@@ -423,7 +423,7 @@ function NumberField({
   );
 }
 
-function Field({
+export function Field({
   label,
   children,
 }: {
@@ -745,88 +745,8 @@ function describeTimeOff(entry: TimeOff, timeZone: string): string {
  * „Važi samo do N dana od poslednjeg dolaska na ovu uslugu ili na drugu."
  * Za korekciju koja posle roka postaje nov set.
  */
-function WindowFields({
-  others,
-  requiresServiceId,
-  requiresWithinDays,
-  notAfterServiceId,
-  notAfterInsteadServiceId,
-}: {
-  others: Service[];
-  requiresServiceId: string | null;
-  requiresWithinDays: number | null;
-  notAfterServiceId: string | null;
-  notAfterInsteadServiceId: string | null;
-}) {
-  if (others.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-1">
-      <div className="grid grid-cols-[5.5rem_1fr] gap-2">
-        <Field label={sr.settings.serviceWindowLabel}>
-          <Input
-            name="requiresWithinDays"
-            type="text"
-            inputMode="numeric"
-            defaultValue={requiresWithinDays ?? ""}
-            placeholder="21"
-          />
-        </Field>
-        <Field label={sr.settings.serviceWindowServiceLabel}>
-          <select
-            name="requiresServiceId"
-            defaultValue={requiresServiceId ?? ""}
-            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
-          >
-            <option value="">{sr.settings.serviceWindowNone}</option>
-            {others.map((other) => (
-              <option key={other.id} value={other.id}>
-                {other.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceWindowHint}</p>
-      <div className="grid grid-cols-2 gap-2">
-        <Field label={sr.settings.serviceNotAfterLabel}>
-          <select
-            name="notAfterServiceId"
-            defaultValue={notAfterServiceId ?? ""}
-            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
-          >
-            <option value="">{sr.settings.serviceNotAfterNone}</option>
-            {others.map((other) => (
-              <option key={other.id} value={other.id}>
-                {other.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-        <Field label={sr.settings.serviceNotAfterInsteadLabel}>
-          <select
-            name="notAfterInsteadServiceId"
-            defaultValue={notAfterInsteadServiceId ?? ""}
-            className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
-          >
-            <option value="">{sr.settings.serviceNotAfterInsteadNone}</option>
-            {others.map((other) => (
-              <option key={other.id} value={other.id}>
-                {other.name}
-              </option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceNotAfterHint}</p>
-    </div>
-  );
-}
-
 /** Kratko objašnjenje za klijentkinju, ispod naziva usluge na javnoj strani. */
-function DescriptionField({ defaultValue }: { defaultValue: string }) {
+export function DescriptionField({ defaultValue }: { defaultValue: string }) {
   return (
     <label className="block space-y-1">
       <span className="text-xs text-[#554C44]">
@@ -844,220 +764,125 @@ function DescriptionField({ defaultValue }: { defaultValue: string }) {
   );
 }
 
-/** Oznaka forme za novu uslugu, koja još nema svoj `id`. */
-const NEW_SERVICE = "new";
-
-export function ServicesSection({ services }: { services: Service[] }) {
-  const { pending, state, submit, call, reset } = useSettingsAction();
-  // Ishod se piše na kartici koja je poslata. Ispod cele liste, na telefonu
-  // je bio ekranima daleko, pa se greška nije ni videla.
-  const [target, setTarget] = useState<string | null>(null);
-  const shownOnCard =
-    target === NEW_SERVICE || services.some((service) => service.id === target);
-
-  function on<T extends unknown[]>(id: string, handler: (...args: T) => void) {
-    return (...args: T) => {
-      setTarget(id);
-      handler(...args);
-    };
-  }
+/**
+ * Spisak usluga: svaki red je jedna usluga sa trajanjem, cenom i pravilima,
+ * a dodir otvara zaseban ekran za izmenu. Pre toga je svaka usluga stalno
+ * stajala otvorena sa svim poljima, pa je deset usluga bilo desetak ekrana.
+ *
+ * Strelice za redosled se pokazuju samo u režimu „Redosled", da se ne
+ * pritiskaju slučajno dok se traži usluga.
+ */
+export function ServicesList({ services }: { services: Service[] }) {
+  const { pending, state, call } = useSettingsAction();
+  const [reordering, setReordering] = useState(false);
 
   return (
-    <div className="space-y-3" onChange={reset}>
-      <p className="text-[#554C44] text-xs">{sr.settings.servicesHint}</p>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[#554C44] text-xs">
+          {reordering ? sr.settings.servicesReorderHint : sr.settings.servicesOpenHint}
+        </p>
+        {services.length > 1 ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="shrink-0 rounded-full"
+            onClick={() => setReordering((current) => !current)}
+          >
+            {reordering ? sr.settings.servicesReorderDone : sr.settings.servicesReorder}
+          </Button>
+        ) : null}
+      </div>
 
       {services.length === 0 ? (
-        <p className="text-[#554C44] text-sm">
-          {sr.settings.servicesEmpty}
-        </p>
-      ) : null}
+        <p className="text-[#554C44] text-sm">{sr.settings.servicesEmpty}</p>
+      ) : (
+        <ul className="divide-y divide-[#EDE5D8] overflow-hidden rounded-2xl border border-[#E4DAC9]">
+          {services.map((service, index) => {
+            const rules = serviceRules(service, services);
+            const text = (
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold">{service.name}</span>
+                <span className="block pt-0.5 text-[13px] text-[#6B6055]">
+                  {serviceLine(service)}
+                </span>
+                {rules.map((rule) => (
+                  <span
+                    key={rule}
+                    className="block pt-0.5 text-[12px] leading-snug text-[#8C1D3F]"
+                  >
+                    {rule}
+                  </span>
+                ))}
+              </span>
+            );
 
-      {services.map((service, index) => (
-        <form
-          key={service.id}
-          onSubmit={on(service.id, submit(saveServiceEntry))}
-          className="space-y-2 rounded-2xl border border-[#E4DAC9] bg-[#FBF7F0] p-3"
+            return (
+              <li key={service.id}>
+                {reordering ? (
+                  <div className="flex min-h-[60px] items-center gap-1 py-2 pr-1 pl-3">
+                    {text}
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-11 shrink-0"
+                      aria-label={sr.settings.moveServiceUp}
+                      disabled={pending || index === 0}
+                      onClick={() => call(() => moveServiceEntry(service.id, "up"))}
+                    >
+                      <ChevronUp />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="size-11 shrink-0"
+                      aria-label={sr.settings.moveServiceDown}
+                      disabled={pending || index === services.length - 1}
+                      onClick={() => call(() => moveServiceEntry(service.id, "down"))}
+                    >
+                      <ChevronDown />
+                    </Button>
+                  </div>
+                ) : (
+                  <Link
+                    href={`/dashboard/podesavanja/usluge/${service.id}`}
+                    className="flex min-h-[60px] items-center gap-2 px-3 py-2 transition-colors active:bg-[#F5EFE6]"
+                  >
+                    {text}
+                    <ChevronRight
+                      size={18}
+                      aria-hidden
+                      className="shrink-0 text-[#9A8F80]"
+                    />
+                  </Link>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {reordering ? null : (
+        <Link
+          href="/dashboard/podesavanja/usluge/nova"
+          className={cn(
+            buttonVariants({ variant: "outline", size: "sm" }),
+            "rounded-full",
+          )}
         >
-          <input type="hidden" name="id" value={service.id} />
+          <Plus aria-hidden />
+          {sr.settings.serviceNew}
+        </Link>
+      )}
 
-          <div className="flex items-center gap-1">
-            <Input
-              name="name"
-              defaultValue={service.name}
-              maxLength={60}
-              required
-              aria-label={sr.settings.serviceName}
-              className="min-w-0"
-            />
-            {/* Kartice su vezane ključem za uslugu, pa neposlata izmena u
-                poljima putuje sa karticom umesto da pređe na susednu. */}
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="shrink-0"
-              aria-label={sr.settings.moveServiceUp}
-              disabled={pending || index === 0}
-              onClick={on(service.id, () =>
-                call(() => moveServiceEntry(service.id, "up")),
-              )}
-            >
-              <ChevronUp />
-            </Button>
-            <Button
-              type="button"
-              size="icon"
-              variant="ghost"
-              className="shrink-0"
-              aria-label={sr.settings.moveServiceDown}
-              disabled={pending || index === services.length - 1}
-              onClick={on(service.id, () =>
-                call(() => moveServiceEntry(service.id, "down")),
-              )}
-            >
-              <ChevronDown />
-            </Button>
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Field label={sr.settings.serviceDuration}>
-              <Input
-                name="durationMin"
-                type="text"
-                inputMode="numeric"
-                defaultValue={service.duration_min}
-                required
-              />
-            </Field>
-            <Field label={sr.settings.servicePrice}>
-              <Input
-                name="priceRsd"
-                type="text"
-                inputMode="numeric"
-                defaultValue={service.price_rsd}
-                required
-              />
-            </Field>
-          </div>
-
-          <DescriptionField defaultValue={service.description ?? ""} />
-          <WindowFields
-            others={services.filter((other) => other.id !== service.id)}
-            requiresServiceId={service.requires_service_id}
-            requiresWithinDays={service.requires_within_days}
-            notAfterServiceId={service.not_after_service_id}
-            notAfterInsteadServiceId={service.not_after_instead_service_id}
-          />
-
-          {target === service.id ? <Feedback state={state} /> : null}
-
-          {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
-              osam piksela razmaka, od kojih jedno briše uslugu, na telefonu su
-              ista meta. Potvrda je isti postupak kao kod blokiranja broja. */}
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              type="submit"
-              size="sm"
-              variant="outline"
-              className="rounded-full"
-              disabled={pending}
-            >
-              {sr.settings.saveService}
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="text-[#B3261E] hover:text-[#B3261E]"
-              disabled={pending}
-              onClick={() => {
-                if (!window.confirm(sr.settings.removeServiceConfirm)) {
-                  return;
-                }
-                setTarget(service.id);
-                call(() => deleteServiceEntry(service.id));
-              }}
-            >
-              {sr.settings.removeService}
-            </Button>
-          </div>
-        </form>
-      ))}
-
-      <form
-        onSubmit={on(
-          NEW_SERVICE,
-          submit(saveServiceEntry, { clearOnSave: true }),
-        )}
-        className="space-y-2 rounded-2xl border border-dashed border-[#DED5C7] p-3"
-      >
-        <input type="hidden" name="id" value="" />
-
-        <Input
-          name="name"
-          placeholder={sr.settings.serviceNamePlaceholder}
-          maxLength={60}
-          required
-          aria-label={sr.settings.serviceName}
-        />
-
-        <div className="grid grid-cols-2 gap-2">
-          <Field label={sr.settings.serviceDuration}>
-            <Input
-              name="durationMin"
-              type="text"
-              inputMode="numeric"
-              defaultValue={90}
-              required
-            />
-          </Field>
-          <Field label={sr.settings.servicePrice}>
-            <Input
-              name="priceRsd"
-              type="text"
-              inputMode="numeric"
-              defaultValue={0}
-              required
-            />
-          </Field>
-        </div>
-
-        <DescriptionField defaultValue="" />
-        <WindowFields
-          others={services}
-          requiresServiceId={null}
-          requiresWithinDays={null}
-          notAfterServiceId={null}
-          notAfterInsteadServiceId={null}
-        />
-
-        {target === NEW_SERVICE ? <Feedback state={state} /> : null}
-
-        <Button
-          type="submit"
-          size="sm"
-          className="rounded-full"
-          disabled={pending}
-        >
-          {sr.settings.addService}
-        </Button>
-      </form>
-
-      {/* Uklonjena usluga više nema karticu na kojoj bi se ishod pokazao. */}
-      {shownOnCard ? null : <Feedback state={state} />}
+      <Feedback state={state} />
     </div>
   );
 }
 
-
-/**
- * Adresa kalendara i uputstvo kako se zakači.
- *
- * Adresa se prikazuje cela, i namerno: vlasnica je nalepljuje u kalendar
- * aplikaciju, pa mora da se vidi i kad kopiranje ne uspe. `webcal://` je isti
- * put, samo shema koju telefon prepozna kao „pretplati me na ovo“ umesto kao
- * „preuzmi fajl“.
- */
 export function CalendarFeed({
   token,
   origin,
