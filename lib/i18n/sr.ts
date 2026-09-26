@@ -340,6 +340,11 @@ export const sr = {
     serviceWindowNone: "— bez ograničenja —",
     serviceWindowHint:
       "Posle toga klijentkinja preko sajta mora da izabere tu drugu uslugu.",
+    /** Pravilo „ne može posle [skidanja]", dok ga ne pokrije usluga iznad. */
+    serviceNotAfterLabel: "Ne može posle usluge",
+    serviceNotAfterNone: "— bez ograničenja —",
+    serviceNotAfterHint:
+      "Npr. korekcija posle skidanja. Važi dok klijentkinja ponovo ne dođe na uslugu iz polja iznad.",
     saveService: "Sačuvaj",
     addService: "Dodaj uslugu",
     removeService: "Ukloni",
@@ -354,6 +359,8 @@ export const sr = {
       invalid_description: "Opis može imati najviše 300 znakova.",
       invalid_window:
         "Za rok upiši broj dana (1–365) i izaberi uslugu, ili ostavi oba prazna.",
+      invalid_not_after:
+        "„Ne može posle“ radi samo uz popunjen rok iznad, i mora biti treća usluga — ne ova i ne ona iz roka.",
       not_found: "Ta usluga više ne postoji.",
     },
 
@@ -458,6 +465,13 @@ export const sr = {
     /** `{datum}`, `{dana}` i `{usluga}` se zamenjuju. */
     serviceWindowWarning:
       "Poslednji dolazak ove klijentkinje bio je {datum}, pre više od {dana} dana — po pravilu usluge sada ide „{usluga}“.",
+    /** Poruke sastavlja `sequenceMessage`; nazivi usluga i datum se zamenjuju. */
+    serviceSequence: {
+      after:
+        "Klijentkinja ima „{prepreka}“ ({datum}) pre ove usluge — po pravilu sada ide „{potrebna}“.",
+      before:
+        "Klijentkinja već ima zakazanu „{kasnija}“ za {datum} — posle „{usluga}“ ona nije moguća.",
+    },
     saveAnyway: "Sačuvaj svejedno",
     noServices: "Prvo unesi bar jednu uslugu.",
     hint: "Termin van radnog vremena je dozvoljen — kalendar je tvoj.",
@@ -625,6 +639,13 @@ export const sr = {
     /** `{dana}` i `{usluga}` se zamenjuju. */
     serviceWindow:
       "Ova usluga važi do {dana} dana od poslednjeg dolaska, a od tvog je prošlo više. Izaberi „{usluga}“.",
+    /** Poruke sastavlja `sequenceMessage`; nazivi usluga i datum se zamenjuju. */
+    serviceSequence: {
+      after:
+        "Usluga „{usluga}“ nije moguća posle usluge „{prepreka}“ ({datum}). Izaberi „{potrebna}“.",
+      before:
+        "Već imaš zakazanu uslugu „{kasnija}“ za {datum}. Posle usluge „{usluga}“ ona nije moguća. Prvo je otkaži, pa zakaži ponovo.",
+    },
     /** Problemi koje vraća `normalizePhone`. */
     phoneProblem: {
       empty: "Upiši broj telefona.",

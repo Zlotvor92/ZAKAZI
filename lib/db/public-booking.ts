@@ -61,6 +61,14 @@ export const bookResultSchema = z.discriminatedUnion("ok", [
     reason: z.string(),
     window_days: z.number().int().optional(),
     required_service_name: z.string().optional(),
+    // Za `service_sequence`; proverava ih `sequenceProblemSchema`.
+    kind: z.string().optional(),
+    timezone: z.string().optional(),
+    service_name: z.string().optional(),
+    blocking_service_name: z.string().optional(),
+    blocking_at: z.string().optional(),
+    later_service_name: z.string().optional(),
+    later_at: z.string().optional(),
   }),
 ]);
 

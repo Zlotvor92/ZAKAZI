@@ -724,10 +724,12 @@ function WindowFields({
   others,
   requiresServiceId,
   requiresWithinDays,
+  notAfterServiceId,
 }: {
   others: Service[];
   requiresServiceId: string | null;
   requiresWithinDays: number | null;
+  notAfterServiceId: string | null;
 }) {
   if (others.length === 0) {
     return null;
@@ -761,6 +763,21 @@ function WindowFields({
         </Field>
       </div>
       <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceWindowHint}</p>
+      <Field label={sr.settings.serviceNotAfterLabel}>
+        <select
+          name="notAfterServiceId"
+          defaultValue={notAfterServiceId ?? ""}
+          className="h-11 w-full min-w-0 rounded-md border border-[#E4DAC9] bg-white px-2 text-base"
+        >
+          <option value="">{sr.settings.serviceNotAfterNone}</option>
+          {others.map((other) => (
+            <option key={other.id} value={other.id}>
+              {other.name}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <p className="text-[11px] text-[#6B6055]">{sr.settings.serviceNotAfterHint}</p>
     </div>
   );
 }
@@ -866,6 +883,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
             others={services.filter((other) => other.id !== service.id)}
             requiresServiceId={service.requires_service_id}
             requiresWithinDays={service.requires_within_days}
+            notAfterServiceId={service.not_after_service_id}
           />
 
           {/* „Ukloni" je odvojeno od „Sačuvaj", ne uz njega: dva dugmeta na
@@ -940,6 +958,7 @@ export function ServicesSection({ services }: { services: Service[] }) {
           others={services}
           requiresServiceId={null}
           requiresWithinDays={null}
+          notAfterServiceId={null}
         />
 
         <Button
