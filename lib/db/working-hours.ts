@@ -71,3 +71,31 @@ export async function setWorkingBlocks(
 
   return writeResultSchema.parse(data);
 }
+
+const outsideSchema = z.array(
+  z.object({
+    id: z.uuid(),
+    start_at: z.string(),
+    client_name: z.string(),
+    service_name: z.string(),
+  }),
+);
+
+export type AppointmentOutsideHours = z.infer<typeof outsideSchema>[number];
+
+/** Budući zakazani termini kojima početak ne pada u radno vreme. */
+export async function getAppointmentsOutsideHours(
+  tenantId: string,
+): Promise<AppointmentOutsideHours[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("appointments_outside_hours", {
+    p_tenant_id: tenantId,
+  });
+
+  if (error) {
+    throw new Error(`Provera termina van radnog vremena nije uspela: ${error.message}`);
+  }
+
+  return outsideSchema.parse(data);
+}
