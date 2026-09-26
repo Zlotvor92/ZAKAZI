@@ -507,7 +507,16 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
       ) : null}
 
       {slot ? (
-        <form action={onSubmit} className={cn("flex flex-col gap-4 py-4", enter)}>
+        // `onSubmit`, ne `action`: forma sa funkcijom kao akcijom posle svakog
+        // slanja sama isprazni polja, pa bi klijentkinja posle svake odbijenice
+        // morala ponovo da kuca ime i broj.
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            onSubmit(new FormData(event.currentTarget));
+          }}
+          className={cn("flex flex-col gap-4 py-4", enter)}
+        >
           <StepHeading>{sr.booking.yourDetails}</StepHeading>
 
           <input type="hidden" name="slug" value={data.tenant.slug} />

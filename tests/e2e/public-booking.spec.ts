@@ -84,3 +84,28 @@ test("nepostojeći salon ne otkriva da ne postoji", async ({ page }) => {
 
   await expect(page.getByText(sr.booking.closed)).toBeVisible();
 });
+
+test("posle odbijenice ime i broj ostaju upisani", async ({ page }) => {
+  await page.goto(`/${SLUG}`);
+  await page.getByTestId("service-option").first().click();
+  await page.getByTestId("day-option").first().click();
+  await page.getByTestId("slot-option").first().click();
+
+  const name = page.getByLabel(sr.booking.nameLabel);
+  const phone = page.getByLabel(sr.booking.phoneLabel);
+  await name.fill("Jelena Petrović");
+  await phone.fill("064 12");
+  await page.getByRole("button", { name: sr.booking.submit }).click();
+
+  await expect(page.getByText(sr.booking.phoneProblem.too_short)).toBeVisible();
+  await expect(name).toHaveValue("Jelena Petrović");
+  await expect(phone).toHaveValue("064 12");
+
+  // Ispravi se samo broj, ime se ne kuca ponovo.
+  await phone.fill(freshPhone());
+  await page.getByRole("button", { name: sr.booking.submit }).click();
+
+  await expect(
+    page.getByRole("heading", { name: sr.booking.confirmedTitle }),
+  ).toBeVisible();
+});
