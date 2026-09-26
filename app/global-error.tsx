@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { sr } from "@/lib/i18n/sr";
+import { reloadIfStaleBuild } from "@/lib/reload-stale-build";
 import "./globals.css";
 
 /**
@@ -17,6 +18,13 @@ export default function GlobalError({
   error: Error & { digest?: string };
 }) {
   useEffect(() => {
+    // Posle nove objave telefon sa otvorenom starom verzijom ne nađe delove
+    // koda po starim imenima. Nije greška u kodu — strana se sama osveži i
+    // učita novu verziju, a u spisak grešaka to ne ide.
+    if (reloadIfStaleBuild(error)) {
+      return;
+    }
+
     void fetch("/api/greske", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
