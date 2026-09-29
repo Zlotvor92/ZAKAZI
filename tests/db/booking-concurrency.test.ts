@@ -61,6 +61,30 @@ describe("trka za isti termin", () => {
     ).toBe(1);
   });
 
+  it("nijedan zahtev ne završi izuzetkom (deadlock) u 5 rundi po 20 istovremenih", async () => {
+    for (let round = 0; round < 5; round += 1) {
+      const startAt = await localInstant(40 + round, "11:00");
+
+      const results = await Promise.all(
+        Array.from({ length: 20 }, (_, index) =>
+          bookAsServer({
+            slug: salon.slug,
+            serviceId: salon.serviceId,
+            startAt,
+            phone: mobile(200 + round * 20 + index),
+            deviceId: `deadlock-${round}-${index}`,
+            requestId: randomUUID(),
+          }),
+        ),
+      );
+
+      expect(results.filter((r) => r.ok)).toHaveLength(1);
+      expect(
+        results.filter((r) => !r.ok).every((r) => r.reason === "slot_taken"),
+      ).toBe(true);
+    }
+  });
+
   it("gubitnici ne ostavljaju klijenta ni događaj u istoriji", async () => {
     const startAt = await localInstant(11, "10:00");
 
