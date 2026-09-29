@@ -32,10 +32,16 @@ const newSalonSchema = z.object({
  * `auth.users` ne dira. Ako pravljenje salona padne, ostane nalog bez salona;
  * to je bezbedno stanje, jer prijava bez salona ne vidi ništa.
  *
- * Pravo se ne proverava ovde nego u bazi: `create_tenant` odbija svakog ko ne
- * upravlja platformom, pa provera ne može da se zaobiđe ni da se zaboravi.
+ * Pravo se proverava PRE pravljenja naloga: `ensureUser` radi sa `service_role`
+ * i ne pita ko zove, pa bi svaka ulogovana vlasnica salona mogla da napravi
+ * potvrđene naloge za proizvoljne mejlove. Baza (`create_tenant`) i dalje
+ * odbija ne-vlasnika kao druga linija odbrane.
  */
 export async function addSalon(formData: FormData): Promise<AdminState> {
+  if (!(await isPlatformOwner())) {
+    return { status: "error", message: sr.admin.actionFailed };
+  }
+
   const parsed = newSalonSchema.safeParse({
     name: formData.get("name"),
     slug: formData.get("slug"),
