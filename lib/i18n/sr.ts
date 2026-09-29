@@ -636,6 +636,13 @@ export const sr = {
     phoneHint: "Salon te zove na ovaj broj ako nešto iskrsne.",
     submit: "Zakaži termin",
     submitting: "Zakazujem…",
+    /**
+     * Zahtev je mogao da stigne do servera, pa ne sme da tvrdi da ništa nije
+     * sačuvano. Ponovni pritisak je bezbedan: isti `request_id` vraća isti
+     * termin umesto da pravi drugi.
+     */
+    connectionLost:
+      "Veza je prekinuta. Proveri da li je termin zakazan pre nego što pokušaš ponovo.",
     confirmedTitle: "Termin je zakazan",
     addToCalendar: "Dodaj u kalendar",
     addToCalendarHint:

@@ -129,6 +129,17 @@ function ChosenRow({
   );
 }
 
+/**
+ * Oznaka jednog pokušaja zakazivanja. Ostaje ista dok odgovor ne stigne, pa
+ * ponovljen pritisak posle prekinute veze vraća isti termin umesto drugog.
+ * Bez `crypto.randomUUID` (nije bezbedan kontekst) zahtev ide bez oznake.
+ */
+function newRequestId(): string | null {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : null;
+}
+
 export function BookingFlow({ data }: { data: PublicBookingData }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -139,6 +150,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
   const [date, setDate] = useState<string | null>(null);
   const [slot, setSlot] = useState<string | null>(null);
   const [state, setState] = useState<BookingState>({ status: "idle" });
+  const [requestId, setRequestId] = useState(newRequestId);
   // Uputstvo se drži skriveno dok se dugme ne dodirne. Pre dodira je samo
   // buka ispod dugmeta koje treba pritisnuti; posle dodira je jedino što
   // pomaže kad se fajl preuzeo a ništa se nije otvorilo.
@@ -164,6 +176,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     setService(data.services.length === 1 ? data.services[0]! : null);
     setDate(null);
     setSlot(null);
+    setRequestId(newRequestId());
   }
 
   function onSubmit(formData: FormData) {
@@ -175,8 +188,15 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
       try {
         const result = await submitBooking(formData);
         setState(result);
+
+        // Odgovor je stigao, pa je ishod poznat: sledeći pokušaj je nov zahtev.
+        if (result.status === "error") {
+          setRequestId(newRequestId());
+        }
       } catch {
-        setState({ status: "error", message: sr.error.unreachable });
+        // Oznaka se ne menja: zahtev je mogao da stigne, pa ponovni pokušaj
+        // mora da vrati isti termin, ne da napravi drugi.
+        setState({ status: "error", message: sr.booking.connectionLost });
       }
 
       // Termin je upravo zauzet — spisak slobodnih koji je stigao sa servera
@@ -491,7 +511,10 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
                   <button
                     type="button"
                     data-testid="slot-option"
-                    onClick={() => setSlot(value)}
+                    onClick={() => {
+                      setSlot(value);
+                      setRequestId(newRequestId());
+                    }}
                     className={cn(
                       "min-h-12 w-full border border-[#E4DAC9] bg-white/60 text-sm font-semibold tabular-nums active:bg-[#F2EADC]",
                       pressable,
@@ -522,6 +545,9 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           <input type="hidden" name="slug" value={data.tenant.slug} />
           <input type="hidden" name="serviceId" value={service.id} />
           <input type="hidden" name="startAt" value={slot} />
+          {requestId ? (
+            <input type="hidden" name="requestId" value={requestId} />
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="name" className={microLabel}>

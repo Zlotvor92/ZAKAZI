@@ -1,5 +1,5 @@
 import pg from "pg";
-import { testDatabaseUrl } from "../../db/globalSetup";
+import { testDatabaseUrl } from "./globalSetup";
 
 /**
  * Prave paralelne konekcije sa commit-om. `withRollback` ovde ne pomaže: jedna
@@ -72,6 +72,7 @@ export async function cleanupSalon(salon: Salon): Promise<void> {
 
 export type BookResult = {
   ok: boolean;
+  replayed?: boolean;
   reason?: string;
   appointment?: { id: string };
 };
@@ -85,21 +86,22 @@ export type BookArgs = {
   deviceId?: string | null;
   networkHash?: string | null;
   headers?: Record<string, string>;
+  requestId?: string | null;
 };
 
-/** Poziv kao neulogovan posetilac, na svojoj konekciji i svojoj transakciji. */
-export async function bookAsAnon(args: BookArgs): Promise<BookResult> {
+/** Poziv kao server (`service_role`), na svojoj konekciji i svojoj transakciji. */
+export async function bookAsServer(args: BookArgs): Promise<BookResult> {
   const db = await racePool.connect();
   try {
     await db.query("begin");
-    await db.query("set local role anon");
+    await db.query("set local role service_role");
     if (args.headers) {
       await db.query("select set_config('request.headers', $1, true)", [
         JSON.stringify(args.headers),
       ]);
     }
     const result = await db.query<{ r: BookResult }>(
-      "select public_book($1,$2,$3,$4,$5,$6,$7) as r",
+      "select public_book($1,$2,$3,$4,$5,$6,$7,$8) as r",
       [
         args.slug,
         args.serviceId,
@@ -108,6 +110,7 @@ export async function bookAsAnon(args: BookArgs): Promise<BookResult> {
         args.phone,
         args.deviceId ?? null,
         args.networkHash ?? null,
+        args.requestId ?? null,
       ],
     );
     await db.query("commit");

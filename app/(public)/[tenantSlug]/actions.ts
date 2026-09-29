@@ -20,6 +20,8 @@ const bookingSchema = z.object({
   startAt: z.iso.datetime({ offset: true }),
   name: z.string(),
   phone: z.string(),
+  /** Isti za ponovljen pokušaj istog zakazivanja; vidi `public_book`. */
+  requestId: z.uuid().nullish(),
 });
 
 export type BookingState =
@@ -52,6 +54,7 @@ export async function submitBooking(
     startAt: formData.get("startAt"),
     name: formData.get("name"),
     phone: formData.get("phone"),
+    requestId: formData.get("requestId"),
   });
 
   if (!parsed.success) {
@@ -76,6 +79,7 @@ export async function submitBooking(
     phoneE164: phone.e164,
     deviceId: await deviceId(),
     networkHash: await networkHash(parsed.data.slug),
+    requestId: parsed.data.requestId ?? null,
   });
 
   if (!result.ok) {
@@ -103,6 +107,20 @@ export async function submitBooking(
     }
 
     return { status: "error", message: rejectionMessage(result.reason) };
+  }
+
+  // Ponovljen zahtev je vratio termin koji već postoji; obaveštenje je otišlo
+  // pri prvom pokušaju i ne šalje se dvaput.
+  if (result.replayed) {
+    return {
+      status: "booked",
+      appointment: {
+        startAt: result.appointment.start_at,
+        endAt: result.appointment.end_at,
+        serviceName: result.appointment.service_name,
+        priceRsd: result.appointment.price_rsd,
+      },
+    };
   }
 
   // Posle odgovora, ne pre njega: klijentkinja ne treba da čeka na tuđi

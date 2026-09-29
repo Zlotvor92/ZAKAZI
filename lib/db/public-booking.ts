@@ -47,6 +47,8 @@ export const bookingDataSchema = z.object({
 export const bookResultSchema = z.discriminatedUnion("ok", [
   z.object({
     ok: z.literal(true),
+    /** Isti `request_id` poslat ponovo: termin je već postojao. */
+    replayed: z.boolean().optional(),
     appointment: z.object({
       id: z.uuid(),
       tenant_id: z.uuid(),
@@ -111,6 +113,7 @@ export async function bookPublicAppointment(input: {
   phoneE164: string;
   deviceId: string | null;
   networkHash: string | null;
+  requestId: string | null;
 }): Promise<BookResult> {
   const supabase = createAdminClient();
 
@@ -122,6 +125,7 @@ export async function bookPublicAppointment(input: {
     p_phone_e164: input.phoneE164,
     p_device_id: input.deviceId,
     p_network_hash: input.networkHash,
+    p_request_id: input.requestId,
   });
 
   if (error) {
