@@ -1,11 +1,11 @@
 import { expect, test } from "@playwright/test";
 import pg from "pg";
-import { sr } from "../../../lib/i18n/sr";
+import { sr } from "../../lib/i18n/sr";
 
 /**
- * AUDIT — [REPRO] odgovor na zakazivanje se izgubi, a termin je u bazi.
- * Ispravno ponašanje: klijentkinja ne dobija poruku "ništa nije sačuvano" i
- * ponovni pritisak ne završava greškom. Test trenutno PADA.
+ * Odgovor na zakazivanje se izgubi a termin je već u bazi (mobilna mreža).
+ * Ekran ne sme da tvrdi da ništa nije sačuvano, a ponovni pritisak mora da vrati
+ * isti termin, ne drugi ni grešku.
  */
 const SLUG = process.env["AUDIT_SLUG"] ?? "studio-milica";
 const DATABASE_URL =
@@ -27,7 +27,7 @@ async function countAppointments(e164: string): Promise<number> {
   }
 }
 
-test("[REPRO] izgubljen odgovor: termin postoji, a ekran kaže da ništa nije sačuvano", async ({
+test("izgubljen odgovor: poruka ne laže, a ponovni pritisak vraća isti termin", async ({
   page,
 }) => {
   const tail = String(Date.now()).slice(-7);
@@ -45,7 +45,7 @@ test("[REPRO] izgubljen odgovor: termin postoji, a ekran kaže da ništa nije sa
   await page.route(`**/${SLUG}`, async (route) => {
     if (route.request().method() === "POST" && !dropped) {
       dropped = true;
-      await route.fetch(); // server izvrši akciju
+      await route.fetch(); // server izvrši akciju, termin nastaje
       await route.abort("failed"); // odgovor se gubi
       return;
     }
@@ -53,8 +53,16 @@ test("[REPRO] izgubljen odgovor: termin postoji, a ekran kaže da ništa nije sa
   });
 
   await page.getByRole("button", { name: sr.booking.submit }).click();
-  await expect.poll(() => countAppointments(e164)).toBe(1);
 
-  // Očekivano: ekran ne tvrdi da ništa nije sačuvano (ili pokaže potvrdu).
+  await expect(page.getByText(sr.booking.connectionLost)).toBeVisible();
   await expect(page.getByText(sr.error.unreachable)).toHaveCount(0);
+  expect(await countAppointments(e164)).toBe(1);
+
+  // Isti pritisak ponovo, bez čekanja od 30 s.
+  await page.getByRole("button", { name: sr.booking.submit }).click();
+
+  await expect(
+    page.getByRole("heading", { name: sr.booking.confirmedTitle }),
+  ).toBeVisible();
+  expect(await countAppointments(e164)).toBe(1);
 });

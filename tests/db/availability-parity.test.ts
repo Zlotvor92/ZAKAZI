@@ -9,7 +9,7 @@ import {
   createTenant,
   insertAppointment,
   withRollback,
-} from "../../db/helpers";
+} from "./helpers";
 
 /**
  * AUDIT — paritet JS (što se prikazuje) i SQL (što se prihvata).

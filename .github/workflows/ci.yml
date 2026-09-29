@@ -149,9 +149,12 @@ jobs:
           grep -vE 'Pulling fs layer|Waiting|Verifying Checksum|Download complete|Pull complete|Downloading|Extracting|Already exists' /tmp/supabase.log || true
           exit "$(cat /tmp/supabase-exit)"
 
-      - name: Anon ključ u okruženje
+      # Servisni ključ je potreban i za sam tok zakazivanja: `public_book`,
+      # otkazivanje i pretragu po broju zove samo server.
+      - name: Ključevi u okruženje
         run: |
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
+          echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> "$GITHUB_ENV"
 
       - name: Playwright
         run: npm run test:e2e

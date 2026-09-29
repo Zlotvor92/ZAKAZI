@@ -6,7 +6,7 @@ import {
   createPopulatedTenant,
   inSavepoint,
   withRollback,
-} from "../../db/helpers";
+} from "./helpers";
 
 /**
  * AUDIT — pokušaji da se tenant A dohvati tenant B direktno kroz tabele, bez
@@ -73,13 +73,15 @@ describe("A pokušava da upiše tuđe identifikatore", () => {
     });
   });
 
-  it("UPDATE tuđeg termina ne pogađa nijedan red; DELETE isto", async () => {
+  it("UPDATE tuđeg termina ne pogađa nijedan red; DELETE nije dozvoljen nikome", async () => {
     await withRollback(async (db) => {
       const { a, b } = await twoTenants(db);
       await asUser(db, a.userId, async () => {
         const upd = await db.query("update appointments set price_rsd=1 where id=$1", [b.appointmentId]);
-        const del = await db.query("delete from appointments where id=$1", [b.appointmentId]);
-        expect([upd.rowCount, del.rowCount]).toEqual([0, 0]);
+        expect(upd.rowCount).toBe(0);
+        await expect(
+          inSavepoint(db, () => db.query("delete from appointments where id=$1", [b.appointmentId])),
+        ).rejects.toThrow(/permission denied/);
       });
     });
   });
