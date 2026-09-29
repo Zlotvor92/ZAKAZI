@@ -66,11 +66,6 @@ describe("površina za neprijavljene", () => {
         // se prijavi, pa je token u adresi jedini dokaz — netačan vraća
         // prazan spisak, isto kao tačan token salona bez termina.
         "calendar_feed",
-        // Upis greške. Zove je i neprijavljen posetilac, jer greška na javnoj
-        // strani zakazivanja pogađa upravo njega — a greška o kojoj se ne
-        // sazna je greška koja ostaje. Ništa ne vraća i ne čita, tekst seče, i
-        // preko šezdeset upisa u minutu odbacuje.
-        "log_error",
         // Zakazivanje, otkazivanje i pretraga po broju NISU ovde: primaju hash
         // mreže i uređaj na kojima stoje limiti, pa ih zove samo server
         // (`service_role`). Vidi `public-rpc-server-only.test.ts`.

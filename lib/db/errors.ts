@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { redactErrorPath } from "@/lib/domain/redact";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type ErrorSource = "client" | "server";
@@ -21,13 +23,15 @@ export type ErrorReport = {
  */
 export async function logError(report: ErrorReport): Promise<void> {
   try {
-    const supabase = await createClient();
+    // Preko `service_role`: `log_error` se ne daje `anon` roli, jer bi izvor i
+    // količinu upisa mogao da bira bilo ko sa javnim ključem.
+    const supabase = createAdminClient();
 
     await supabase.rpc("log_error", {
       p_source: report.source,
       p_message: report.message,
       p_digest: report.digest ?? null,
-      p_path: report.path ?? null,
+      p_path: redactErrorPath(report.path),
       p_stack: report.stack ?? null,
       p_user_agent: report.userAgent ?? null,
       p_tenant_id: null,
