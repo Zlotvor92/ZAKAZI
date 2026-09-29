@@ -164,9 +164,8 @@ jobs:
           retention-days: 7
 
   audit:
-    name: npm audit (informativno)
+    name: npm audit
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
 
@@ -177,7 +176,15 @@ jobs:
 
       - run: npm ci
 
-      - name: Odakle dolaze ranjivosti
+      # Blokira: kritična ranjivost u zavisnostima koje idu u produkciju
+      # (`--omit=dev`) ne sme da prođe. Preostale ranjivosti nižeg stepena su
+      # ispisane u `docs/security-advisories.md`, sa razlogom zašto ostaju.
+      - name: Kritične ranjivosti u produkcionim zavisnostima
+        run: npm audit --omit=dev --audit-level=critical
+
+      # Informativno: cela slika, uključujući razvojne zavisnosti.
+      - name: Odakle dolaze ostale ranjivosti
+        continue-on-error: true
         run: |
           npm audit || true
           echo "--- lanci zavisnosti ---"
