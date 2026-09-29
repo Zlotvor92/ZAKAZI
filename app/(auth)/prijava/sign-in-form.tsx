@@ -67,7 +67,7 @@ function GoogleButton() {
               if (isRedirect(cause)) {
                 throw cause;
               }
-              setMessage(sr.error.unreachable);
+              setMessage(sr.signIn.failed);
             }
           });
         }}
@@ -122,7 +122,7 @@ export function SignInForm() {
       try {
         return await requestMagicLink(previous, formData);
       } catch {
-        return { status: "error", message: sr.error.unreachable };
+        return { status: "error", message: sr.signIn.failed };
       }
     },
     { status: "idle" },
