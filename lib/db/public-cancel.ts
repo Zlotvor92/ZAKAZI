@@ -112,3 +112,19 @@ export async function cancelPublicAppointment(input: {
 
   return cancelResultSchema.parse(data);
 }
+
+/**
+ * Briše pokušaje pretrage starije od dana i vraća koliko ih je otišlo. Limit
+ * gleda samo poslednjih 60 minuta, pa stariji zapisi nikome ne trebaju.
+ */
+export async function prunePhoneLookupAttempts(): Promise<number> {
+  const supabase = createAdminClient();
+
+  const { data, error } = await supabase.rpc("prune_phone_lookup_attempts");
+
+  if (error) {
+    throw new Error(`Čišćenje pokušaja pretrage nije uspelo: ${error.message}`);
+  }
+
+  return z.number().int().parse(data);
+}

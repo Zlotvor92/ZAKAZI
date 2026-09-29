@@ -1,10 +1,12 @@
 import { timingSafeEqual } from "node:crypto";
 import { type NextRequest } from "next/server";
 import { completePastAppointments } from "@/lib/db/appointments";
+import { prunePhoneLookupAttempts } from "@/lib/db/public-cancel";
 import { requireEnv } from "@/lib/env";
 
 /**
- * Noćni posao: termini iz prošlog dana postaju obavljeni.
+ * Noćni posao: termini iz prošlog dana postaju obavljeni, a pokušaji pretrage
+ * po broju stariji od dana se brišu.
  *
  * Vercel ga zove po rasporedu iz `vercel.json` i šalje `CRON_SECRET` kao
  * Bearer token. Ko ga nema, dobija 401. Kad promenljiva nije podešena, ruta
@@ -26,6 +28,7 @@ export async function GET(request: NextRequest) {
   }
 
   const completed = await completePastAppointments();
+  const pruned = await prunePhoneLookupAttempts();
 
-  return Response.json({ completed });
+  return Response.json({ completed, pruned });
 }
