@@ -71,12 +71,10 @@ describe("površina za neprijavljene", () => {
         // sazna je greška koja ostaje. Ništa ne vraća i ne čita, tekst seče, i
         // preko šezdeset upisa u minutu odbacuje.
         "log_error",
-        // Spisak termina za dati broj, na strani za otkazivanje.
-        "public_appointments_for_phone",
-        "public_book",
+        // Zakazivanje, otkazivanje i pretraga po broju NISU ovde: primaju hash
+        // mreže i uređaj na kojima stoje limiti, pa ih zove samo server
+        // (`service_role`). Vidi `public-rpc-server-only.test.ts`.
         "public_booking_data",
-        // Otkazivanje termina od strane klijentkinje koja ga je zakazala.
-        "public_cancel_appointment",
         // Ime, boje i logo salona za stranu za otkazivanje, van gejta
         // `public_booking_enabled` — otkazivanje radi i kad je zakazivanje
         // ručno isključeno.

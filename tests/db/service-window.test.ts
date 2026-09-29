@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   asAnon,
+  asServer,
   asUser,
   closePool,
   createClient,
@@ -121,10 +122,11 @@ async function bookRefill(
   target: string,
 ): Promise<BookResult> {
   return asAnon(db, async () => {
-    const result = await db.query<{ result: BookResult }>(
+    const result = await asServer(db, () =>
+db.query<{ result: BookResult }>(
       "select public_book($1, $2, $3, 'Ana', $4, null, null) as result",
       [base.slug, base.refill, target, PHONE],
-    );
+    ));
     return result.rows[0]!.result;
   });
 }
@@ -222,10 +224,11 @@ describe("korekcija važi 21 dan od poslednjeg dolaska", () => {
       await visit(db, base, client, base.fullSet, target, 90);
 
       const result = await asAnon(db, async () => {
-        const booked = await db.query<{ result: BookResult }>(
+        const booked = await asServer(db, () =>
+db.query<{ result: BookResult }>(
           "select public_book($1, $2, $3, 'Ana', $4, null, null) as result",
           [base.slug, base.fullSet, target, PHONE],
-        );
+        ));
         return booked.rows[0]!.result;
       });
 

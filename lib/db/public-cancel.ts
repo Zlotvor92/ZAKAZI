@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -43,6 +44,9 @@ const upcomingAppointmentSchema = z.object({
 export type UpcomingAppointment = z.infer<typeof upcomingAppointmentSchema>;
 
 /**
+ * Pretraga i otkazivanje idu preko `service_role`, iz istog razloga kao
+ * zakazivanje: hash mreže mora da računa server, ne pozivalac.
+ *
  * Budući termini datog broja telefona u salonu. `null` kad salon ne postoji
  * ili je suspendovan; prazan niz kad salon postoji ali taj broj nema termina —
  * dve različite poruke na strani.
@@ -52,7 +56,7 @@ export async function getAppointmentsForPhone(
   phoneE164: string,
   networkHash: string | null,
 ): Promise<UpcomingAppointment[] | null> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc("public_appointments_for_phone", {
     p_slug: slug,
@@ -92,7 +96,7 @@ export async function cancelPublicAppointment(input: {
   deviceId: string | null;
   networkHash: string | null;
 }): Promise<CancelResult> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc("public_cancel_appointment", {
     p_slug: input.slug,

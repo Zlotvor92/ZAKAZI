@@ -7,6 +7,7 @@ import {
 import { buildAvailability } from "@/lib/domain/availability";
 import {
   asAnon,
+  asServer,
   asUser,
   closePool,
   createClient,
@@ -202,7 +203,8 @@ async function book(
     networkHash?: string;
   },
 ): Promise<BookResult> {
-  const result = await db.query<{ result: BookResult }>(
+  const result = await asServer(db, () =>
+db.query<{ result: BookResult }>(
     "select public_book($1, $2, $3, $4, $5, $6, $7) as result",
     [
       input.slug,
@@ -213,7 +215,7 @@ async function book(
       input.deviceId ?? null,
       input.networkHash ?? null,
     ],
-  );
+  ));
   return result.rows[0]!.result;
 }
 

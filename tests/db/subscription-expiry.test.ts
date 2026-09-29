@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   asAnon,
+  asServer,
   closePool,
   createClient,
   createService,
@@ -187,12 +188,13 @@ describe("istekla pretplata gasi novo zakazivanje", () => {
       const { tenantId, slug } = await openSalon(db);
       await setPaidUntil(db, tenantId, "2020-01-01");
 
-      const result = await db.query<{ result: { ok: boolean; reason?: string } }>(
+      const result = await asServer(db, () =>
+db.query<{ result: { ok: boolean; reason?: string } }>(
         `select public_book($1, (select id from services where tenant_id = $2 limit 1),
                             now() + interval '3 days', 'Jelena', '+381601234567', 'x')
          as result`,
         [slug, tenantId],
-      );
+      ));
 
       expect(result.rows[0]!.result).toMatchObject({
         ok: false,

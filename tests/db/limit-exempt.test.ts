@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   asAnon,
+  asServer,
   asUser,
   closePool,
   createService,
@@ -74,10 +75,11 @@ async function bookThree(db: pg.PoolClient, salon: Salon, phone: string) {
     const at = await monday(db, time);
     results.push(
       await asAnon(db, async () => {
-        const result = await db.query<{ result: BookResult }>(
+        const result = await asServer(db, () =>
+db.query<{ result: BookResult }>(
           "select public_book($1, $2, $3, 'Test', $4, 'isti-telefon', null) as result",
           [salon.slug, salon.serviceId, at, phone],
-        );
+        ));
         return result.rows[0]!.result;
       }),
     );

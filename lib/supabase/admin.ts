@@ -4,9 +4,10 @@ import { requireEnv, requireUrlEnv } from "@/lib/env";
 /**
  * Klijent koji zaobilazi RLS.
  *
- * Postoji zbog jednog jedinog slučaja: klijentkinja koja zakazuje nije
- * ulogovana, a obaveštenje treba poslati na uređaje vlasnice — koje ta
- * klijentkinja po RLS-u ne sme ni da vidi, i s pravom.
+ * Postoji zbog toga što klijentkinja koja zakazuje nije ulogovana: obaveštenje
+ * treba poslati na uređaje vlasnice, koje ona po RLS-u ne sme da vidi, a
+ * zakazivanje, otkazivanje i pretragu po broju sme da zove samo server (limiti
+ * po mreži se oslanjaju na hash koji server izračuna).
  *
  * Sme se uvoziti isključivo iz server akcija i ruta. Nikad iz komponente, jer
  * bi ključ završio u pregledaču i sa njim cela baza.

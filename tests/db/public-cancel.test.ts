@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   asAnon,
+  asServer,
   asUser,
   closePool,
   createClient,
@@ -59,10 +60,11 @@ async function upcoming(
   slug: string,
   phone: string,
 ): Promise<UpcomingAppointment[]> {
-  const result = await db.query<{ data: UpcomingAppointment[] }>(
+  const result = await asServer(db, () =>
+db.query<{ data: UpcomingAppointment[] }>(
     "select public_appointments_for_phone($1, $2) as data",
     [slug, phone],
-  );
+  ));
   return result.rows[0]!.data;
 }
 
@@ -76,7 +78,8 @@ async function cancel(
     networkHash?: string;
   },
 ): Promise<CancelResult> {
-  const result = await db.query<{ result: CancelResult }>(
+  const result = await asServer(db, () =>
+db.query<{ result: CancelResult }>(
     "select public_cancel_appointment($1, $2, $3, $4, $5) as result",
     [
       input.slug,
@@ -85,7 +88,7 @@ async function cancel(
       input.deviceId ?? null,
       input.networkHash ?? null,
     ],
-  );
+  ));
   return result.rows[0]!.result;
 }
 

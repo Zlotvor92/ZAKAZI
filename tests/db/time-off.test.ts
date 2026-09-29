@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   asAnon,
+  asServer,
   asUser,
   closePool,
   createClient,
@@ -248,10 +249,11 @@ describe("odsustvo zatvara javno zakazivanje", () => {
       expect(data.busy).toHaveLength(1);
 
       const booked = await asAnon(db, async () => {
-        const result = await db.query<{ result: { ok: boolean; reason?: string } }>(
+        const result = await asServer(db, () =>
+db.query<{ result: { ok: boolean; reason?: string } }>(
           "select public_book($1, $2, $3, $4, $5, null) as result",
           [base.slug, base.serviceId, start, "Jelena", "+381645557001"],
-        );
+        ));
         return result.rows[0]!.result;
       });
 

@@ -76,6 +76,24 @@ export async function asUser<T>(
   }
 }
 
+/**
+ * Poziv kao server (`service_role`). Zakazivanje, otkazivanje i pretragu po
+ * broju sme da zove samo server; posle poziva se vraća rola koja je važila.
+ */
+export async function asServer<T>(
+  db: pg.PoolClient,
+  fn: () => Promise<T>,
+): Promise<T> {
+  const before = await db.query<{ role: string }>("select current_user as role");
+  await db.query("set local role service_role");
+  try {
+    return await fn();
+  } finally {
+    const role = before.rows[0]!.role;
+    await db.query(role === "postgres" ? "reset role" : `set local role ${role}`);
+  }
+}
+
 /** Neulogovan posetilac: rola `anon`, bez ijedne JWT tvrdnje. */
 export async function asAnon<T>(
   db: pg.PoolClient,

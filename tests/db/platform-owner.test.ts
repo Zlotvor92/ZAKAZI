@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   asAnon,
+  asServer,
   asUser,
   closePool,
   createStaff,
@@ -385,11 +386,12 @@ describe("prekidač salona", () => {
         [tenantId],
       );
 
-      const result = await db.query<{ result: WriteResult }>(
+      const result = await asServer(db, () =>
+db.query<{ result: WriteResult }>(
         `select public_book($1, $2, '2027-03-01T09:00:00Z', 'Jelena',
                             '+381641234567', null) as result`,
         [slug, serviceId.rows[0]!.id],
-      );
+      ));
 
       expect(result.rows[0]!.result).toEqual({
         ok: false,

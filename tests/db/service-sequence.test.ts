@@ -2,6 +2,7 @@ import type pg from "pg";
 import { afterAll, describe, expect, it } from "vitest";
 import {
   asAnon,
+  asServer,
   asUser,
   closePool,
   createClient,
@@ -150,10 +151,11 @@ async function book(
   startAt: string,
 ): Promise<BookResult> {
   return asAnon(db, async () => {
-    const result = await db.query<{ result: BookResult }>(
+    const result = await asServer(db, () =>
+db.query<{ result: BookResult }>(
       "select public_book($1, $2, $3, 'Ana', $4, null, null) as result",
       [base.slug, serviceId, startAt, PHONE],
-    );
+    ));
     return result.rows[0]!.result;
   });
 }

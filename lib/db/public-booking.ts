@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -97,6 +98,11 @@ export async function getPublicBookingData(
   return bookingDataSchema.parse(data);
 }
 
+/**
+ * Ide preko `service_role`: baza `public_book` više ne daje `anon` roli. Hash
+ * mreže i uređaj određuje server, jer ih inače pozivalac bira sam i limiti ne
+ * važe.
+ */
 export async function bookPublicAppointment(input: {
   slug: string;
   serviceId: string;
@@ -106,7 +112,7 @@ export async function bookPublicAppointment(input: {
   deviceId: string | null;
   networkHash: string | null;
 }): Promise<BookResult> {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc("public_book", {
     p_slug: input.slug,
