@@ -229,25 +229,24 @@ describe("upis preko granice tenanta", () => {
     });
   });
 
-  it("brisanje tuđeg termina ne dira nijedan red", async () => {
+  it("brisanje termina nije dozvoljeno nikome iz salona, ni svog ni tuđeg", async () => {
     await withRollback(async (db) => {
       const a = await createPopulatedTenant(db);
       const b = await createPopulatedTenant(db);
 
-      const deleted = await asUser(db, a.userId, async () => {
-        const result = await db.query("delete from appointments where id = $1", [
-          b.appointmentId,
-        ]);
-        return result.rowCount;
+      await asUser(db, a.userId, async () => {
+        for (const id of [a.appointmentId, b.appointmentId]) {
+          await expect(
+            inSavepoint(db, () => db.query("delete from appointments where id = $1", [id])),
+          ).rejects.toThrow(/permission denied/);
+        }
       });
 
-      expect(deleted).toBe(0);
-
       const survivors = await db.query<{ count: string }>(
-        "select count(*)::text as count from appointments where id = $1",
-        [b.appointmentId],
+        "select count(*)::text as count from appointments where id = any($1)",
+        [[a.appointmentId, b.appointmentId]],
       );
-      expect(survivors.rows[0]!.count).toBe("1");
+      expect(survivors.rows[0]!.count).toBe("2");
     });
   });
 
@@ -270,48 +269,90 @@ describe("upis preko granice tenanta", () => {
   });
 });
 
-describe("appointment_events je samo za dopisivanje", () => {
-  it("dozvoljava upis novog reda u sopstvenom salonu", async () => {
+describe("appointment_events piše samo baza", () => {
+  it("član salona ne može da upiše događaj, ni u svom salonu", async () => {
     await withRollback(async (db) => {
       const a = await createPopulatedTenant(db);
 
-      const inserted = await asUser(db, a.userId, async () => {
-        const result = await db.query(
-          `insert into appointment_events
-             (tenant_id, appointment_id, from_status, to_status, actor_type, actor_id, device_id)
-           values ($1, $2, 'confirmed', 'completed', 'user', $3, 'telefon-1')`,
-          [a.tenantId, a.appointmentId, a.userId],
-        );
-        return result.rowCount;
+      await asUser(db, a.userId, async () => {
+        await expect(
+          inSavepoint(db, () =>
+            db.query(
+              `insert into appointment_events
+                 (tenant_id, appointment_id, from_status, to_status, actor_type, actor_id, device_id)
+               values ($1, $2, 'confirmed', 'cancelled_by_client', 'client', null, 'lazan-uredjaj')`,
+              [a.tenantId, a.appointmentId],
+            ),
+          ),
+        ).rejects.toThrow(/permission denied/);
       });
-
-      expect(inserted).toBe(1);
     });
   });
 
-  it("ne dozvoljava izmenu ni brisanje sopstvenog reda", async () => {
+  it("ne dozvoljava ni izmenu ni brisanje postojećeg reda", async () => {
     await withRollback(async (db) => {
       const a = await createPopulatedTenant(db);
 
-      const result = await asUser(db, a.userId, async () => {
-        const updated = await db.query(
-          "update appointment_events set to_status = 'no_show' where tenant_id = $1",
-          [a.tenantId],
-        );
-        const deleted = await db.query(
-          "delete from appointment_events where tenant_id = $1",
-          [a.tenantId],
-        );
-        return { updated: updated.rowCount, deleted: deleted.rowCount };
+      await asUser(db, a.userId, async () => {
+        await expect(
+          inSavepoint(db, () =>
+            db.query("update appointment_events set to_status = 'no_show' where tenant_id = $1", [a.tenantId]),
+          ),
+        ).rejects.toThrow(/permission denied/);
+        await expect(
+          inSavepoint(db, () =>
+            db.query("delete from appointment_events where tenant_id = $1", [a.tenantId]),
+          ),
+        ).rejects.toThrow(/permission denied/);
       });
-
-      expect(result).toEqual({ updated: 0, deleted: 0 });
 
       const survivors = await db.query<{ to_status: string }>(
         "select to_status from appointment_events where tenant_id = $1",
         [a.tenantId],
       );
       expect(survivors.rows.map((row) => row.to_status)).toEqual(["confirmed"]);
+    });
+  });
+
+  it("član i dalje čita istoriju svog salona, ne tuđeg", async () => {
+    await withRollback(async (db) => {
+      const a = await createPopulatedTenant(db);
+      const b = await createPopulatedTenant(db);
+
+      const seen = await asUser(db, a.userId, async () =>
+        (await db.query<{ tenant_id: string }>("select tenant_id from appointment_events")).rows,
+      );
+
+      expect(seen.length).toBeGreaterThan(0);
+      expect(seen.every((row) => row.tenant_id === a.tenantId)).toBe(true);
+      expect(seen.some((row) => row.tenant_id === b.tenantId)).toBe(false);
+    });
+  });
+
+  it("promena statusa i dalje upisuje događaj kroz triger, iako član ne sme direktno", async () => {
+    await withRollback(async (db) => {
+      const a = await createPopulatedTenant(db);
+
+      await asUser(db, a.userId, async () => {
+        await db.query("select change_appointment_status($1, 'completed', 'telefon')", [a.appointmentId]);
+      });
+
+      const events = await db.query<{ to_status: string; actor_type: string }>(
+        "select to_status, actor_type from appointment_events where appointment_id = $1 order by created_at",
+        [a.appointmentId],
+      );
+      expect(events.rows.map((r) => r.to_status)).toEqual(["confirmed", "completed"]);
+      expect(events.rows[1]!.actor_type).toBe("user");
+    });
+  });
+
+  it("baza ne pušta brisanje termina koji ima istoriju, ni vlasniku baze", async () => {
+    await withRollback(async (db) => {
+      const a = await createPopulatedTenant(db);
+
+      await expect(
+        inSavepoint(db, () => db.query("delete from appointments where id = $1", [a.appointmentId])),
+      ).rejects.toThrow(/foreign key|violates/);
     });
   });
 });
