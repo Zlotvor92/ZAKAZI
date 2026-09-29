@@ -16,12 +16,27 @@ Grana `fix/production-security-reliability`.
 | F-10 | `is_bookable_start` traži ceo minut | isto | isto |
 | F-09 | `prune_phone_lookup_attempts` (starije od 1 dana) u postojećem noćnom cron-u | isto | isto, `tests/actions/cron.test.ts` |
 
-## Ručno, pre i posle deploy-a
+## Primenjeno u produkciji (2026-09-29)
 
-1. **`SUPABASE_SERVICE_ROLE_KEY` mora biti postavljen u Vercel-u (Production i Preview).** Bez njega više ne rade javno zakazivanje, otkazivanje, pretraga po broju ni upis grešaka. Postavlja se u Vercel → Project Settings → Environment Variables; posle toga nov deploy.
-2. **Redosled:** migracije `20260928000000` … `20260928050000` i nov deploy aplikacije treba da idu jedno za drugim, u periodu sa malo saobraćaja. Stara verzija aplikacije ne radi posle prve migracije (zove funkcije kao `anon`), a nova ne radi bez druge (šalje `p_request_id`). Prozor je kratak, ali postoji.
-3. **Pregled podataka pre `validate`** (F-07): upit je u komentaru migracije `20260928050000`. Ako vrati redove, oni ostaju netaknuti dok se ne obrade; tek onda `alter table … validate constraint …` za `clients_phone_e164_format` i `limit_exempt_phones_phone_e164_check`.
-4. Migracija `20260928030000` briše `error_events` starije od 7 dana.
+- **Vercel:** `SUPABASE_SERVICE_ROLE_KEY` je već bio postavljen (Production i Preview), nije menjan. Produkcioni deploy `dpl_77DsP6x4FnUbVKpssDc76PQqGH5D` (commit `a1771b4`, `main`) je READY na `doterajme.rs`.
+- **Supabase:** šest migracija `20260928000000` … `20260928050000` primenjeno u jednoj transakciji, upisane u `supabase_migrations.schema_migrations` (71 zapis). Pre toga: probni prolaz u transakciji koja se poništava i lokalna kopija svih tabela i definicija funkcija (Supabase nije imao svoje kopije; PITR je isključen).
+- **Podaci pre F-07:** 0 redova sa `+3810…` u `clients`, `limit_exempt_phones` i `blocklist`. Ograničenja su ipak ostala `NOT VALID`; može `validate constraint` za `clients_phone_e164_format` i `limit_exempt_phones_phone_e164_check` kad želiš.
+- **Prozor bez zakazivanja:** oko dva minuta, između migracija i kraja build-a nove verzije (stara verzija je zvala funkcije kao `anon`).
+
+### Provera u produkciji
+
+| Šta | Ishod |
+|---|---|
+| javna strana `/salon-smiley` | 200; usluge, dani, termini se prikazuju; forma nosi `requestId` (36 znakova) |
+| `/salon-smiley/otkazi`, pretraga po nepostojećem broju (server → `service_role`) | „Nema zakazanih termina za taj broj", bez greške |
+| anon → `public_book`, `public_appointments_for_phone`, `log_error` preko REST-a | 401 `permission denied` |
+| anon → `public_booking_data` | 200 |
+| anon → `select` nad `appointments` | 401 `permission denied` |
+| `public_book` kao `service_role`, u transakciji koja se poništava | prvi poziv `ok`; isti `request_id` ponovo `ok` + `replayed`; broj sa nulom `invalid_phone`; `09:00:00.4` `outside_working_hours` |
+| ostaci posle provere | 0 test termina, 0 test klijenata, ukupno 72 termina kao pre |
+| `appointment_events` INSERT politike | 0 |
+
+**Nije proveravano u produkciji:** stvarno zakazivanje kroz formu (napravilo bi pravi termin i push obaveštenje salonu; audit log ga više ne bi dozvolio da obrišem) i noćni cron sa `prune_phone_lookup_attempts` (`CRON_SECRET` je `sensitive` i ne može da se pročita; prvi put radi po rasporedu u 01:00 UTC).
 
 ## Nije popravljeno (van zadatka)
 
