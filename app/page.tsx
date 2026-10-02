@@ -93,10 +93,10 @@ export default function HomePage() {
           Dimenzije zato stoje ovde, i dalje čuvaju raspored od poskakivanja.
         */}
         <Image
-          src="/home-hero-manicure.webp"
+          src="/home-hero-two-hands.webp"
           alt={sr.home.heroImageAlt}
-          width={1600}
-          height={900}
+          width={1440}
+          height={960}
           sizes="(max-width: 448px) 100vw, 448px"
           priority
           className="-mx-6 w-[calc(100%+3rem)] max-w-none"
