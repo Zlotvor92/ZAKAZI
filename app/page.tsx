@@ -103,6 +103,44 @@ export default function HomePage() {
         />
 
         {/*
+          Snimak od 45 s se skida tek kad neko pritisne pokretanje
+          (`preload="none"`): do tada se učitava samo poster od 30 KB, pa strana
+          ostaje laka i na mobilnom internetu. Autoplay ne postoji jer snimak
+          ima zvuk. Bez `playsInline` iPhone vertikalni snimak otvara preko
+          celog ekrana, što mu je pravo mesto.
+        */}
+        <section className="flex flex-col gap-3">
+          <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+            {sr.home.video.label}
+          </span>
+          <video
+            controls
+            preload="none"
+            poster="/home-kako-radi-poster.webp"
+            aria-label={sr.home.video.ariaLabel}
+            className="aspect-[9/16] w-full max-w-[280px] bg-[#211D1A]"
+          >
+            <source src="/home-kako-radi.mp4" type="video/mp4" />
+            {sr.home.video.unsupported}
+          </video>
+          <p className="text-[13.5px] leading-relaxed text-[#554C44]">
+            {sr.home.instagram.before}{" "}
+            <b className="font-bold tracking-[0.06em] text-[#8C1D3F]">
+              {sr.home.instagram.keyword}
+            </b>{" "}
+            {sr.home.instagram.after}{" "}
+            <a
+              href={sr.home.instagram.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[#8C1D3F] underline"
+            >
+              {sr.home.instagram.handle}
+            </a>
+          </p>
+        </section>
+
+        {/*
           Primer termina namerno nije kartica sa senkom: na magazinskoj strani
           bela kutija postaje najglasniji element i potuče i naslov i sliku.
           Ovde je to tabela činjenica — tanke linije i serifni brojevi.
