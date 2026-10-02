@@ -109,7 +109,7 @@ export default function HomePage() {
           ima zvuk. Bez `playsInline` iPhone vertikalni snimak otvara preko
           celog ekrana, što mu je pravo mesto.
         */}
-        <section className="flex flex-col gap-3">
+        <section className="flex flex-col gap-3 text-center">
           <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
             {sr.home.video.label}
           </span>
@@ -118,7 +118,7 @@ export default function HomePage() {
             preload="none"
             poster="/home-kako-radi-poster.webp"
             aria-label={sr.home.video.ariaLabel}
-            className="aspect-[9/16] w-full max-w-[280px] bg-[#211D1A]"
+            className="mx-auto aspect-[9/16] w-full max-w-[280px] bg-[#211D1A]"
           >
             <source src="/home-kako-radi.mp4" type="video/mp4" />
             {sr.home.video.unsupported}
