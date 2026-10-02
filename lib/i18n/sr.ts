@@ -46,7 +46,7 @@ export const sr = {
     forWho:
       "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
     priceLabel: "Pretplata",
-    price: "od 990 RSD",
+    price: "od 1.590 RSD",
     pricePeriod: "mesečno",
     dataTitle: "Prijava preko Google naloga",
     dataBody:

@@ -432,7 +432,7 @@ Zato se pravo proverava dvaput u bazi: pre slanja fajla i još jednom u
 ## Obaveštenja o zakazivanju
 
 Kanal je Web Push. Odluka je pre svega o marži: pri dvesta zakazivanja mesečno
-SMS košta 500–800 RSD, a pretplata je 990. Push ne košta ništa po poruci.
+SMS košta 500–800 RSD, a pretplata je 1.590. Push ne košta ništa po poruci.
 
 - Slanje ide u `after()`, pošto je odgovor već otišao. Termin je u bazi pre nego
   što slanje počne, pa telefon koji se ne javi ne može da postane greška za
