@@ -7,6 +7,19 @@ export const sr = {
     tagline: "Zakazivanje termina za male salone lepote u Srbiji.",
     eyebrow: "Zakazivanje termina · Srbija",
     heroImageAlt: "Ruke sa svežim manikirom na lanenoj tkanini.",
+    video: {
+      label: "Pogledaj kako radi",
+      ariaLabel:
+        "Snimak od 45 sekundi: kako klijent zakazuje preko linka i kako termin stiže u kalendar salona.",
+      unsupported: "Ovaj pregledač ne ume da pusti snimak.",
+    },
+    instagram: {
+      before: "Napiši nam",
+      keyword: "TERMIN",
+      after: "u poruci na Instagramu:",
+      handle: "@doterajme",
+      url: "https://www.instagram.com/doterajme/",
+    },
     /**
      * Naslov je razbijen na tri dela zato što samo srednja reč ide u kurziv i
      * u vinsku boju — ostatak ostaje uspravan i crn.
