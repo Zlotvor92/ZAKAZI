@@ -173,8 +173,8 @@ pošiljaoca, pa prvi put stiže poruka bez logoa. Mora da radi i tako.
 
 Sivi krug pored imena pošiljaoca menja se jedino kroz **BIMI**, a Gmail BIMI
 logo ne prikazuje bez **VMC ili CMC sertifikata**: 1.000–1.500 USD godišnje,
-uz registrovan žig. Uz pretplatu od 990–3.900 RSD mesečno to je trošak veći
-od dvadeset godišnjih pretplata, za jednu ikonicu. Ne radi se.
+uz registrovan žig. Uz pretplatu od 1.590 RSD mesečno to je trošak od nekoliko
+godišnjih pretplata, za jednu ikonicu. Ne radi se.
 
 Ono što se besplatno kontroliše je ime pošiljaoca (`smtp_sender_name`) i logo
 u telu poruke.

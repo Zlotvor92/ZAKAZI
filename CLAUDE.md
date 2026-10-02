@@ -4,7 +4,7 @@
 
 SaaS aplikacija za zakazivanje termina namenjena **solo beauty profesionalcima u Srbiji** — nokat-tehničarke, kozmetičarke, majstori za trepavice i obrve, berberi. Tipičan korisnik radi sam ili u dvoje, iz iznajmljene stolice ili od kuće, klijente prima preko Instagram poruka, a termine vodi u papirnoj svesci.
 
-Cena proizvoda je 990–3.900 RSD mesečno. To znači da korisnik nema strpljenja ni za kakvu složenost i da svaki suvišan klik košta pretplatu.
+Cena proizvoda je od 1.590 RSD mesečno (najjeftinija, a verovatno i jedina cena). To znači da korisnik nema strpljenja ni za kakvu složenost i da svaki suvišan klik košta pretplatu.
 
 **Ovo NIJE** salon ERP. Nema POS-a, nema zaliha, nema obračuna plata, nema marketing kampanja. Ako se pojavi predlog da se doda nešto od toga — odbij ga i podseti me na ovaj pasus.
 

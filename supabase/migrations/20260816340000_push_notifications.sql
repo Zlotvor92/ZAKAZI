@@ -2,7 +2,8 @@
 --
 -- Kanal je Web Push: prava notifikacija na telefonu i kad je aplikacija
 -- zatvorena, bez cene po poruci. Pri dvesta zakazivanja mesečno SMS bi pojeo
--- pola pretplate od 990 dinara, pa cena ovde nije sitnica nego izbor kanala.
+-- trećinu do pola pretplate od 1.590 dinara, pa cena ovde nije sitnica nego
+-- izbor kanala.
 
 /*
  * Telefoni koji primaju obaveštenja.
