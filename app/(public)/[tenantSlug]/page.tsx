@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { display } from "@/app/fonts";
+import { JsonLd } from "@/components/json-ld";
 import { getPublicBookingData } from "@/lib/db/public-booking";
 import { getSalonSummary } from "@/lib/db/public-cancel";
+import { salonDescription, salonJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
 import { BookingFlow } from "./booking-flow";
 
@@ -22,7 +24,29 @@ export async function generateMetadata({
   const { tenantSlug } = await params;
   const data = await bookingData(tenantSlug);
 
-  return { title: data ? data.tenant.name : sr.booking.unavailableTitle };
+  if (!data) {
+    return { title: sr.booking.unavailableTitle };
+  }
+
+  const description = salonDescription(
+    data.tenant.name,
+    data.services.map((service) => service.name),
+  );
+
+  // Naslov ostaje golo ime salona: iz njega klijentkina prečica na početnom
+  // ekranu dobija ime, pa ključne reči idu u opis i u sadržaj strane.
+  return {
+    title: data.tenant.name,
+    description,
+    alternates: { canonical: `/${tenantSlug}` },
+    openGraph: {
+      type: "website",
+      title: data.tenant.name,
+      description,
+      locale: "sr_RS",
+      ...(data.tenant.logo_url ? { images: [data.tenant.logo_url] } : {}),
+    },
+  };
 }
 
 /**
@@ -182,6 +206,22 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
   return (
     <PublicPage>
+      <JsonLd
+        data={salonJsonLd({
+          name: data.tenant.name,
+          slug: data.tenant.slug,
+          logoUrl: data.tenant.logo_url,
+          description: salonDescription(
+            data.tenant.name,
+            data.services.map((service) => service.name),
+          ),
+          services: data.services.map((service) => ({
+            name: service.name,
+            description: service.description,
+            priceRsd: service.price_rsd,
+          })),
+        })}
+      />
       <SalonHeader
         name={data.tenant.name}
         logoUrl={data.tenant.logo_url}

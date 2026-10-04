@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { display } from "@/app/fonts";
+import { JsonLd } from "@/components/json-ld";
+import { softwareJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
 
 /**
@@ -16,6 +18,7 @@ export const metadata: Metadata = {
   title: sr.app.name,
   description: sr.home.tagline,
   applicationName: sr.app.name,
+  alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: sr.app.name,
@@ -41,6 +44,14 @@ export default function HomePage() {
   // svog telefona.
   return (
     <div className="min-h-dvh bg-[#FBF7F0] text-[#211D1A]">
+      <JsonLd
+        data={softwareJsonLd({
+          name: sr.app.name,
+          description: sr.home.tagline,
+          priceRsd: 1590,
+          instagramUrl: sr.home.instagram.url,
+        })}
+      />
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-7 px-6 pb-8">
         <header className="flex h-[62px] items-center justify-between border-b border-[#DED5C7]">
           <span className={`${display.className} text-xl tracking-[0.01em]`}>
@@ -234,12 +245,26 @@ export default function HomePage() {
         </ul>
 
         <section className="flex flex-col gap-2">
-          <h2 className={`${display.className} text-[22px] text-[#8C1D3F] italic`}>
+          <h2
+            className={`${display.className} text-[22px] text-[#8C1D3F] italic`}
+          >
             {sr.home.forWhoTitle}
           </h2>
           <p className="text-[13.5px] leading-relaxed text-[#554C44]">
             {sr.home.forWho}
           </p>
+          <ul className="flex flex-wrap gap-x-4">
+            {Object.entries(sr.seo.professions).map(([key, profession]) => (
+              <li key={key}>
+                <Link
+                  href={`/${sr.seo.pathPrefix}/${key}`}
+                  className="inline-block py-2 text-[13.5px] text-[#8C1D3F] underline"
+                >
+                  {profession.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </section>
 
         <div className="flex items-baseline justify-between bg-[#F2EADC] px-5 py-4">
