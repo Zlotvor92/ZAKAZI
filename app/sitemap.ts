@@ -10,6 +10,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     url: absoluteUrl(`/${sr.seo.pathPrefix}/${key}`),
   }));
 
+  const posts = Object.entries(sr.blog.posts).map(([slug, post]) => ({
+    url: absoluteUrl(`/blog/${slug}`),
+    lastModified: new Date(post.dateIso),
+    priority: 0.7,
+  }));
+
   // Mapa ne sme da obori build ili da izgubi stranice platforme kad baza ne
   // odgovori: bez salona je i dalje bolja od greške.
   const salons = await getIndexableSalons().catch(() => []);
@@ -17,6 +23,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   return [
     { url: absoluteUrl("/"), priority: 1 },
     ...professions.map((page) => ({ ...page, priority: 0.8 })),
+    { url: absoluteUrl("/blog"), priority: 0.7 },
+    ...posts,
     { url: absoluteUrl("/politika-privatnosti"), priority: 0.2 },
     { url: absoluteUrl("/uslovi-koriscenja"), priority: 0.2 },
     ...salons.map((salon) => ({

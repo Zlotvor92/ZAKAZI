@@ -57,12 +57,20 @@ export default function HomePage() {
           <span className={`${display.className} text-xl tracking-[0.01em]`}>
             {sr.app.name}
           </span>
-          <Link
-            href="/prijava"
-            className="flex h-11 items-center text-xs font-bold tracking-[0.14em] text-[#8C1D3F] uppercase"
-          >
-            {sr.signIn.title}
-          </Link>
+          <nav className="flex items-center gap-5">
+            <Link
+              href="/blog"
+              className="flex h-11 items-center text-xs font-bold tracking-[0.14em] text-[#6B6055] uppercase"
+            >
+              {sr.blog.navLabel}
+            </Link>
+            <Link
+              href="/prijava"
+              className="flex h-11 items-center text-xs font-bold tracking-[0.14em] text-[#8C1D3F] uppercase"
+            >
+              {sr.signIn.title}
+            </Link>
+          </nav>
         </header>
 
         <section className="flex flex-col gap-4">
