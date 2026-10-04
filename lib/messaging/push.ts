@@ -18,6 +18,17 @@ export type PushPayload = {
   tag: string;
 };
 
+/**
+ * Podrazumevana hitnost je `normal`, a FCM takvu poruku na Androidu u Doze
+ * režimu drži dok telefon ne bude aktivan: server dobije 201, a vlasnica ništa
+ * ne vidi. `high` budi telefon odmah. Svaka poruka ovde postaje vidljivo
+ * obaveštenje, pa je to jedini dozvoljen način da se koristi.
+ *
+ * Rok od dana: zakazivanje starije od toga vlasnica ionako vidi u kalendaru, a
+ * telefon koji je ceo dan ugašen ne sme da zaspe stotinu starih poruka.
+ */
+export const SEND_OPTIONS = { urgency: "high", TTL: 24 * 60 * 60 } as const;
+
 /** Uređaj koji je pretplaćen, u obliku koji `web-push` očekuje. */
 type Target = {
   id: string;
@@ -96,6 +107,7 @@ export async function notifyTenant(input: {
             keys: { p256dh: target.p256dh, auth: target.auth },
           },
           body,
+          SEND_OPTIONS,
         );
         return "sent" as const;
       } catch (sendError) {

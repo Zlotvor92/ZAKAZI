@@ -67,6 +67,7 @@ export function PushToggle({
 }) {
   const [state, setState] = useState<State>("checking");
   const [apple, setApple] = useState(false);
+  const [android, setAndroid] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -74,6 +75,7 @@ export function PushToggle({
     // Tek ovde, ne pri prvom crtanju: server ne zna koji je telefon u pitanju,
     // pa bi se prvi otisak razlikovao od onog u pregledaču.
     setApple(isApplePhone());
+    setAndroid(/Android/.test(navigator.userAgent));
 
     if (
       typeof window === "undefined" ||
@@ -207,6 +209,14 @@ export function PushToggle({
       {message ? (
         <p role="alert" className="text-destructive text-sm">
           {message}
+        </p>
+      ) : null}
+
+      {/* Štednja baterije je glavni razlog što obaveštenje kasni ili ne stigne
+          na Androidu, a salon to sam ne može da zaključi. */}
+      {android && state === "on" ? (
+        <p className="text-muted-foreground text-xs">
+          {sr.settings.pushAndroidHint}
         </p>
       ) : null}
 

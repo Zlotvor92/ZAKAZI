@@ -461,6 +461,8 @@ export const sr = {
     pushOff: "Nije uključeno na ovom telefonu.",
     pushIosHint:
       "Na iPhone-u prvo dodaj stranicu na početni ekran (Podeli → Dodaj na početni ekran), pa se vrati ovde.",
+    pushAndroidHint:
+      "Ako obaveštenja kasne ili ne stižu: Podešavanja telefona → Aplikacije → Chrome → Baterija → izaberi „Bez ograničenja“.",
     pushBlocked:
       "Obaveštenja su zabranjena u podešavanjima pregledača. Dozvoli ih pa pokušaj ponovo.",
     pushUnsupported: "Ovaj pregledač ne podržava obaveštenja.",
