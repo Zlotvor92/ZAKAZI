@@ -58,6 +58,18 @@ export const sr = {
     forWhoTitle: "Ko ovo koristi",
     forWho:
       "Namenjeno onima koji rade sami ili udvoje: manikir i pedikir, kozmetički tretmani, trepavice i obrve, frizerske usluge.",
+    testimonial: {
+      title: "Kaže salon koji je već koristi",
+      quote: [
+        "Oduševljena sam aplikacijom. Ne mogu da opišem koliko mi je sada lakše, a i devojkama koje zakazuju. Ova aplikacija vredi svaki dinar.",
+        "Mislim da skoro 10 dana nisam dobila nijednu poruku za zakazivanje. Jedino sam ih preusmeravala na stranicu za zakazivanje.",
+        "Prezadovoljna sam. Pune preporuke za aplikaciju i za brzinu kojom je namešten moj salon.",
+      ],
+      invite: "Ako se neko dvoumi, slobodno neka me kontaktira na Instagramu.",
+      author: "Dragana, salon Smiley",
+      handle: "@gaga_smiley",
+      url: "https://www.instagram.com/gaga_smiley/",
+    },
     priceLabel: "Pretplata",
     price: "od 1.590 RSD",
     pricePeriod: "mesečno",

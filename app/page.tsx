@@ -267,6 +267,32 @@ export default function HomePage() {
           </ul>
         </section>
 
+        <section className="flex flex-col gap-3 border-l-2 border-[#8C1D3F] pl-4">
+          <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+            {sr.home.testimonial.title}
+          </span>
+          <blockquote
+            className={`${display.className} flex flex-col gap-2 text-[17px] leading-snug italic`}
+          >
+            {sr.home.testimonial.quote.map((paragraph) => (
+              <p key={paragraph}>{paragraph}</p>
+            ))}
+            <p>{sr.home.testimonial.invite}</p>
+          </blockquote>
+          <p className="text-[13px] text-[#554C44]">
+            <b className="font-bold">{sr.home.testimonial.author}</b>
+            {" · "}
+            <a
+              href={sr.home.testimonial.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-[#8C1D3F] underline"
+            >
+              {sr.home.testimonial.handle}
+            </a>
+          </p>
+        </section>
+
         <div className="flex items-baseline justify-between bg-[#F2EADC] px-5 py-4">
           <span className="text-[11px] font-bold tracking-[0.16em] text-[#6B6055] uppercase">
             {sr.home.priceLabel}
