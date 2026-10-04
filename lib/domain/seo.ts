@@ -135,3 +135,23 @@ export function breadcrumbJsonLd(
     })),
   };
 }
+
+export function articleJsonLd(input: {
+  title: string;
+  description: string;
+  path: string;
+  dateIso: string;
+  publisherName: string;
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: input.title,
+    description: input.description,
+    datePublished: input.dateIso,
+    mainEntityOfPage: absoluteUrl(input.path),
+    inLanguage: "sr-Latn-RS",
+    author: { "@type": "Organization", name: input.publisherName },
+    publisher: { "@type": "Organization", name: input.publisherName },
+  };
+}

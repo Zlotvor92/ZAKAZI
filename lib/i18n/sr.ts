@@ -34,7 +34,7 @@ export const sr = {
       serviceLabel: "Usluga",
       service: "Gel nokti",
       whenLabel: "Termin",
-      when: "Petak, 10. oktobra u 14.30",
+      when: "Petak, 9. oktobra u 14.30",
       clientLabel: "Klijent",
       client: "Milica J.",
       priceLabel: "Cena",
@@ -728,6 +728,131 @@ export const sr = {
     },
     haveAppointment: "Već imaš zakazan termin?",
     manageLink: "Otkaži ga ovde",
+  },
+  blog: {
+    navLabel: "Blog",
+    title: "Blog",
+    metaTitle: "Blog o zakazivanju termina za salone lepote — Doteraj Me",
+    metaDescription:
+      "Praktični saveti za nokt-tehničarke, kozmetičarke, majstore za trepavice i berbere: kako da zakazivanje termina prestane da ti jede dan.",
+    intro: "Kratki, praktični tekstovi za one koji rade sami ili udvoje.",
+    readMinutes: "min čitanja",
+    back: "Svi tekstovi",
+    ctaTitle: "Hoćeš da probaš?",
+    posts: {
+      "kako-da-zakazes-termin-preko-linka": {
+        title: "Kako da zakažeš termin preko linka salona",
+        metaTitle: "Kako da zakažeš termin online preko linka salona, korak po korak",
+        description:
+          "Vodič za klijentkinje: kako da zakažeš manikir, trepavice ili šišanje preko linka, bez naloga i bez dopisivanja, i kako da termin otkažeš.",
+        dateIso: "2026-10-04",
+        dateLabel: "4. oktobar 2026.",
+        readMin: 3,
+        intro:
+          "Salon u opisu profila ima link za zakazivanje? Evo kako izgleda ceo put, od klika do potvrde. Traje otprilike minut, a nalog ti ne treba.",
+        sections: [
+          {
+            heading: "1. Otvori link salona",
+            paragraphs: [
+              "Link je obično u opisu profila na Instagramu ili ti ga je salon poslao u poruci. Otvara se u pregledaču na telefonu, bez preuzimanja aplikacije.",
+            ],
+          },
+          {
+            heading: "2. Izaberi uslugu",
+            paragraphs: [
+              "Vidiš spisak usluga sa cenom u dinarima i trajanjem. Dodirni ono što zakazuješ, na primer manikir, nadogradnju trepavica ili šišanje.",
+            ],
+          },
+          {
+            heading: "3. Izaberi dan i sat",
+            paragraphs: [
+              "Prikazani su samo dani i sati u koje ta usluga stvarno staje u radno vreme salona. Ako nema slobodnih termina, tako će i pisati, pa probaj kasnije ili drugu uslugu.",
+              "Ako je neko u međuvremenu uzeo isti termin, dobićeš poruku da izabereš drugi. Isti sat ne može da se zakaže dva puta.",
+            ],
+          },
+          {
+            heading: "4. Upiši ime i broj telefona",
+            paragraphs: [
+              "Treba samo ime i prezime i tvoj srpski broj telefona. Salon te zove na taj broj ako nešto iskrsne. Nalog ne praviš.",
+              "Pritisni „Zakaži termin“. Kad se pojavi poruka „Termin je zakazan“, gotovo si.",
+            ],
+          },
+          {
+            heading: "5. Dodaj termin u kalendar telefona",
+            paragraphs: [
+              "Na ekranu potvrde postoji dugme „Dodaj u kalendar“. Ako ga iskoristiš, telefon će te sam podsetiti dan ranije i dva sata pre termina.",
+              "Ako veza pukne dok zakazuješ, prvo proveri da li je termin zakazan pre nego što pokušaš ponovo.",
+            ],
+          },
+          {
+            heading: "Ako ne možeš da dođeš",
+            paragraphs: [
+              "Na stranici salona pritisni „Otkaži ga ovde“, upiši isti broj telefona sa kog si zakazala i izaberi termin. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
+              "Ako si termin dodala u kalendar telefona, obriši ga i odatle, da ti podsetnik ne zvoni za termin koji više ne postoji.",
+            ],
+          },
+          {
+            heading: "Dobro je znati",
+            paragraphs: [
+              "Preko linka možeš da imaš najviše dva zakazana termina u razmaku od sedam dana u istom salonu. Ako ti treba više, javi se direktno salonu.",
+            ],
+          },
+        ],
+        closing:
+          "Imaš salon pa želiš da tvoje klijentkinje zakazuju ovako? Doteraj Me košta od 1.590 RSD mesečno, a prvih 30 dana je besplatno.",
+      },
+      "prestani-da-zakazujes-preko-poruka": {
+        title: "Kako da prestaneš da zakazuješ termine preko poruka",
+        metaTitle:
+          "Kako da prestaneš da zakazuješ termine preko Instagram poruka",
+        description:
+          "Pet koraka da zakazivanje preseliš iz Instagram poruka i sveske na jedan link, za jedno popodne i bez gubljenja stalnih klijentkinja.",
+        dateIso: "2026-10-04",
+        dateLabel: "4. oktobar 2026.",
+        readMin: 4,
+        intro:
+          "Poznato je: pogledaš telefon između dve klijentkinje i čeka te osam poruka. „Ima li slobodno u petak?“ „A u subotu?“ „Koliko košta gel lak?“ Svaka traži odgovor, a ti ga pišeš dok ti je gel na rukama. Dobra vest je da se to može prebaciti na jedan link, i to za jedno popodne.",
+        sections: [
+          {
+            heading: "1. Zapiši svaku uslugu sa pravim trajanjem",
+            paragraphs: [
+              "Ne ono što piše u cenovniku, nego koliko ti zaista traje, od sedanja klijentkinje do trenutka kada ustane. Ako ti nadogradnja traje dva sata i petnaest minuta, upiši dva sata i petnaest, a ne „oko dva“.",
+              "Ovo je najvažniji korak. Netačno trajanje znači da se termini preklapaju ili da ti ostaju rupe, a oba slučaja znaš iz sveske.",
+            ],
+          },
+          {
+            heading: "2. Upiši radno vreme kakvo stvarno jeste",
+            paragraphs: [
+              "Ako subotom radiš do 14 časova, tako i upiši. Klijentkinja će videti samo termine u koje usluga staje pre kraja radnog vremena, pa ne moraš da objašnjavaš zašto u 13.30 ne možeš da radiš nadogradnju.",
+              "Slobodne dane i godišnji odmor upiši unapred. Ono što je upisano ne može da se zakaže.",
+            ],
+          },
+          {
+            heading: "3. Stavi link tamo gde te već traže",
+            paragraphs: [
+              "Najbolje mesto je opis profila na Instagramu, jer ljudi odatle i pišu. Dodaj i istaknutu priču „Zakazivanje“ sa istim linkom, da ga nađu bez traženja.",
+              "Kratka rečenica pored linka je dovoljna: „Termin zakaži ovde, bez dopisivanja.“",
+            ],
+          },
+          {
+            heading: "4. Stalnim klijentkinjama pošalji link jednom",
+            paragraphs: [
+              "Nemoj odjednom da menjaš naviku svima. Kad ti sledeći put neka od stalnih napiše, odgovori jednom rečenicom i pošalji link. Većina će ga sledeći put otvoriti sama.",
+              "Termine koje dogovoriš uživo ili telefonom i dalje možeš da upišeš ručno, tako da je kalendar uvek ceo.",
+            ],
+          },
+          {
+            heading: "5. Imaj spreman odgovor za one koje ipak pišu",
+            paragraphs: [
+              "Uvek će biti neko ko će napisati poruku iako je link u opisu. Sačuvaj kratak odgovor: „Zdravo! Slobodne termine vidiš na linku u opisu profila, tamo možeš odmah da zakažeš.“",
+              "Posle nekoliko nedelja poruka postaje sve manje, a to je i cilj.",
+            ],
+          },
+        ],
+        closing:
+          "Sve ovo možeš da radiš i bez posebne aplikacije, ali bi ti trebala tabela koju sama održavaš i niko ne bi sprečavao dupli termin. Doteraj Me je napravljen upravo za to: link za zakazivanje i kalendar na telefonu, od 1.590 RSD mesečno, prvih 30 dana besplatno.",
+      },
+    },
   },
   seo: {
     pathPrefix: "program-za-zakazivanje",

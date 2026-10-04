@@ -69,3 +69,18 @@ describe("salonJsonLd", () => {
     });
   });
 });
+
+describe("articleJsonLd", () => {
+  it("nosi datum objave i apsolutnu adresu", async () => {
+    const { articleJsonLd } = await import("@/lib/domain/seo");
+    const out = articleJsonLd({
+      title: "t",
+      description: "d",
+      path: "/blog/x",
+      dateIso: "2026-10-04",
+      publisherName: "Doteraj Me",
+    });
+    expect(out.datePublished).toBe("2026-10-04");
+    expect(out.mainEntityOfPage).toBe("https://doterajme.rs/blog/x");
+  });
+});
