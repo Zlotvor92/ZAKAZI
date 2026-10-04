@@ -717,6 +717,162 @@ export const sr = {
     haveAppointment: "Već imaš zakazan termin?",
     manageLink: "Otkaži ga ovde",
   },
+  seo: {
+    pathPrefix: "program-za-zakazivanje",
+    crumbHome: "Početna",
+    cta: {
+      before: "Napiši nam",
+      keyword: "TERMIN",
+      after: "u poruci na Instagramu:",
+      handle: "@doterajme",
+      url: "https://www.instagram.com/doterajme/",
+    },
+    priceLine:
+      "Od 1.590 RSD mesečno. Prvih 30 dana je besplatno, bez ugovora.",
+    stepsTitle: "Kako to izgleda",
+    steps: [
+      "Link tvog salona staviš u opis profila na Instagramu.",
+      "Klijent izabere uslugu i slobodan termin iz tvog radnog vremena.",
+      "Termin se odmah pojavi u tvom kalendaru, na telefonu.",
+    ],
+    faqTitle: "Česta pitanja",
+    faq: [
+      {
+        q: "Da li klijent mora da pravi nalog?",
+        a: "Ne. Ostavlja samo ime i broj telefona.",
+      },
+      {
+        q: "Može li se isti termin zakazati dvaput?",
+        a: "Ne. Zauzet termin se više nikome ne nudi, ni kada dvoje kliknu u istoj sekundi.",
+      },
+      {
+        q: "Koliko košta?",
+        a: "Od 1.590 RSD mesečno. Prvih 30 dana je besplatno.",
+      },
+      {
+        q: "Radi li na telefonu?",
+        a: "Da. Aplikacija je napravljena za telefon, jer većina vlasnica salona njom upravlja odatle.",
+      },
+    ],
+    otherTitle: "Za druge usluge",
+    professions: {
+      nokti: {
+        label: "Nokti",
+        metaTitle: "Zakazivanje termina za nokte — program za salon",
+        metaDescription:
+          "Program za zakazivanje termina za nokte: klijentkinje biraju uslugu i slobodan termin preko linka. Bez dopisivanja na Instagramu. Od 1.590 RSD mesečno.",
+        h1: "Zakazivanje termina za nokte bez dopisivanja",
+        intro:
+          "Klijentkinje ti pišu na Instagramu: „Ima li slobodno u petak?“ Umesto da odgovaraš svakoj, ostaviš im link. Ona izabere uslugu i slobodan termin, a ti dobiješ zakazan termin u kalendaru.",
+        points: [
+          {
+            title: "Svaka usluga ima svoje trajanje",
+            body: "Lakiranje, gel lak ili nadogradnja ne traju isto. Kalendar nudi samo termine u koje usluga stvarno stane.",
+          },
+          {
+            title: "Radno vreme i slobodni dani",
+            body: "Klijentkinja vidi samo sate kada radiš. Slobodan dan upišeš jednom i niko ga ne može zakazati.",
+          },
+          {
+            title: "Sve što te čeka, u telefonu",
+            body: "Pregled dana, dodavanje termina dogovorenih uživo i promena statusa, bez sveske.",
+          },
+        ],
+      },
+      trepavice: {
+        label: "Trepavice",
+        metaTitle: "Zakazivanje termina za trepavice — program za salon",
+        metaDescription:
+          "Program za zakazivanje termina za trepavice: nadogradnja, korekcija i skidanje sa svojim trajanjem, bez dopisivanja. Od 1.590 RSD mesečno.",
+        h1: "Zakazivanje termina za trepavice bez dopisivanja",
+        intro:
+          "Nadogradnja traje dugo, a korekcija kraće. Klijentkinje ipak sve pitaju u porukama. Sa linkom salona one same biraju uslugu i termin koji stvarno stane u tvoj dan.",
+        points: [
+          {
+            title: "Nadogradnja, korekcija, skidanje",
+            body: "Za svaku uslugu upišeš trajanje i cenu. Klijentkinja vidi samo termine u koje ta usluga stane.",
+          },
+          {
+            title: "Bez duplih termina",
+            body: "Dok radiš nadogradnju i ne gledaš telefon, niko ne može zakazati isti sat.",
+          },
+          {
+            title: "Link za Instagram",
+            body: "Jedan link u opisu profila, i klijentkinja zakazuje bez poruke.",
+          },
+        ],
+      },
+      obrve: {
+        label: "Obrve",
+        metaTitle: "Zakazivanje termina za obrve — program za salon",
+        metaDescription:
+          "Program za zakazivanje termina za obrve: oblikovanje, farbanje i laminacija, svaka usluga sa svojim trajanjem. Od 1.590 RSD mesečno.",
+        h1: "Zakazivanje termina za obrve bez dopisivanja",
+        intro:
+          "Oblikovanje obrva traje kratko i klijentkinje zakazuju često, pa se poruke brzo gomilaju. Link salona skida taj deo posla sa tebe.",
+        points: [
+          {
+            title: "Kratke usluge, puni dan",
+            body: "Kad su usluge kratke, termini se poređaju gusto. Kalendar ih slaže prema trajanju koje si upisala.",
+          },
+          {
+            title: "Klijent bira sam",
+            body: "Usluga, dan i sat, iz tvog radnog vremena. Ne čeka se na tvoj odgovor.",
+          },
+          {
+            title: "Otkazivanje preko linka",
+            body: "Klijentkinja može sama da otkaže termin, pa slobodan sat ne ostaje prazan do poslednjeg trenutka.",
+          },
+        ],
+      },
+      kozmeticari: {
+        label: "Kozmetički tretmani",
+        metaTitle: "Zakazivanje termina za kozmetičarke — program za salon",
+        metaDescription:
+          "Program za zakazivanje termina za kozmetičke tretmane: čišćenje lica, masaže i epilacija sa svojim trajanjem i cenom. Od 1.590 RSD mesečno.",
+        h1: "Zakazivanje termina za kozmetičke tretmane",
+        intro:
+          "Čišćenje lica, masaža i epilacija imaju različito trajanje i cenu. Aplikacija to zna, pa klijentkinja bira tretman i dobija samo termine koji odgovaraju.",
+        points: [
+          {
+            title: "Trajanje i cena po tretmanu",
+            body: "Upišeš ih jednom. Klijentkinja ih vidi pre nego što zakaže.",
+          },
+          {
+            title: "Radno vreme i pauze",
+            body: "Termini se nude samo kada radiš, a slobodne dane upisuješ u kalendar.",
+          },
+          {
+            title: "Bez naloga za klijentkinje",
+            body: "Za zakazivanje treba samo ime i broj telefona.",
+          },
+        ],
+      },
+      berberi: {
+        label: "Berberi i frizeri",
+        metaTitle: "Zakazivanje termina za berbernicu i frizerski salon",
+        metaDescription:
+          "Program za zakazivanje termina za berbere i frizere: klijenti sami biraju uslugu i slobodan termin preko linka. Od 1.590 RSD mesečno.",
+        h1: "Zakazivanje termina za berbernicu i frizerski salon",
+        intro:
+          "Šišanje, brijanje i farbanje: klijenti otvore link, izaberu uslugu i slobodan termin. Ti ne moraš da odgovaraš na pozive dok radiš.",
+        points: [
+          {
+            title: "Šišanje, brada, farbanje",
+            body: "Svaka usluga ima svoje trajanje, pa se termini ne preklapaju.",
+          },
+          {
+            title: "Ne javljaš se dok radiš",
+            body: "Klijent zakazuje sam, a ti vidiš termin u kalendaru kada stigneš do telefona.",
+          },
+          {
+            title: "Zauzet termin nestaje",
+            body: "Isti sat ne može da se zakaže dva puta.",
+          },
+        ],
+      },
+    },
+  },
   legal: {
     terms: "Uslovi korišćenja",
     privacy: "Politika privatnosti",

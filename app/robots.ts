@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { absoluteUrl } from "@/lib/site";
 
 /**
  * Bez ove rute `/robots.txt` propadne do `[tenantSlug]`, koji ga primi kao ime
@@ -22,5 +23,6 @@ export default function robots(): MetadataRoute.Robots {
         "/*/otkazi",
       ],
     },
+    sitemap: absoluteUrl("/sitemap.xml"),
   };
 }

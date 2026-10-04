@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { sr } from "@/lib/i18n/sr";
+import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 /**
@@ -18,6 +19,7 @@ const geistSans = Geist({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: sr.app.name,
   description: sr.app.description,
 };
@@ -34,9 +36,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="sr-Latn-RS">
-      <body className={`${geistSans.variable} antialiased`}>
-        {children}
-      </body>
+      <body className={`${geistSans.variable} antialiased`}>{children}</body>
     </html>
   );
 }
