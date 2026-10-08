@@ -7,6 +7,7 @@ import { getPriorNoShows } from "@/lib/db/appointments";
 import { bookPublicAppointment } from "@/lib/db/public-booking";
 import { sequenceProblemSchema } from "@/lib/db/services";
 import { deviceId } from "@/lib/device";
+import { dashboardLink } from "@/lib/domain/dashboard-link";
 import { priorNoShowsLine } from "@/lib/domain/no-shows";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sequenceMessage } from "@/lib/domain/service-sequence";
@@ -155,7 +156,10 @@ export async function submitBooking(
             ),
           )
           .concat(warning ? `\n${warning}` : ""),
-        url: `/dashboard?dan=${formatInTimeZone(new Date(booked.start_at), timeZone, "yyyy-MM-dd")}`,
+        url: dashboardLink({
+          tenantId: booked.tenant_id,
+          day: formatInTimeZone(new Date(booked.start_at), timeZone, "yyyy-MM-dd"),
+        }),
         tag: `zakazano:${booked.id}`,
       },
     });

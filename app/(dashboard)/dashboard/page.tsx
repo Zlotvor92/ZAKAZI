@@ -3,6 +3,7 @@ import Link from "next/link";
 import { display } from "@/app/fonts";
 import { DayList } from "@/components/calendar/day-list";
 import { WeekStrip, type StripDay } from "@/components/calendar/week-strip";
+import { LiveRefresh } from "@/components/dashboard/live-refresh";
 import { TenantSwitcher } from "@/components/dashboard/tenant-switcher";
 import { Button } from "@/components/ui/button";
 import {
@@ -178,6 +179,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
   return (
     <div className="min-h-dvh bg-[#FBF7F0] text-[#211D1A]">
       <main className="mx-auto w-full max-w-md px-4 pb-6">
+        <LiveRefresh />
         <header className="flex h-[60px] items-center justify-between gap-3">
           {week.tenants.length > 1 ? (
             <TenantSwitcher

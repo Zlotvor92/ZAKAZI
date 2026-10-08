@@ -9,6 +9,7 @@ import {
   type UpcomingAppointment,
 } from "@/lib/db/public-cancel";
 import { deviceId } from "@/lib/device";
+import { dashboardLink } from "@/lib/domain/dashboard-link";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sr } from "@/lib/i18n/sr";
 import { notifyTenant } from "@/lib/messaging/push";
@@ -119,7 +120,14 @@ export async function cancelAppointment(
               "dd.MM. 'u' HH:mm",
             ),
           ),
-        url: `/dashboard?dan=${formatInTimeZone(new Date(cancelled.start_at), cancelled.timezone, "yyyy-MM-dd")}`,
+        url: dashboardLink({
+          tenantId: cancelled.tenant_id,
+          day: formatInTimeZone(
+            new Date(cancelled.start_at),
+            cancelled.timezone,
+            "yyyy-MM-dd",
+          ),
+        }),
         tag: `otkazano:${cancelled.id}`,
       },
     });

@@ -11,6 +11,7 @@ export default defineConfig({
     environment: "node",
     include: [
       "tests/domain/**/*.test.ts",
+      "tests/pwa/**/*.test.ts",
       "tests/supabase/**/*.test.ts",
       "tests/actions/**/*.test.ts",
     ],
