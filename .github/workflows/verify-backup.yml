@@ -13,11 +13,6 @@ name: Verify backup
 
 on:
   workflow_dispatch:
-  # PRIVREMENO: novi workflow sa grane se ne može pokrenuti ručno pre `main`.
-  push:
-    branches: [claude/pronadi-termin-visibility-ay3o16]
-    paths:
-      - .github/workflows/verify-backup.yml
 
 permissions:
   contents: read

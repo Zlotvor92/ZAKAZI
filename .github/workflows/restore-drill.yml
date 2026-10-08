@@ -22,14 +22,6 @@ on:
   # nesreći pokvarilo.
   schedule:
     - cron: "40 3 1 * *"
-  # PRIVREMENO, dok se posao ne dokaže: novi workflow sa grane se ne može
-  # pokrenuti ručno dok ne dospe na `main`.
-  push:
-    branches: [claude/pronadi-termin-visibility-ay3o16]
-    paths:
-      - .github/workflows/restore-drill.yml
-      - .github/scripts/verify-drill.sh
-      - .github/scripts/catalog.sql
 
 permissions:
   contents: read
