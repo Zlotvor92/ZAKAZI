@@ -12,6 +12,7 @@ import {
 } from "@/lib/domain/availability";
 import { isoWeekday } from "@/lib/domain/calendar";
 import { sr } from "@/lib/i18n/sr";
+import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
 import { submitBooking, type BookingState } from "./actions";
 
@@ -143,6 +144,7 @@ function newRequestId(): string | null {
 export function BookingFlow({ data }: { data: PublicBookingData }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const online = useOnline();
 
   const [service, setService] = useState<PublicService | null>(
     data.services.length === 1 ? data.services[0]! : null,
@@ -597,10 +599,22 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             </p>
           ) : null}
 
+          {/* Bez veze se zahtev ne šalje: ekran ne sme da obeća termin koji
+              server nije potvrdio, a pad bez poruke ostavlja klijentkinju u
+              nedoumici da li je zakazala. */}
+          {!online ? (
+            <p
+              role="alert"
+              className="border-l-2 border-[#8C1D3F] pl-3 text-sm text-[#8C1D3F]"
+            >
+              {sr.offline.booking}
+            </p>
+          ) : null}
+
           <button
             ref={submitRef}
             type="submit"
-            disabled={pending}
+            disabled={pending || !online}
             className={cn(
               "flex h-14 w-full scroll-mb-4 items-center justify-center bg-[#211D1A] text-xs font-bold tracking-[0.18em] text-[#FBF7F0] uppercase active:bg-[#3A332D] disabled:opacity-60",
               pressable,

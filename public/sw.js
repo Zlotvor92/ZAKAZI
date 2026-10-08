@@ -1,5 +1,52 @@
-// Servis radnik postoji samo zbog obaveštenja. Ne kešira ništa — kalendar koji
+// Servis radnik postoji zbog obaveštenja. Ne kešira ništa — kalendar koji
 // pokaže jučerašnje stanje je gori od kalendara koji se sporije otvori.
+//
+// Jedino što radi mimo obaveštenja: kad se stranica otvori bez veze, umesto
+// prazne strane pregledača pokazuje kratko objašnjenje. Podaci se ne čuvaju, pa
+// ni ova strana ne može da pokaže star raspored.
+
+const OFFLINE_PAGE = `<!doctype html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#FBF7F0">
+<title>Nema internet veze</title>
+<style>
+  body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: #FBF7F0; color: #211D1A; font-family: system-ui, sans-serif; }
+  main { max-width: 22rem; padding: 1.5rem; }
+  h1 { font-size: 1.5rem; margin: 0 0 .75rem; }
+  p { line-height: 1.5; color: #554C44; margin: 0 0 1.25rem; }
+  button { width: 100%; min-height: 3rem; border: 0; background: #211D1A; color: #FBF7F0; font-size: 1rem; }
+</style>
+</head>
+<body>
+<main>
+<h1>Nema internet veze</h1>
+<p>Raspored se ne prikazuje bez veze, da ne bi bio star. Zakazivanje i otkazivanje nisu mogući dok se veza ne vrati.</p>
+<button type="button" onclick="location.reload()">Pokušaj ponovo</button>
+</main>
+</body>
+</html>`;
+
+self.addEventListener("fetch", (event) => {
+  if (event.request.mode !== "navigate") {
+    return;
+  }
+
+  event.respondWith(
+    fetch(event.request).catch(
+      () =>
+        new Response(OFFLINE_PAGE, {
+          status: 503,
+          headers: {
+            "content-type": "text/html; charset=utf-8",
+            "cache-control": "no-store",
+          },
+        }),
+    ),
+  );
+});
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) =>

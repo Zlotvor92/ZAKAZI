@@ -55,18 +55,26 @@ function loadWorker(windows: FakeWindow[]) {
     },
   };
 
-  vm.runInNewContext(source, { self: scope, URL });
+  const networkFetch = vi.fn();
+
+  vm.runInNewContext(source, {
+    self: scope,
+    URL,
+    Response,
+    fetch: networkFetch,
+  });
 
   async function dispatch(name: string, event: Record<string, unknown>) {
     const pending: Promise<unknown>[] = [];
     listeners[name]!({
       ...event,
       waitUntil: (work: Promise<unknown>) => pending.push(work),
+      respondWith: (work: Promise<unknown>) => pending.push(work),
     });
-    await Promise.all(pending);
+    return Promise.all(pending);
   }
 
-  return { dispatch, showNotification, openWindow };
+  return { dispatch, showNotification, openWindow, networkFetch };
 }
 
 const payload = {
@@ -153,5 +161,46 @@ describe("dodir na obaveštenje", () => {
     await worker.dispatch("notificationclick", event);
 
     expect(event.notification.close).toHaveBeenCalled();
+  });
+});
+
+describe("otvaranje bez veze", () => {
+  it("navigacija bez veze dobija objašnjenje, ne praznu stranu", async () => {
+    const worker = loadWorker([]);
+    worker.networkFetch.mockRejectedValue(new TypeError("Failed to fetch"));
+
+    const [response] = (await worker.dispatch("fetch", {
+      request: { mode: "navigate", url: `${ORIGIN}/dashboard` },
+    })) as Response[];
+
+    expect(response!.status).toBe(503);
+    expect(response!.headers.get("cache-control")).toBe("no-store");
+    const html = await response!.text();
+    expect(html).toContain("Nema internet veze");
+    // Ne sme da nudi nikakav raspored: servisni radnik ništa ne čuva.
+    expect(html).toContain("ne prikazuje bez veze");
+  });
+
+  it("sa vezom navigacija prolazi netaknuta", async () => {
+    const worker = loadWorker([]);
+    const real = new Response("kalendar", { status: 200 });
+    worker.networkFetch.mockResolvedValue(real);
+
+    const [response] = (await worker.dispatch("fetch", {
+      request: { mode: "navigate", url: `${ORIGIN}/dashboard` },
+    })) as Response[];
+
+    expect(response).toBe(real);
+  });
+
+  it("zahtevi koji nisu navigacija se ne diraju", async () => {
+    const worker = loadWorker([]);
+
+    const result = await worker.dispatch("fetch", {
+      request: { mode: "cors", url: `${ORIGIN}/api/nesto` },
+    });
+
+    expect(result).toEqual([]);
+    expect(worker.networkFetch).not.toHaveBeenCalled();
   });
 });

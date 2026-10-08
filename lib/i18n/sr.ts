@@ -123,6 +123,18 @@ export const sr = {
   tenants: {
     switchLabel: "Salon",
   },
+  offline: {
+    dashboardTitle: "Nema internet veze",
+    /** `{vreme}` je kad je prikazani raspored poslednji put učitan. */
+    dashboardBody:
+      "Prikazan je raspored od {vreme}. Termini koje klijentkinje zakažu u međuvremenu neće se videti dok se veza ne vrati.",
+    retry: "Pokušaj ponovo",
+    checking: "Proveravam…",
+    stillOffline: "Veza još nije stigla. Pokušaj ponovo za koji trenutak.",
+    /** Zakazivanje bez veze se ne šalje, da ekran ne obeća ono što ne može. */
+    booking:
+      "Nema internet veze. Zakazivanje nije moguće dok se veza ne vrati — termin nije zakazan.",
+  },
   admin: {
     title: "Saloni",
     open: "Konzola",
