@@ -1,7 +1,7 @@
 # Kopija baze i vraćanje
 
 Stanje na 8. oktobar 2026. Ovde piše šta kopija stvarno jeste i šta je do sada
-**proveravano**, a šta je tek plan. Plan nije prikazan kao urađen.
+**proveravano** (sa izmerenim rezultatom), a šta nije.
 
 ## Šta se kopira
 
@@ -33,7 +33,7 @@ Stanje na 8. oktobar 2026. Ovde piše šta kopija stvarno jeste i šta je do sad
 | | Vrednost | Napomena |
 |---|---|---|
 | Najveći gubitak podataka (RPO) | do 24 sata | Poslednja noćna kopija. Ovo je posledica rasporeda, ne dogovoren cilj — odluka vlasnika platforme da li je dovoljno. |
-| Vreme oporavka (RTO) | **nije izmereno** | Puno vraćanje nikad nije izvedeno. Ne navodim broj koji ne znam. |
+| Vreme oporavka (RTO) | automatizovani deo: **~2 min** | Od praznog runnera do potvrđene provere (stek, podaci, prijava, RLS). **Ručni deo nije meren**: novi Supabase projekat, Auth podešavanja, tajne u Vercel-u, redeploy, domen, dešifrovanje. Ne navodim broj koji ne znam. |
 | Odgovorna osoba | vlasnik platforme (GitHub nalog `Zlotvor92`) | Jedini ima privatni `age` ključ. |
 | Gde je postupak | ovaj fajl | |
 
@@ -56,29 +56,65 @@ proširenja i role, uveze dump i proverava:
 Proba ide **posle** slanja kopija. Pad probe pocrveni posao, ali kopija je tada
 već sačuvana.
 
-Lokalno provereno nad dump-om baze sa svim migracijama: probu pada kad fali
-`btree_gist` i kad fali red; prolazi kad je vraćanje potpuno. **Nije proveren
-stvarni produkcioni dump** — prvi noćni prolaz posle ove izmene je prvi pravi test,
-i njegov izlaz treba pogledati.
+Izmereno nad **pravim produkcionim dump-om** (8. oktobar 2026, ručno pokretanje
+`Backup` sa `samo_proba=true`, bez slanja ičega): svih 17 tabela se poklapa red po
+red, RLS (17), politike (38), ograničenja (91), okidači (7), funkcije (55) i
+indeksi (24) se poklapaju, `appointments_no_overlap` je vraćen, a vraćanje je
+trajalo 5 s. Jedina greška pri uvozu je očekivana (`schema "public" already
+exists`). Šifrovanje i dešifrovanje privremenim ključem vraćaju isti dump.
 
-## Puno vraćanje — plan, nije izvedeno
+Ono što **ne** može da se proveri bez tebe: da li tvoj stvarni privatni `age` ključ
+otvara stvarnu kopiju iz `zakazi-backup`. Jedna komanda:
+`age -d -i kljuc.txt zakazi-YYYY-MM-DD.sql.gz.age | gunzip | head`.
 
-Noćna proba ne proverava Supabase kao platformu (GoTrue, PostgREST, Storage), ni
-da se u vraćenoj bazi može prijaviti. To traži vraćanje u okruženje kompatibilno sa
-Supabase-om. Predlog, jednom u tri meseca i posle svake veće promene šeme:
+## Puno vraćanje u Supabase stek (izvedeno)
 
-1. Preuzeti najnoviji fajl iz `zakazi-backup/dnevno/` i dešifrovati ga privatnim
-   ključem: `age -d -i kljuc.txt zakazi-YYYY-MM-DD.sql.gz.age | gunzip > dump.sql`.
-2. Dići izolovano Supabase okruženje (lokalni `supabase start`, ili poseban probni
-   projekat — ne produkcija).
-3. Dodati proširenja iz odeljka iznad, pa uvesti `public` deo. Šema `auth` u
-   Supabase projektu već postoji i njom upravlja GoTrue, pa se `auth.users` uvozi
-   samo kao podaci. *Tačan postupak treba ispisati pri prvom izvođenju.*
-4. Proveriti: prijava vlasnika, javno zakazivanje, dupla rezervacija odbijena,
-   korisnik jednog salona ne vidi drugi (RLS), uključivanje obaveštenja,
-   `public_cancel_appointment`, logo (vidi „Šta se NE kopira").
-5. Upisati ovde datum, trajanje (to je prvo stvarno merenje RTO-a) i šta je puklo.
+`.github/workflows/restore-drill.yml` (ručno, i jednom mesečno) radi ono što bi se
+radilo u nesreći, nad svežom kopijom produkcije i u kontejnerima koji nestaju sa
+runnerom. Produkcija se samo čita (jedan `pg_dump` i upiti nad katalogom).
 
-| Datum | Trajanje | Rezultat |
-|---|---|---|
-| — | — | Nije izvedeno. |
+Postupak, tačno kako je izveden:
+
+1. Pun dump šema `public` i `auth`, istim zastavicama kao noćna kopija.
+2. Vraćanje u običan Postgres (sa `btree_gist`, `pgcrypto` i rolama), pa izvlačenje
+   **samo podataka**: `pg_dump --data-only -t 'public.*' -t auth.users -t auth.identities`.
+3. Novi Supabase stek (`supabase start`) izgrađen iz migracija u repou. Migracije
+   nose šemu **i prava**; dump ih ne nosi (`--no-privileges`), pa se bez migracija
+   posle vraćanja ništa ne bi moglo pročitati preko API-ja.
+4. Učitavanje podataka kao `supabase_admin` sa `session_replication_role = replica`
+   u jednoj transakciji (`ON_ERROR_STOP=1`): bez toga okidač nad `appointments`
+   iznova pravi događaje koji su već u dump-u.
+5. Provere, sve preko pravog PostgREST-a i GoTrue-a.
+
+Izmereno 8. oktobra 2026 (tri uzastopna prolaza, isti rezultat):
+
+| Provera | Rezultat |
+|---|---|
+| Redovi: 17 tabela `public` + `auth.users` (5) + `auth.identities` (7) | poklapaju se sa dump-om |
+| `anon` čita `appointments` / zove `public_book` | HTTP 401 oba |
+| `public_booking_data` preko PostgREST-a | vraća salon sa uslugama |
+| Prijava vlasnika preko GoTrue-a nad vraćenim `auth.users` | uspela |
+| RLS sa pravim tokenom | vlasnik vidi tačno svoj salon i tačno svih svojih 102 termina |
+| Izolacija između salona | proverena sa privremenim drugim salonom (produkcija ima jedan) u oba smera |
+| Dvostruko zakazivanje | baza odbija preklapanje |
+| Šema iz migracija naspram produkcije | **470 od 470 objekata identično**, uključujući prava (ACL) |
+| 5 migracija koje produkcija još nema, na kopiji stvarnih podataka | primenjene za 1 s; broj redova isti; sva tri telefonska ograničenja se potvrđuju |
+| Trajanje | 1 min 55 s ukupno od praznog runnera, od čega je većina podizanje steka; učitavanje podataka manje od 1 s |
+
+Šta je usput nađeno:
+- Noćni posao nikad nije imao `checkout`, pa skripta za proveru ne bi postojala.
+- Prve migracije (`init`, `rls`) su u produkciji primenjene sa Windows prelomima
+  redova (`\r\n`) u telu funkcija. Ponašanje je isto; poređenje šeme to ignoriše.
+- Produkcija ima **jedan** salon i pet korisnika. Izolacija RLS-a se zato ne može
+  dokazati nad pravim podacima samo; drill pravi drugi salon u steku.
+
+Šta ovo i dalje **ne** pokriva:
+- Pravi Supabase projekat (hosted): ovde je lokalni stek. Na hostovanom projektu
+  `postgres` rola ne mora da sme `session_replication_role`; to treba potvrditi
+  prvi put kad se to stvarno radi.
+- Podešavanja Supabase-a, tajne, domen, Vercel, Storage (logo datoteke).
+- Dešifrovanje stvarnog `age` ključa.
+- Obaveštenja na uređaju: pretplate se vraćaju, ali ih uređaji moraju ponovo
+  potvrditi ako se promeni VAPID par.
+
+Ako se `restore-drill` ikad zacrveni, to je ono što bi se desilo u nesreći.

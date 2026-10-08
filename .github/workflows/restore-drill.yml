@@ -18,6 +18,10 @@ on:
         description: "Primeni samo migracije koje produkcija već ima; ostale (sa grane) probaj posle, na kopiji stvarnih podataka"
         type: boolean
         default: true
+  # Jednom mesečno, bez ičije intervencije: pad znači da bi se vraćanje u
+  # nesreći pokvarilo.
+  schedule:
+    - cron: "40 3 1 * *"
   # PRIVREMENO, dok se posao ne dokaže: novi workflow sa grane se ne može
   # pokrenuti ručno dok ne dospe na `main`.
   push:

@@ -27,7 +27,7 @@ viđen zelen.
 | Logo 1,5 MB / 2 MB / preko granice | `tests/domain/logo.test.ts` (funkcija i konfiguracija granice) | Stvarno slanje fajla od ~2 MB u administraciji |
 | Admin: status, istek pristupa, produženje | `tests/db/paid-until.test.ts`, `subscription-expiry.test.ts` | |
 | ICS pretplata i opoziv tokena | `tests/db/calendar-feed.test.ts`, `tests/domain/ics*.test.ts` | Apple/Google kalendar i njihovi intervali osvežavanja |
-| Povratak kopije u izolovano okruženje | Noćna proba (`docs/backup-restore.md`) | Puno vraćanje — **nikad izvedeno** |
+| Povratak kopije u izolovano okruženje | Noćna proba i `restore-drill.yml` (pun Supabase stek: prijava, RLS, prava; izvedeno 8.10.2026, `docs/backup-restore.md`) | Vraćanje u pravi (hostovani) Supabase projekat i stvarni `age` ključ — nikad |
 | Tastatura, čitač ekrana, zoom 200%, uzak ekran | | **Nije proveravano** |
 
 ## Kratka provera na fizičkom telefonu (oko 10 minuta)
