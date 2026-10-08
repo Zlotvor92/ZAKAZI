@@ -4,12 +4,10 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Service } from "@/lib/db/services";
+import { durationOptions } from "@/lib/domain/durations";
 import { sr } from "@/lib/i18n/sr";
 import { isRedirect } from "@/lib/utils";
 import { saveAppointment, type NewAppointmentState } from "./actions";
-
-/** Trajanja koja solo majstor stvarno koristi; ostalo je kucanje bez potrebe. */
-const DURATIONS = [30, 45, 60, 90, 120, 150, 180, 240];
 
 /**
  * Bez `crypto.randomUUID` (nije bezbedan kontekst) zahtev ide bez oznake i
@@ -33,6 +31,20 @@ export function AppointmentForm({
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<NewAppointmentState>({ status: "idle" });
   const [requestId, setRequestId] = useState(newRequestId);
+  const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
+  const [duration, setDuration] = useState(defaultDuration);
+  // Dok vlasnica nije sama izabrala trajanje, ono prati izabranu uslugu. Kad
+  // jeste, to je njena odluka i izbor usluge je ne gazi.
+  const [durationChosen, setDurationChosen] = useState(false);
+
+  function chooseService(id: string) {
+    setServiceId(id);
+
+    const chosen = services.find((service) => service.id === id);
+    if (chosen && !durationChosen) {
+      setDuration(chosen.duration_min);
+    }
+  }
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
@@ -103,10 +115,17 @@ export function AppointmentForm({
           id="durationMin"
           name="durationMin"
           required
-          defaultValue={defaultDuration}
+          value={duration}
+          onChange={(event) => {
+            setDuration(Number(event.target.value));
+            setDurationChosen(true);
+          }}
           className="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
         >
-          {DURATIONS.map((minutes) => (
+          {durationOptions([
+            ...services.map((service) => service.duration_min),
+            duration,
+          ]).map((minutes) => (
             <option key={minutes} value={minutes}>
               {minutes} min
             </option>
@@ -122,6 +141,8 @@ export function AppointmentForm({
           id="serviceId"
           name="serviceId"
           required
+          value={serviceId}
+          onChange={(event) => chooseService(event.target.value)}
           className="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
         >
           {services.map((service) => (
