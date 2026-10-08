@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { send, setVapid, inserted } = vi.hoisted(() => ({
+const { send, setVapid, inserted, deleted, members } = vi.hoisted(() => ({
   send: vi.fn(),
   setVapid: vi.fn(),
   inserted: [] as Record<string, unknown>[][],
+  deleted: [] as string[][],
+  /** Korisnici koji su trenutno članovi salona. */
+  members: { current: ["u1"] as string[] },
 }));
 
 vi.mock("web-push", () => ({
@@ -19,13 +22,22 @@ vi.mock("@/lib/supabase/admin", () => ({
                 data: [
                   {
                     id: "s1",
+                    user_id: "u1",
                     endpoint: "https://fcm.googleapis.com/fcm/send/1",
                     p256dh: "k",
                     auth: "a",
                   },
                   {
                     id: "s2",
+                    user_id: "u1",
                     endpoint: "https://attacker.example.test/collect",
+                    p256dh: "k",
+                    auth: "a",
+                  },
+                  {
+                    id: "s3",
+                    user_id: "u2",
+                    endpoint: "https://fcm.googleapis.com/fcm/send/3",
                     p256dh: "k",
                     auth: "a",
                   },
@@ -37,9 +49,25 @@ vi.mock("@/lib/supabase/admin", () => ({
               };
               return chain;
             },
-            delete: () => ({ in: async () => ({}) }),
+            delete: () => ({
+              in: async (_column: string, ids: string[]) => {
+                deleted.push(ids);
+                return {};
+              },
+            }),
           }
-        : {
+        : table === "memberships"
+          ? {
+              select: () => ({
+                eq: () => ({
+                  in: async () => ({
+                    data: members.current.map((user_id) => ({ user_id })),
+                    error: null,
+                  }),
+                }),
+              }),
+            }
+          : {
             insert: async (rows: Record<string, unknown>[]) => {
               inserted.push(rows);
               return {};
@@ -57,6 +85,8 @@ import {
 beforeEach(() => {
   send.mockReset();
   inserted.length = 0;
+  deleted.length = 0;
+  members.current = ["u1"];
   process.env["VAPID_SUBJECT"] = "mailto:test@example.com";
   process.env["NEXT_PUBLIC_VAPID_PUBLIC_KEY"] = "pub";
   process.env["VAPID_PRIVATE_KEY"] = "priv";
@@ -137,5 +167,54 @@ describe("sendTestPush", () => {
     });
 
     expect(result).toEqual({ status: "unavailable" });
+  });
+});
+
+describe("članstvo pri slanju", () => {
+  const payload = { title: "x", body: "y", url: "/dashboard", tag: "z" };
+
+  it("ne šalje uređaju korisnika koji više nije član salona i briše ga", async () => {
+    send.mockResolvedValue({ statusCode: 201 });
+
+    await notifyTenant({
+      tenantId: "t",
+      appointmentId: "a",
+      template: "new_booking",
+      payload,
+    });
+
+    const endpoints = send.mock.calls.map((call) => call[0].endpoint);
+    expect(endpoints).toEqual(["https://fcm.googleapis.com/fcm/send/1"]);
+    expect(deleted).toContainEqual(["s3"]);
+  });
+
+  it("kad nijedan korisnik nije član, ništa se ne šalje", async () => {
+    members.current = [];
+
+    await notifyTenant({
+      tenantId: "t",
+      appointmentId: "a",
+      template: "new_booking",
+      payload,
+    });
+
+    expect(send).not.toHaveBeenCalled();
+    expect(inserted).toHaveLength(0);
+    expect(deleted).toContainEqual(["s1", "s2", "s3"]);
+  });
+
+  it("uređaj člana ostaje u spisku i prima obaveštenje", async () => {
+    members.current = ["u1", "u2"];
+    send.mockResolvedValue({ statusCode: 201 });
+
+    await notifyTenant({
+      tenantId: "t",
+      appointmentId: "a",
+      template: "new_booking",
+      payload,
+    });
+
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(deleted).toHaveLength(0);
   });
 });

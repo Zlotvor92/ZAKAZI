@@ -33,6 +33,7 @@ export const SEND_OPTIONS = { urgency: "high", TTL: 24 * 60 * 60 } as const;
 /** Uređaj koji je pretplaćen, u obliku koji `web-push` očekuje. */
 type Target = {
   id: string;
+  user_id: string;
   endpoint: string;
   p256dh: string;
   auth: string;
@@ -94,7 +95,7 @@ async function deliver(input: {
 
   const query = supabase
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth")
+    .select("id, user_id, endpoint, p256dh, auth")
     .eq("tenant_id", input.tenantId);
 
   const { data, error } = await (input.userId === undefined
@@ -105,11 +106,46 @@ async function deliver(input: {
     return error ? null : [];
   }
 
+  // Pretplata pripada uređaju, ne članstvu: korisnica koja se odjavila ili je
+  // izgubila pristup salonu ne sme da dobija ime klijentkinje i vreme termina
+  // na telefon. Članstvo se proverava pri svakom slanju, pa ne zavisi od toga
+  // da li je neko pretplatu obrisao.
+  const targets = data as Target[];
+  const { data: members, error: membersError } = await supabase
+    .from("memberships")
+    .select("user_id")
+    .eq("tenant_id", input.tenantId)
+    .in("user_id", [...new Set(targets.map((target) => target.user_id))]);
+
+  if (membersError || !members) {
+    return null;
+  }
+
+  const memberIds = new Set(
+    (members as { user_id: string }[]).map((member) => member.user_id),
+  );
+  const orphaned = targets.filter((target) => !memberIds.has(target.user_id));
+  const eligible = targets.filter((target) => memberIds.has(target.user_id));
+
+  if (orphaned.length > 0) {
+    await supabase
+      .from("push_subscriptions")
+      .delete()
+      .in(
+        "id",
+        orphaned.map((target) => target.id),
+      );
+  }
+
+  if (eligible.length === 0) {
+    return [];
+  }
+
   const body = JSON.stringify(input.payload);
   const dead: string[] = [];
 
   const results = await Promise.all(
-    (data as Target[]).map(async (target): Promise<DeliveryStatus> => {
+    eligible.map(async (target): Promise<DeliveryStatus> => {
       if (!isAllowedPushEndpoint(target.endpoint)) {
         return "failed";
       }

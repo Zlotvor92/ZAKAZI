@@ -14,14 +14,34 @@ import {
   saveClientNotes,
   type ClientCard,
 } from "@/lib/db/clients";
+import { pushSubscriptionSchema } from "@/lib/db/push";
 import { getMyTenants } from "@/lib/db/tenants";
 import { deviceId } from "@/lib/device";
 import { sr } from "@/lib/i18n/sr";
 import { createClient } from "@/lib/supabase/server";
 import { selectTenant } from "@/lib/tenant";
 
-export async function signOut(): Promise<never> {
+/**
+ * Odjava briše pretplatu na obaveštenja sa ovog uređaja. Pretplata pripada
+ * telefonu, a ne sesiji: bez ovoga bi osoba koja se posle prijavi na istom
+ * telefonu (ili ona koja je ostala odjavljena) i dalje primala imena klijentkinja
+ * i vremena termina.
+ *
+ * Brisanje ide pre odjave, dok je sesija još važeća (RLS briše samo redove
+ * njenog korisnika). Ako ne uspe, odjava se svejedno izvršava: ostaje
+ * provera članstva pri slanju.
+ */
+export async function signOut(endpoint?: string): Promise<never> {
   const supabase = await createClient();
+
+  const parsed = pushSubscriptionSchema.shape.endpoint.safeParse(endpoint);
+  if (parsed.success) {
+    await supabase
+      .from("push_subscriptions")
+      .delete()
+      .eq("endpoint", parsed.data);
+  }
+
   await supabase.auth.signOut();
   redirect("/prijava");
 }
