@@ -61,6 +61,73 @@ for t in users identities; do
 done
 }
 
+# Otkazivanje traži broj telefona i dokaz (migracija 20261008050000). Provera
+# važi tek kad šema to ima; produkcijska šema pre te migracije je preskače.
+cancel_protection() {
+  if [ -z "$(q "select to_regprocedure('public.owned_appointment_ids(uuid,text,text[],text)')")" ]; then
+    return
+  fi
+
+  echo "Zaštita otkazivanja (na kopiji pravih podataka):"
+
+  # Budući termini zakazani preko sajta pre tajne: broj telefona sam ne sme da
+  # otvori nijedan, a uređaj sa kog su zakazani mora da otvori svaki koji ga ima.
+  counts=$(q "
+    with legacy as (
+      select a.id, a.tenant_id, c.phone_e164 as phone, e.device_id
+      from appointments a
+      join clients c on c.id = a.client_id
+      left join appointment_events e
+        on e.appointment_id = a.id and e.from_status is null and e.actor_type = 'client'
+      where a.source = 'public' and a.manage_proof_hash is null
+        and a.status in ('pending', 'confirmed') and a.start_at >= now()
+    )
+    select count(*),
+           count(*) filter (where device_id is not null),
+           count(*) filter (where device_id is not null and exists (
+             select 1 from owned_appointment_ids(tenant_id, phone, array[]::text[], device_id) o where o = id)),
+           count(*) filter (where exists (
+             select 1 from owned_appointment_ids(tenant_id, phone, array[]::text[], null) o where o = id))
+    from legacy")
+  IFS='|' read -r legacy with_device via_device by_phone <<< "$counts"
+  [ "$by_phone" = "0" ] && ok "broj telefona sam ne otvara nijedan od $legacy budućih termina bez tajne" \
+    || fail "broj telefona sam otvara $by_phone termina"
+  [ "$via_device" = "$with_device" ] && ok "uređaj otvara svih $with_device termina koji ga imaju (od $legacy)" \
+    || fail "uređaj otvara $via_device od $with_device termina koji ga imaju"
+
+  # Isto kroz PostgREST, onako kako zove server: pravi salon i pravi broj, bez dokaza.
+  target=$(q "select t.slug || '|' || c.phone_e164 from appointments a join clients c on c.id = a.client_id join tenants t on t.id = a.tenant_id where a.status in ('pending','confirmed') and a.start_at >= now() order by a.start_at limit 1")
+  if [ -n "$target" ]; then
+    slug="${target%%|*}"; phone="${target##*|}"
+    body=$(curl -s -X POST "$API_URL/rest/v1/rpc/public_appointments_for_proof" \
+      -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" -H 'Content-Type: application/json' \
+      -d "$(jq -nc --arg s "$slug" --arg p "$phone" '{p_slug:$s,p_phone_e164:$p,p_secrets:[],p_device_id:null}')")
+    [ "$(echo "$body" | jq -c '.' 2>/dev/null)" = "[]" ] \
+      && ok "pravi broj bez dokaza ne vraća nijedan termin (preko PostgREST-a)" \
+      || fail "pravi broj bez dokaza vraća: $(echo "$body" | cut -c1-120)"
+  else
+    echo "  ! nema budućih termina; provera preko PostgREST-a preskočena"
+  fi
+
+  code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/rest/v1/rpc/public_appointments_for_phone" \
+    -H "apikey: $SERVICE_ROLE_KEY" -H "Authorization: Bearer $SERVICE_ROLE_KEY" -H 'Content-Type: application/json' \
+    -d '{"p_slug":"x","p_phone_e164":"+381641234567","p_network_hash":null}')
+  [ "$code" = "404" ] && ok "pretraga samo po broju ne postoji (HTTP 404)" || fail "pretraga samo po broju odgovara, HTTP $code"
+
+  anon_proof='{"p_slug":"x","p_phone_e164":"+381641234567","p_secrets":[]}'
+  anon_cancel='{"p_slug":"x","p_phone_e164":"+381641234567","p_appointment_id":"00000000-0000-0000-0000-000000000000","p_secrets":[]}'
+  for pair in "public_appointments_for_proof|$anon_proof" "public_cancel_appointment|$anon_cancel"; do
+    fn="${pair%%|*}"; payload="${pair#*|}"
+    code=$(curl -s -o /dev/null -w '%{http_code}' -X POST "$API_URL/rest/v1/rpc/$fn" \
+      -H "apikey: $ANON_KEY" -H "Authorization: Bearer $ANON_KEY" -H 'Content-Type: application/json' \
+      -d "$payload")
+    case "$code" in
+      401|403) ok "anon ne može da zove $fn (HTTP $code)" ;;
+      *) fail "anon zove $fn, HTTP $code" ;;
+    esac
+  done
+}
+
 run_api() {
 echo "Prava (iz migracija, dump ih ne nosi):"
 code=$(curl -s -o /dev/null -w '%{http_code}' "$API_URL/rest/v1/appointments?select=id&limit=1" \
@@ -168,6 +235,8 @@ for uid in $users; do
 done
 [ "$checked" -ge 1 ] || fail "nijedan vlasnik sa potvrđenim mejlom nije nađen, prijava nije proverena"
 [ "$checked" -ge 2 ] || echo "  ! samo jedan salon sa vlasnikom: izolacija između salona nije proverena"
+
+cancel_protection
 
 echo "Dvostruko zakazivanje:"
 # RAISE NOTICE ide na stderr, pa se spaja; `-i` je potreban da kontejner čita stdin.
