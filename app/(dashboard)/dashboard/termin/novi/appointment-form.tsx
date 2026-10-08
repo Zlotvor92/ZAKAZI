@@ -4,12 +4,20 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Service } from "@/lib/db/services";
+import { durationOptions } from "@/lib/domain/durations";
 import { sr } from "@/lib/i18n/sr";
 import { isRedirect } from "@/lib/utils";
 import { saveAppointment, type NewAppointmentState } from "./actions";
 
-/** Trajanja koja solo majstor stvarno koristi; ostalo je kucanje bez potrebe. */
-const DURATIONS = [30, 45, 60, 90, 120, 150, 180, 240];
+/**
+ * Bez `crypto.randomUUID` (nije bezbedan kontekst) zahtev ide bez oznake i
+ * ponavljanje nema zaštitu — isto kao kod javnog zakazivanja.
+ */
+function newRequestId(): string | null {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : null;
+}
 
 export function AppointmentForm({
   services,
@@ -22,11 +30,30 @@ export function AppointmentForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<NewAppointmentState>({ status: "idle" });
+  const [requestId, setRequestId] = useState(newRequestId);
+  const [serviceId, setServiceId] = useState(services[0]?.id ?? "");
+  const [duration, setDuration] = useState(defaultDuration);
+  // Dok vlasnica nije sama izabrala trajanje, ono prati izabranu uslugu. Kad
+  // jeste, to je njena odluka i izbor usluge je ne gazi.
+  const [durationChosen, setDurationChosen] = useState(false);
+
+  function chooseService(id: string) {
+    setServiceId(id);
+
+    const chosen = services.find((service) => service.id === id);
+    if (chosen && !durationChosen) {
+      setDuration(chosen.duration_min);
+    }
+  }
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       try {
-        setState(await saveAppointment(formData));
+        const result = await saveAppointment(formData);
+        setState(result);
+
+        // Odgovor je stigao, pa je ishod poznat: sledeći pokušaj je nov unos.
+        setRequestId(newRequestId());
       } catch (cause) {
         // Uspeh se iz ove akcije vraća kao `redirect()`, a on do pregledača
         // ume da stigne kao greška. Takva mora da ide dalje do rutera —
@@ -35,7 +62,9 @@ export function AppointmentForm({
         if (isRedirect(cause)) {
           throw cause;
         }
-        setState({ status: "error", message: sr.error.unreachable });
+        // Oznaka se ne menja: unos je mogao da stigne, pa ponovni pokušaj mora
+        // da vrati isti termin, ne da javi da je vreme zauzeto.
+        setState({ status: "error", message: sr.newAppointment.connectionLost });
       }
     });
   }
@@ -58,6 +87,10 @@ export function AppointmentForm({
       }
       className="space-y-4"
     >
+      {requestId ? (
+        <input type="hidden" name="requestId" value={requestId} />
+      ) : null}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <label htmlFor="date" className="text-sm font-medium">
@@ -82,10 +115,17 @@ export function AppointmentForm({
           id="durationMin"
           name="durationMin"
           required
-          defaultValue={defaultDuration}
+          value={duration}
+          onChange={(event) => {
+            setDuration(Number(event.target.value));
+            setDurationChosen(true);
+          }}
           className="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
         >
-          {DURATIONS.map((minutes) => (
+          {durationOptions([
+            ...services.map((service) => service.duration_min),
+            duration,
+          ]).map((minutes) => (
             <option key={minutes} value={minutes}>
               {minutes} min
             </option>
@@ -101,6 +141,8 @@ export function AppointmentForm({
           id="serviceId"
           name="serviceId"
           required
+          value={serviceId}
+          onChange={(event) => chooseService(event.target.value)}
           className="border-input bg-background h-11 w-full rounded-md border px-3 text-sm"
         >
           {services.map((service) => (

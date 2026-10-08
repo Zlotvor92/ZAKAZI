@@ -107,12 +107,19 @@ export const sr = {
     retry: "Pokušaj ponovo",
     home: "Nazad na početnu",
     /**
+     * `{sifra}` je Next-ov `digest`: ista vrednost je u evidenciji grešaka, pa
+     * se prijava „pukla mi je strana" može povezati sa tačnom greškom, bez
+     * ijednog podatka o korisniku.
+     */
+    reference: "Šifra greške: {sifra}",
+    /**
      * Radnja nije stigla do servera ili se odatle nije vratila. Poruka pokriva
      * oba slučaja namerno: u pregledaču se prekinuta veza i pukao server ne
-     * razlikuju, a korisnici je bitno samo da ništa nije upisano.
+     * razlikuju, pa ne sme da tvrdi da ništa nije sačuvano — zahtev je mogao da
+     * prođe, a odgovor da se izgubi.
      */
     unreachable:
-      "Nije uspelo — ništa nije sačuvano. Proveri internet i pokušaj ponovo.",
+      "Nismo dobili potvrdu da je radnja završena. Osveži stranicu i proveri stanje pre nego što pokušaš ponovo.",
   },
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
@@ -121,6 +128,18 @@ export const sr = {
   },
   tenants: {
     switchLabel: "Salon",
+  },
+  offline: {
+    dashboardTitle: "Nema internet veze",
+    /** `{vreme}` je kad je prikazani raspored poslednji put učitan. */
+    dashboardBody:
+      "Prikazan je raspored od {vreme}. Termini koje klijentkinje zakažu u međuvremenu neće se videti dok se veza ne vrati.",
+    retry: "Pokušaj ponovo",
+    checking: "Proveravam…",
+    stillOffline: "Veza još nije stigla. Pokušaj ponovo za koji trenutak.",
+    /** Zakazivanje bez veze se ne šalje, da ekran ne obeća ono što ne može. */
+    booking:
+      "Nema internet veze. Zakazivanje nije moguće dok se veza ne vrati — termin nije zakazan.",
   },
   admin: {
     title: "Saloni",
@@ -470,6 +489,21 @@ export const sr = {
       "Telefon nije dozvolio obaveštenja. Ako si u pregledaču unutar Instagrama ili Fejsbuka, otvori doterajme.rs u Chrome-u pa pokušaj tamo.",
     pushSaveFailed:
       "Telefon je dozvolio obaveštenja, ali upis nije uspeo. Pokušaj ponovo.",
+    pushUnverified:
+      "Ne možemo da proverimo da li su obaveštenja uključena za ovaj salon. Proveri vezu pa pokušaj ponovo.",
+    pushRecheck: "Proveri ponovo",
+    pushDisableFailed:
+      "Gašenje nije uspelo, obaveštenja su i dalje uključena. Pokušaj ponovo.",
+    pushTest: "Pošalji probno obaveštenje",
+    pushTesting: "Šaljem…",
+    pushTestAccepted:
+      "Probno obaveštenje je poslato. Ako ga ne vidiš za nekoliko sekundi, proveri podešavanja telefona.",
+    pushTestNoDevices:
+      "Server nema nijedan tvoj uređaj za ovaj salon. Isključi pa ponovo uključi obaveštenja.",
+    pushTestFailed:
+      "Servis za obaveštenja nije primio poruku. Isključi pa ponovo uključi obaveštenja.",
+    pushTestUnavailable:
+      "Obaveštenja trenutno nisu dostupna na serveru. Javi se podršci.",
 
     blockedTitle: "Blokirani brojevi",
     blockedEmpty: "Nijedan broj nije blokiran.",
@@ -542,6 +576,12 @@ export const sr = {
     noServices: "Prvo unesi bar jednu uslugu.",
     hint: "Termin van radnog vremena je dozvoljen — kalendar je tvoj.",
     failed: "Upis nije uspeo. Pokušaj ponovo.",
+    /**
+     * Ponovni pritisak je bezbedan: isti `request_id` vraća termin koji je već
+     * upisan umesto da pravi drugi, ili javlja da je vreme zauzeto tuđim.
+     */
+    connectionLost:
+      "Nismo dobili potvrdu da je termin upisan. Pritisni „Sačuvaj“ ponovo — ako je već upisan, neće se duplirati.",
     rejected: {
       invalid_name: "Upiši ime klijenta.",
       invalid_phone: "Broj telefona nije ispravan.",
@@ -549,6 +589,8 @@ export const sr = {
       no_staff: "Salon nema nijednog aktivnog izvođača.",
       slot_taken: "To vreme je već zauzeto. Izaberi drugo.",
       invalid_duration: "Trajanje termina nije ispravno.",
+      request_conflict:
+        "Ovaj unos je već poslat sa drugačijim podacima. Osveži stranicu i unesi termin ponovo.",
     },
   },
   push: {
@@ -562,6 +604,9 @@ export const sr = {
      */
     priorNoShows: "Ranije nije došla {puta}×: {termini}",
     priorNoShowEntry: "{vreme} ({usluga})",
+    testTitle: "Probno obaveštenje",
+    /** `{salon}` se zamenjuje pre slanja. */
+    testBody: "Obaveštenja za salon „{salon}“ rade.",
     clientCancelledTitle: "Termin otkazan",
     /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
     clientCancelledBody: "{klijent} — {usluga}, {vreme}",
@@ -686,6 +731,8 @@ export const sr = {
     hourShort: "h",
     currency: "RSD",
     failed: "Zakazivanje nije uspelo. Pokušaj ponovo za koji trenutak.",
+    /** Stranica otvorena pre objave nove verzije ne nosi tajnu termina. */
+    refreshPage: "Stranica je zastarela. Osveži je pa pokušaj ponovo.",
     /** Razlozi koje vraća `public_book`. */
     rejected: {
       booking_closed: "Ovaj salon trenutno ne prima zakazivanje preko interneta.",
@@ -700,7 +747,7 @@ export const sr = {
       slot_taken: "Neko je upravo uzeo taj termin. Izaberi drugi.",
       blocked: "Sa ovog broja nije moguće zakazati preko interneta. Javi se salonu.",
       too_many_this_week:
-        "Već imaš dva termina te nedelje. Izaberi drugi datum ili otkaži jedan.",
+        "Već imaš dva termina te nedelje. Izaberi drugi datum, otkaži jedan ili se javi salonu.",
       too_many_upcoming:
         "Već imaš više zakazanih termina u ovom salonu. Otkaži neki ili se javi salonu.",
       too_many_from_device:
@@ -717,7 +764,7 @@ export const sr = {
       after:
         "Usluga „{usluga}“ nije moguća posle usluge „{prepreka}“ ({datum}). Izaberi „{potrebna}“.",
       before:
-        "Već imaš zakazanu uslugu „{kasnija}“ za {datum}. Posle usluge „{usluga}“ ona nije moguća. Prvo je otkaži, pa zakaži ponovo.",
+        "Već imaš zakazanu uslugu „{kasnija}“ za {datum}. Posle usluge „{usluga}“ ona nije moguća. Prvo je otkaži (ili se javi salonu), pa zakaži ponovo.",
     },
     /** Problemi koje vraća `normalizePhone`. */
     phoneProblem: {
@@ -729,7 +776,17 @@ export const sr = {
       foreign: "Upiši srpski broj telefona — salon te zove nazad na njega.",
     },
     haveAppointment: "Već imaš zakazan termin?",
-    manageLink: "Otkaži ga ovde",
+    manageLink: "Pronađi svoj termin",
+    manageHint: "Pogledaj svoj termin ili ga otkaži.",
+    /** Posle zakazivanja: link za otkazivanje sa drugog telefona. */
+    saveLink: {
+      title: "Otkazivanje sa drugog telefona",
+      body: "Termin možeš da otkažeš na ovom telefonu, preko „Pronađi svoj termin“. Zakazuješ li u Instagramu ili ćeš otkazivati sa drugog telefona, sačuvaj link.",
+      button: "Sačuvaj link za otkazivanje",
+      copied: "Link je kopiran. Sačuvaj ga u poruke ili beleške.",
+      manual: "Pritisni i drži link da ga kopiraš:",
+      shareTitle: "Link za otkazivanje termina",
+    },
   },
   blog: {
     navLabel: "Blog",
@@ -789,7 +846,7 @@ export const sr = {
           {
             heading: "Ako ne možeš da dođeš",
             paragraphs: [
-              "Na stranici salona pritisni „Otkaži ga ovde“, upiši isti broj telefona sa kog si zakazala i izaberi termin. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
+              "Na stranici salona pritisni „Pronađi svoj termin“, upiši isti broj telefona sa kog si zakazala i izaberi termin koji otkazuješ. Radi na telefonu na kom si zakazala; sa drugog telefona otvori link koji si sačuvala pri zakazivanju. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
               "Ako si termin dodala u kalendar telefona, obriši ga i odatle, da ti podsetnik ne zvoni za termin koji više ne postoji.",
             ],
           },
@@ -1022,13 +1079,18 @@ export const sr = {
     home: "Nazad na početak",
   },
   cancel: {
-    title: "Otkazivanje termina",
+    title: "Pronađi svoj termin",
     back: "Nazad na zakazivanje",
-    intro: "Upiši broj telefona sa kog si zakazala.",
+    intro:
+      "Upiši broj telefona sa kog si zakazala. Prikazaćemo tvoje zakazane termine, a svaki možeš i da otkažeš — na telefonu na kom si zakazala ili preko linka koji si sačuvala.",
+    introLink:
+      "Otvorila si link za otkazivanje. Upiši broj telefona sa kog si zakazala.",
     submit: "Pronađi termine",
     submitting: "Tražim…",
     changePhone: "Drugi broj",
-    empty: "Nema zakazanih termina za taj broj.",
+    empty: "Nismo našli termin za taj broj na ovom telefonu.",
+    emptyHelp:
+      "Proveri da li si dobro upisala broj. Otkazivanje radi na telefonu na kom si zakazala ili preko linka koji si sačuvala pri zakazivanju. Zakazivala si iz Instagrama? Otvori stranicu salona iz iste aplikacije. Ako ne možeš da pronađeš termin, javi se salonu na Instagramu — salon vidi sve zakazane termine.",
     cancelButton: "Otkaži",
     cancelConfirm: "Sigurno otkazujem?",
     cancelling: "Otkazujem…",
@@ -1038,11 +1100,17 @@ export const sr = {
     removeFromCalendarHint:
       "Ako si termin dodala u kalendar telefona, otvori ovo da ga obrišeš — inače će podsetnici zvoniti za termin koji više ne postoji.",
     failed: "Otkazivanje nije uspelo. Pokušaj ponovo.",
+    /** Ponavljanje je bezbedno: već otkazan termin se prikazuje kao otkazan. */
+    connectionLost:
+      "Nismo dobili potvrdu da je termin otkazan. Pokušaj ponovo — termin se neće otkazati dvaput.",
+    notCancelled: "Termin nije otkazan jer zahtev nije stigao. Pokušaj ponovo.",
     rejected: {
-      not_found: "Taj termin nije pronađen za uneti broj telefona.",
-      already_cancelled: "Taj termin je već otkazan.",
+      not_found:
+        "Termin nije pronađen na ovom telefonu. Javi se salonu — salon vidi sve zakazane termine.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
       invalid_phone: "Broj telefona nije ispravan.",
+      too_many_cancellations:
+        "Sa ovog broja je danas već otkazano više termina preko sajta. Javi se salonu.",
     },
   },
 } as const;

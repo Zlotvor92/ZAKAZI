@@ -50,7 +50,9 @@ test("klijent zakaže sam, bez ijedne poruke", async ({ page }) => {
   ).toBeVisible();
 
   await page.getByTestId("service-option").first().click();
-  await page.getByTestId("day-option").first().click();
+  const firstDay = page.getByTestId("day-option").first();
+  const dayLabel = (await firstDay.innerText()).trim();
+  await firstDay.click();
 
   const slot = page.getByTestId("slot-option").first();
   const chosenTime = (await slot.innerText()).trim();
@@ -70,13 +72,22 @@ test("klijent zakaže sam, bez ijedne poruke", async ({ page }) => {
   expect(rows[0]).toMatchObject({ status: "confirmed", source: "public" });
 
   // I ono najvažnije: isti termin se više ne nudi sledećem klijentu.
+  //
+  // Isti dan, ne „prvi dan": kad je slot bio poslednji slobodan tog dana, ceo
+  // dan nestaje iz ponude, a prvi dan tada postaje sledeći, koji isti sat ima.
   await page.goto(`/${SLUG}`);
   await page.getByTestId("service-option").first().click();
-  await page.getByTestId("day-option").first().click();
 
-  await expect(
-    page.getByTestId("slot-option").filter({ hasText: chosenTime }),
-  ).toHaveCount(0);
+  const sameDay = page
+    .getByTestId("day-option")
+    .filter({ hasText: dayLabel });
+
+  if ((await sameDay.count()) > 0) {
+    await sameDay.first().click();
+    await expect(
+      page.getByTestId("slot-option").filter({ hasText: chosenTime }),
+    ).toHaveCount(0);
+  }
 });
 
 test("nepostojeći salon ne otkriva da ne postoji", async ({ page }) => {

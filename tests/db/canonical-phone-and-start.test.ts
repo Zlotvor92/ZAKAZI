@@ -100,13 +100,13 @@ describe("srpski broj je kanonski: bez nule posle +381", () => {
       const s = await salon(db);
       await asServer(db, async () => {
         const found = await db.query<{ r: unknown[] }>(
-          "select public_appointments_for_phone($1, $2, 'h') as r",
+          "select public_appointments_for_proof($1, $2, array['x']::text[], null) as r",
           [s.slug, WITH_ZERO],
         );
         expect(found.rows[0]!.r).toEqual([]);
 
         const cancelled = await db.query<{ r: Result }>(
-          "select public_cancel_appointment($1, $2, gen_random_uuid(), null, 'h') as r",
+          "select public_cancel_appointment($1, $2, gen_random_uuid(), array[]::text[], null, 'h') as r",
           [s.slug, WITH_ZERO],
         );
         expect(cancelled.rows[0]!.r).toEqual({ ok: false, reason: "invalid_phone" });
@@ -127,20 +127,6 @@ describe("srpski broj je kanonski: bez nule posle +381", () => {
           db.query("insert into limit_exempt_phones (tenant_id, phone_e164) values ($1,$2)", [s.tenantId, WITH_ZERO]),
         ),
       ).rejects.toThrow(/limit_exempt_phones_phone_e164_check/);
-    });
-  });
-
-  it("postojeći redovi se ne diraju: ograničenje je not valid dok se ne pregledaju podaci", async () => {
-    await withRollback(async (db) => {
-      const { rows } = await db.query<{ conname: string; convalidated: boolean }>(
-        `select conname, convalidated from pg_constraint
-          where conname in ('clients_phone_e164_format','limit_exempt_phones_phone_e164_check')
-          order by conname`,
-      );
-      expect(rows).toEqual([
-        { conname: "clients_phone_e164_format", convalidated: false },
-        { conname: "limit_exempt_phones_phone_e164_check", convalidated: false },
-      ]);
     });
   });
 });

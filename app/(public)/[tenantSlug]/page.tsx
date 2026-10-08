@@ -1,3 +1,4 @@
+import { CalendarSearch, ChevronRight } from "lucide-react";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -64,8 +65,11 @@ export const viewport: Viewport = { themeColor: "#FBF7F0" };
  * što je njen telefon podešen na tamno.
  */
 export function PublicPage({ children }: { children: React.ReactNode }) {
+  // `overflow-x-clip`: puls oko dugmeta „Dodaj u kalendar" se širi preko ivica
+  // ekrana, a mobilni pregledač zbog toga proširi prozor stranice na 558 px,
+  // pa se stranica pomera u stranu i ne može da se skroluje do kraja.
   return (
-    <div className="min-h-dvh bg-[#FBF7F0] text-[#211D1A]">
+    <div className="min-h-dvh overflow-x-clip bg-[#FBF7F0] text-[#211D1A]">
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pb-8">
         {children}
       </main>
@@ -121,6 +125,38 @@ export function SalonHeader({
 
       <span className="h-0.5 w-14 bg-[#211D1A]" />
     </header>
+  );
+}
+
+/**
+ * Ulaz za klijentkinju koja već ima termin. Stoji odmah ispod zaglavlja, ne u
+ * podnožju: ko dođe da vidi ili otkaže termin ne sme da pretražuje celu stranu
+ * za sitan link. Termin se otvara brojem telefona i dokazom da je zakazan sa
+ * ovog pregledača (ili linkom koji je sačuvan); vidi `lib/domain/manage-proof.ts`.
+ */
+export function FindAppointmentLink({ slug }: { slug: string }) {
+  return (
+    <Link
+      href={`/${slug}/otkazi`}
+      className="flex min-h-14 items-center gap-3.5 border border-[#211D1A] px-4 py-3 transition-[transform,background-color] duration-150 active:scale-[0.985] active:bg-[#F2EADC] motion-reduce:transition-none motion-reduce:active:scale-100"
+    >
+      <CalendarSearch
+        aria-hidden="true"
+        className="size-5 shrink-0 text-[#8C1D3F]"
+      />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-[11px] font-bold tracking-[0.16em] uppercase">
+          {sr.booking.manageLink}
+        </span>
+        <span className="text-xs leading-snug text-[#554C44]">
+          {sr.booking.manageHint}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0 text-[#6B6055]"
+      />
+    </Link>
   );
 }
 
@@ -185,15 +221,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
     return (
       <Notice title={salon.name} message={sr.booking.closed}>
-        <p className="text-sm text-[#554C44]">
-          {sr.booking.haveAppointment}{" "}
-          <Link
-            href={`/${tenantSlug}/otkazi`}
-            className="inline-block py-3.5 text-[#8C1D3F] underline"
-          >
-            {sr.booking.manageLink}
-          </Link>
-        </p>
+        <FindAppointmentLink slug={tenantSlug} />
       </Notice>
     );
   }
@@ -227,6 +255,8 @@ export default async function PublicBookingPage({ params }: PageProps) {
         logoUrl={data.tenant.logo_url}
         eyebrow={sr.booking.eyebrow}
       />
+
+      <FindAppointmentLink slug={tenantSlug} />
 
       <BookingFlow data={data} />
 

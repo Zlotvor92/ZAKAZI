@@ -21,6 +21,8 @@ const formSchema = z.object({
   durationMin: z.coerce.number().int().min(5).max(1440),
   name: z.string(),
   phone: z.string(),
+  /** Isti za ponovljen pokušaj istog unosa; vidi `create_appointment`. */
+  requestId: z.uuid().nullish(),
 });
 
 export type NewAppointmentState =
@@ -47,6 +49,7 @@ export async function saveAppointment(
     durationMin: formData.get("durationMin"),
     name: formData.get("name"),
     phone: formData.get("phone"),
+    requestId: formData.get("requestId"),
   });
 
   if (!parsed.success) {
@@ -122,6 +125,7 @@ export async function saveAppointment(
     clientName: name,
     phoneE164: phone.e164,
     deviceId: await deviceId(),
+    requestId: parsed.data.requestId ?? null,
   });
 
   if (!result.ok) {

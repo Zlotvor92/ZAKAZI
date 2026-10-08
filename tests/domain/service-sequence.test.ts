@@ -25,7 +25,7 @@ describe("poruka o redosledu usluga", () => {
 
   it("klijentkinji: skidanje pred zakazanu korekciju traži da je prvo otkaže", () => {
     expect(sequenceMessage(before, "Europe/Belgrade", "client")).toBe(
-      "Već imaš zakazanu uslugu „Korekcija trepavica“ za 10. oktobar. Posle usluge „Skidanje trepavica“ ona nije moguća. Prvo je otkaži, pa zakaži ponovo.",
+      "Već imaš zakazanu uslugu „Korekcija trepavica“ za 10. oktobar. Posle usluge „Skidanje trepavica“ ona nije moguća. Prvo je otkaži (ili se javi salonu), pa zakaži ponovo.",
     );
   });
 

@@ -11,7 +11,9 @@ import {
   type Slot,
 } from "@/lib/domain/availability";
 import { isoWeekday } from "@/lib/domain/calendar";
+import { cancelLink, newManageProof } from "@/lib/domain/manage-proof";
 import { sr } from "@/lib/i18n/sr";
+import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
 import { submitBooking, type BookingState } from "./actions";
 
@@ -140,9 +142,79 @@ function newRequestId(): string | null {
     : null;
 }
 
+/**
+ * Link koji otvara otkazivanje sa bilo kog telefona. Na telefonu sa kog je
+ * zakazano otkazivanje radi i bez njega (tajna je u kolačiću); link treba onoj
+ * koja zakazuje u Instagram pregledaču, menja telefon ili otkazuje sa drugog.
+ */
+function SaveCancelLink({ slug, proof }: { slug: string; proof: string }) {
+  const [status, setStatus] = useState<"idle" | "copied" | "manual">("idle");
+  const [link, setLink] = useState("");
+
+  async function save() {
+    const url = cancelLink(window.location.origin, slug, proof);
+    setLink(url);
+
+    try {
+      if (typeof navigator.share === "function") {
+        await navigator.share({ url, title: sr.booking.saveLink.shareTitle });
+        return;
+      }
+    } catch (error) {
+      // Zatvoren list za deljenje nije greška; ostalo ide na kopiranje.
+      if (error instanceof DOMException && error.name === "AbortError") {
+        return;
+      }
+    }
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setStatus("copied");
+    } catch {
+      setStatus("manual");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2 border-t border-[#E4DAC9] pt-4">
+      <h3 className={microLabel}>{sr.booking.saveLink.title}</h3>
+      <p className="text-xs leading-relaxed text-[#6B6055]">
+        {sr.booking.saveLink.body}
+      </p>
+      <button
+        type="button"
+        onClick={save}
+        className={cn(
+          "flex h-12 w-full items-center justify-center border border-[#211D1A] text-xs font-bold tracking-[0.18em] uppercase active:bg-[#F2EADC]",
+          pressable,
+        )}
+      >
+        {sr.booking.saveLink.button}
+      </button>
+      {status === "copied" ? (
+        <p role="status" className="text-xs text-[#554C44]">
+          {sr.booking.saveLink.copied}
+        </p>
+      ) : null}
+      {status === "manual" ? (
+        <label className="flex flex-col gap-1 text-xs text-[#554C44]">
+          {sr.booking.saveLink.manual}
+          <input
+            readOnly
+            value={link}
+            onFocus={(event) => event.currentTarget.select()}
+            className="h-11 w-full border-b border-[#211D1A] bg-transparent text-[13px] outline-none"
+          />
+        </label>
+      ) : null}
+    </div>
+  );
+}
+
 export function BookingFlow({ data }: { data: PublicBookingData }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const online = useOnline();
 
   const [service, setService] = useState<PublicService | null>(
     data.services.length === 1 ? data.services[0]! : null,
@@ -151,6 +223,9 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
   const [slot, setSlot] = useState<string | null>(null);
   const [state, setState] = useState<BookingState>({ status: "idle" });
   const [requestId, setRequestId] = useState(newRequestId);
+  // Tajna ovog termina; menja se zajedno sa `requestId`, jer ponovljen zahtev
+  // mora da nosi istu tajnu, a nov zahtev novu.
+  const [proof, setProof] = useState(newManageProof);
   // Uputstvo se drži skriveno dok se dugme ne dodirne. Pre dodira je samo
   // buka ispod dugmeta koje treba pritisnuti; posle dodira je jedino što
   // pomaže kad se fajl preuzeo a ništa se nije otvorilo.
@@ -177,6 +252,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
     setDate(null);
     setSlot(null);
     setRequestId(newRequestId());
+    setProof(newManageProof());
   }
 
   function onSubmit(formData: FormData) {
@@ -192,6 +268,7 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
         // Odgovor je stigao, pa je ishod poznat: sledeći pokušaj je nov zahtev.
         if (result.status === "error") {
           setRequestId(newRequestId());
+          setProof(newManageProof());
         }
       } catch {
         // Oznaka se ne menja: zahtev je mogao da stigne, pa ponovni pokušaj
@@ -342,6 +419,8 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             </p>
           ) : null}
         </div>
+
+        {proof ? <SaveCancelLink slug={data.tenant.slug} proof={proof} /> : null}
 
         {/* Link ka otkazivanju je već u podnožju strane, ispod ovog toka —
             nema potrebe da stoji dvaput na istom ekranu. */}
@@ -548,6 +627,9 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
           {requestId ? (
             <input type="hidden" name="requestId" value={requestId} />
           ) : null}
+          {proof ? (
+            <input type="hidden" name="manageProof" value={proof} />
+          ) : null}
 
           <div className="flex flex-col gap-1.5">
             <label htmlFor="name" className={microLabel}>
@@ -597,10 +679,22 @@ export function BookingFlow({ data }: { data: PublicBookingData }) {
             </p>
           ) : null}
 
+          {/* Bez veze se zahtev ne šalje: ekran ne sme da obeća termin koji
+              server nije potvrdio, a pad bez poruke ostavlja klijentkinju u
+              nedoumici da li je zakazala. */}
+          {!online ? (
+            <p
+              role="alert"
+              className="border-l-2 border-[#8C1D3F] pl-3 text-sm text-[#8C1D3F]"
+            >
+              {sr.offline.booking}
+            </p>
+          ) : null}
+
           <button
             ref={submitRef}
             type="submit"
-            disabled={pending}
+            disabled={pending || !online}
             className={cn(
               "flex h-14 w-full scroll-mb-4 items-center justify-center bg-[#211D1A] text-xs font-bold tracking-[0.18em] text-[#FBF7F0] uppercase active:bg-[#3A332D] disabled:opacity-60",
               pressable,

@@ -103,10 +103,13 @@ export function salonJsonLd(input: {
           hasOfferCatalog: {
             "@type": "OfferCatalog",
             name: input.name,
+            // Cena 0 u aplikaciji znači „nije upisana" (na strani se i ne
+            // prikazuje), ne „besplatno". Strukturirani podaci tvrde više od
+            // strane, pa se tada cena izostavlja.
             itemListElement: input.services.map((service) => ({
               "@type": "Offer",
               priceCurrency: "RSD",
-              price: String(service.priceRsd),
+              ...(service.priceRsd > 0 ? { price: String(service.priceRsd) } : {}),
               itemOffered: {
                 "@type": "Service",
                 name: service.name,

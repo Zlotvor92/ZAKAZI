@@ -7,6 +7,7 @@ const HOME_PATH = "/";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
+  let authHeaders: Record<string, string> = {};
 
   const supabase = createServerClient(
     requireUrlEnv("NEXT_PUBLIC_SUPABASE_URL"),
@@ -16,13 +17,17 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll();
         },
-        setAll(cookiesToSet) {
+        setAll(cookiesToSet, headers) {
           for (const { name, value } of cookiesToSet) {
             request.cookies.set(name, value);
           }
           response = NextResponse.next({ request });
           for (const { name, value, options } of cookiesToSet) {
             response.cookies.set(name, value, options);
+          }
+          authHeaders = headers;
+          for (const [key, value] of Object.entries(headers)) {
+            response.headers.set(key, value);
           }
         },
       },
@@ -40,12 +45,29 @@ export async function updateSession(request: NextRequest) {
   const { data } = await supabase.auth.getClaims();
   const signedIn = data?.claims != null;
 
+  // Redirect je novi odgovor, pa kolačići koje je `getClaims` upravo osvežio ili
+  // obrisao na `response` ne bi stigli do pregledača. Pregledač bi ostao sa
+  // starim tokenima, a sledeći zahtev bi ponovo morao da ih osvežava — ili bi
+  // osvežavanje palo, jer je stari refresh token već potrošen.
+  function redirectTo(url: URL): NextResponse {
+    const redirect = NextResponse.redirect(url);
+
+    for (const cookie of response.cookies.getAll()) {
+      redirect.cookies.set(cookie);
+    }
+    for (const [key, value] of Object.entries(authHeaders)) {
+      redirect.headers.set(key, value);
+    }
+
+    return redirect;
+  }
+
   const path = request.nextUrl.pathname;
 
   if (!signedIn && (path.startsWith("/dashboard") || path.startsWith("/admin"))) {
     const url = request.nextUrl.clone();
     url.pathname = SIGN_IN_PATH;
-    return NextResponse.redirect(url);
+    return redirectTo(url);
   }
 
   // Početna strana postoji zbog posetioca koji ne zna šta je ovo. Vlasnici
@@ -54,7 +76,7 @@ export async function updateSession(request: NextRequest) {
   if (signedIn && (path === SIGN_IN_PATH || path === HOME_PATH)) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
-    return NextResponse.redirect(url);
+    return redirectTo(url);
   }
 
   return response;

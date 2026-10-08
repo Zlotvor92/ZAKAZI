@@ -5,6 +5,7 @@ import { z } from "zod";
 import { blockNumber, unblockNumber } from "@/lib/db/blocklist";
 import { clearCalendarToken, rotateCalendarToken } from "@/lib/db/calendar";
 import {
+  hasPushSubscription,
   pushSubscriptionSchema,
   removePushSubscription,
   savePushSubscription,
@@ -21,8 +22,10 @@ import { addDays, instantInTimeZone, timeToMinutes } from "@/lib/domain/calendar
 import { outsideHoursMessage } from "@/lib/domain/outside-hours";
 import { normalizePhone } from "@/lib/domain/phone";
 import { pluralize } from "@/lib/domain/plural";
+import { isAllowedPushEndpoint } from "@/lib/domain/push-endpoint";
 import { toBlocks, validateDay, type DayShape } from "@/lib/domain/working-hours";
 import { sr } from "@/lib/i18n/sr";
+import { sendTestPush } from "@/lib/messaging/push";
 import { createClient } from "@/lib/supabase/server";
 
 export type SettingsState =
@@ -271,14 +274,111 @@ export async function enableNotifications(
   return true;
 }
 
-export async function disableNotifications(endpoint: string): Promise<void> {
-  const parsed = z.url().max(1000).safeParse(endpoint);
+export type PushCheck = "on" | "off" | "unknown";
+
+const endpointSchema = z.url().max(1000).refine(isAllowedPushEndpoint);
+
+/**
+ * Da li server za ovaj salon i ovaj uređaj ima pretplatu.
+ *
+ * Pregledač zna samo da je pretplaćen. Ekran sme da kaže „uključeno" tek kad
+ * i server to potvrdi — inače upis koji je pao ostavlja lažan status. `unknown`
+ * je poseban ishod: pad provere nije isto što i „nije uključeno".
+ */
+export async function checkNotifications(endpoint: string): Promise<PushCheck> {
+  const parsed = endpointSchema.safeParse(endpoint);
   if (!parsed.success) {
-    return;
+    // Server takvu pretplatu nikad ne prima, pa je ni nema.
+    return "off";
   }
 
-  await removePushSubscription(parsed.data);
-  revalidatePath("/dashboard/podesavanja");
+  try {
+    const tenant = await getCurrentTenant(await selectedTenantId());
+    if (!tenant) {
+      return "unknown";
+    }
+
+    return (await hasPushSubscription({
+      tenantId: tenant.id,
+      endpoint: parsed.data,
+    }))
+      ? "on"
+      : "off";
+  } catch {
+    return "unknown";
+  }
+}
+
+export type DisableResult =
+  | { ok: true; remainingElsewhere: number }
+  | { ok: false };
+
+/**
+ * Gasi obaveštenja samo za izabrani salon. Isti telefon može da prati i drugi
+ * salon istog naloga, pa `remainingElsewhere` kaže da li pregledačku pretplatu
+ * sme da ugasi i uređaj — ona je zajednička svim salonima.
+ */
+export async function disableNotifications(
+  endpoint: string,
+): Promise<DisableResult> {
+  const parsed = endpointSchema.safeParse(endpoint);
+  if (!parsed.success) {
+    return { ok: false };
+  }
+
+  const tenant = await getCurrentTenant(await selectedTenantId());
+  if (!tenant) {
+    return { ok: false };
+  }
+
+  try {
+    const { remainingElsewhere } = await removePushSubscription({
+      tenantId: tenant.id,
+      endpoint: parsed.data,
+    });
+    revalidatePath("/dashboard/podesavanja");
+    return { ok: true, remainingElsewhere };
+  } catch {
+    return { ok: false };
+  }
+}
+
+export type TestNotificationResult =
+  | "accepted"
+  | "no_devices"
+  | "failed"
+  | "unavailable";
+
+/**
+ * Probno obaveštenje koje korisnica sama pokrene, samo na njene uređaje.
+ *
+ * `accepted` znači da je push servis pregledača primio poruku — servis ne
+ * javlja da je stigla na ekran, pa ni odgovor to ne sme da tvrdi.
+ */
+export async function sendTestNotification(): Promise<TestNotificationResult> {
+  const tenant = await getCurrentTenant(await selectedTenantId());
+  if (!tenant) {
+    return "failed";
+  }
+
+  const supabase = await createClient();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) {
+    return "failed";
+  }
+
+  const result = await sendTestPush({
+    tenantId: tenant.id,
+    userId: data.user.id,
+    payload: {
+      title: sr.push.testTitle,
+      body: sr.push.testBody.replace("{salon}", tenant.name),
+      url: "/dashboard/podesavanja",
+      tag: "probno",
+    },
+  });
+
+  return result.status;
 }
 
 export async function addBlockedNumber(

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AdminSalon } from "@/lib/db/admin";
+import { LOGO_MAX_BYTES } from "@/lib/domain/logo";
 import { pluralize } from "@/lib/domain/plural";
 import { subscriptionState } from "@/lib/domain/subscription";
 import { sr } from "@/lib/i18n/sr";
@@ -245,6 +246,15 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
               const file = event.target.files?.[0];
               event.target.value = "";
               if (!file) {
+                return;
+              }
+              // Prevelika slika ne treba ni da krene: transport je odbija pre
+              // akcije, bez poruke koja kaže zašto.
+              if (file.size > LOGO_MAX_BYTES) {
+                setState({
+                  status: "error",
+                  message: sr.admin.logoProblem.too_big,
+                });
                 return;
               }
               const data = new FormData();

@@ -265,7 +265,7 @@ export async function createPopulatedTenant(
   await db.query(
     `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
      values ($1, $2, $3, 'kljuc', 'tajna')`,
-    [tenantId, userId, `https://push.primer.rs/${unique()}`],
+    [tenantId, userId, `https://fcm.googleapis.com/fcm/send/${unique()}`],
   );
 
   await db.query(

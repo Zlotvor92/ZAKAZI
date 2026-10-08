@@ -1,14 +1,22 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { sr } from "@/lib/i18n/sr";
 import type { PushSubscriptionInput } from "@/lib/db/push";
+
+export type PushCheck = "on" | "off" | "unknown";
+export type DisableResult =
+  | { ok: true; remainingElsewhere: number }
+  | { ok: false };
+export type TestResult = "accepted" | "no_devices" | "failed" | "unavailable";
 
 type State =
   | "checking"
   | "off"
   | "on"
+  /** Pregledač je pretplaćen, a server nije potvrdio ni da jeste ni da nije. */
+  | "unverified"
   | "blocked"
   | "unsupported"
   | "needs_home_screen";
@@ -56,20 +64,50 @@ function toInput(subscription: PushSubscription): PushSubscriptionInput | null {
   };
 }
 
+/**
+ * Prekidač za obaveštenja jednog salona na ovom telefonu.
+ *
+ * „Uključeno" se prikazuje tek kad server potvrdi pretplatu za ovaj salon:
+ * pregledač sam zna samo da je pretplaćen, a upis na serveru je mogao da padne.
+ * Komponenta se u stranici crta sa `key` salona, pa promena salona počinje
+ * proveru iznova.
+ */
 export function PushToggle({
   publicKey,
   onEnable,
   onDisable,
+  onCheck,
+  onTest,
 }: {
   publicKey: string;
   onEnable: (subscription: PushSubscriptionInput) => Promise<boolean>;
-  onDisable: (endpoint: string) => Promise<void>;
+  onDisable: (endpoint: string) => Promise<DisableResult>;
+  onCheck: (endpoint: string) => Promise<PushCheck>;
+  onTest: () => Promise<TestResult>;
 }) {
   const [state, setState] = useState<State>("checking");
   const [apple, setApple] = useState(false);
   const [android, setAndroid] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  /** Pregledač kaže da li je pretplaćen, a server da li to zna. */
+  const verify = useCallback(async () => {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+
+      if (!subscription) {
+        setState("off");
+        return;
+      }
+
+      const check = await onCheck(subscription.endpoint);
+      setState(check === "unknown" ? "unverified" : check);
+    } catch {
+      setState("unverified");
+    }
+  }, [onCheck]);
 
   useEffect(() => {
     // Tek ovde, ne pri prvom crtanju: server ne zna koji je telefon u pitanju,
@@ -92,12 +130,8 @@ export function PushToggle({
       return;
     }
 
-    navigator.serviceWorker
-      .getRegistration()
-      .then((registration) => registration?.pushManager.getSubscription())
-      .then((subscription) => setState(subscription ? "on" : "off"))
-      .catch(() => setState("off"));
-  }, []);
+    void verify();
+  }, [verify]);
 
   function enable() {
     setMessage(null);
@@ -151,16 +185,53 @@ export function PushToggle({
   }
 
   function disable() {
+    setMessage(null);
     startTransition(async () => {
-      const registration = await navigator.serviceWorker.getRegistration();
-      const subscription = await registration?.pushManager.getSubscription();
+      try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        const subscription = await registration?.pushManager.getSubscription();
 
-      if (subscription) {
-        await onDisable(subscription.endpoint);
-        await subscription.unsubscribe();
+        if (!subscription) {
+          setState("off");
+          return;
+        }
+
+        const result = await onDisable(subscription.endpoint);
+
+        if (!result.ok) {
+          setMessage(sr.settings.pushDisableFailed);
+          return;
+        }
+
+        // Pretplata u pregledaču je zajednička svim salonima na ovom telefonu:
+        // gasi se tek kad nijedan drugi salon više ne računa na nju.
+        if (result.remainingElsewhere === 0) {
+          await subscription.unsubscribe();
+        }
+
+        setState("off");
+      } catch {
+        setMessage(sr.settings.pushDisableFailed);
       }
+    });
+  }
 
-      setState("off");
+  function sendTest() {
+    setMessage(null);
+    startTransition(async () => {
+      try {
+        const result = await onTest();
+        setMessage(
+          {
+            accepted: sr.settings.pushTestAccepted,
+            no_devices: sr.settings.pushTestNoDevices,
+            failed: sr.settings.pushTestFailed,
+            unavailable: sr.settings.pushTestUnavailable,
+          }[result],
+        );
+      } catch {
+        setMessage(sr.settings.pushTestFailed);
+      }
     });
   }
 
@@ -190,6 +261,26 @@ export function PushToggle({
     );
   }
 
+  if (state === "unverified") {
+    return (
+      <div className="space-y-2">
+        <p role="alert" className="text-destructive text-sm">
+          {sr.settings.pushUnverified}
+        </p>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setState("checking");
+            void verify();
+          }}
+        >
+          {sr.settings.pushRecheck}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
       <p className="text-sm">
@@ -197,9 +288,14 @@ export function PushToggle({
       </p>
 
       {state === "on" ? (
-        <Button type="button" variant="outline" onClick={disable} disabled={pending}>
-          {sr.settings.pushDisable}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={disable} disabled={pending}>
+            {sr.settings.pushDisable}
+          </Button>
+          <Button type="button" variant="outline" onClick={sendTest} disabled={pending}>
+            {pending ? sr.settings.pushTesting : sr.settings.pushTest}
+          </Button>
+        </div>
       ) : (
         <Button type="button" className="h-12 w-full" onClick={enable} disabled={pending}>
           {pending ? sr.settings.pushEnabling : sr.settings.pushEnable}

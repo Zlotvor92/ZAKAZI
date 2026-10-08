@@ -56,9 +56,9 @@ async function localInstant(db: pg.PoolClient, day: number, time: string) {
 const CALLS: Record<string, string> = {
   public_book: "select public_book($1, gen_random_uuid(), now() + interval '2 days', 'A', '+381645123480', null, 'hash')",
   public_cancel_appointment:
-    "select public_cancel_appointment($1, '+381645123480', gen_random_uuid(), null, 'hash')",
-  public_appointments_for_phone:
-    "select public_appointments_for_phone($1, '+381645123480', 'hash')",
+    "select public_cancel_appointment($1, '+381645123480', gen_random_uuid(), array[]::text[], null, 'hash')",
+  public_appointments_for_proof:
+    "select public_appointments_for_proof($1, '+381645123480', array[]::text[], null)",
 };
 
 describe("zakazivanje, otkazivanje i pretragu zove samo server", () => {

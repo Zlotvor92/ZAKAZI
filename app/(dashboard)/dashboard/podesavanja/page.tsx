@@ -32,7 +32,12 @@ import {
   TimeOffSection,
   WorkingHoursForm,
 } from "./settings-forms";
-import { disableNotifications, enableNotifications } from "./actions";
+import {
+  checkNotifications,
+  disableNotifications,
+  enableNotifications,
+  sendTestNotification,
+} from "./actions";
 
 async function siteOrigin(): Promise<string> {
   const incoming = await headers();
@@ -246,9 +251,12 @@ export default async function SettingsPage({ searchParams }: PageProps) {
             </p>
           ) : (
             <PushToggle
+              key={tenant.id}
               publicKey={vapidPublicKey}
               onEnable={enableNotifications}
               onDisable={disableNotifications}
+              onCheck={checkNotifications}
+              onTest={sendTestNotification}
             />
           )}
         </Section>

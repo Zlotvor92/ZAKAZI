@@ -1,3 +1,4 @@
+import { LOGO_MAX_BYTES } from "@/lib/domain/logo";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export const LOGO_BUCKET = "logos";
@@ -8,8 +9,6 @@ const ALLOWED = new Map([
   ["image/jpeg", "jpg"],
   ["image/webp", "webp"],
 ]);
-
-const MAX_BYTES = 2 * 1024 * 1024;
 
 export type LogoUploadResult =
   | { ok: true; url: string }
@@ -32,7 +31,7 @@ export async function uploadLogo(input: {
     return { ok: false, reason: "wrong_type" };
   }
 
-  if (input.file.size > MAX_BYTES) {
+  if (input.file.size > LOGO_MAX_BYTES) {
     return { ok: false, reason: "too_big" };
   }
 

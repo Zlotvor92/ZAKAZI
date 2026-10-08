@@ -1,0 +1,230 @@
+name: Restore drill
+
+# Pravo vraćanje u pun Supabase stek (GoTrue + PostgREST + Kong), nad svežom
+# kopijom produkcije. Odgovara na pitanje koje noćna proba ne može: da li bi se
+# posle nesreće sistem stvarno podigao i radio — uz prijavu vlasnika i RLS.
+#
+# Produkcija se samo čita: jedan `pg_dump` i upiti nad katalogom, isto što radi
+# noćna kopija. Sve ostalo se dešava u kontejnerima koji nestaju sa runnerom.
+# Nema šifrovanja i nema slanja: kopija ostaje na runneru dok posao traje.
+#
+# Postupak je onaj koji bi se i u nesreći koristio: novi Supabase = migracije iz
+# repoa (one nose i prava, a dump ih ne nosi: `--no-privileges`), pa samo podaci.
+
+on:
+  workflow_dispatch:
+    inputs:
+      samo_prod_migracije:
+        description: "Primeni samo migracije koje produkcija već ima; ostale (sa grane) probaj posle, na kopiji stvarnih podataka"
+        type: boolean
+        default: true
+  # Jednom mesečno, bez ičije intervencije: pad znači da bi se vraćanje u
+  # nesreći pokvarilo.
+  schedule:
+    - cron: "40 3 1 * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: restore-drill
+  cancel-in-progress: false
+
+jobs:
+  drill:
+    name: Vraćanje u Supabase stek
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    env:
+      PROD_HOST: aws-0-eu-central-1.pooler.supabase.com
+      PROD_USER: postgres.onoaympwuewxoqtkeguz
+      PGIMAGE: postgres:17-alpine
+      LOCAL_DB: "-h 127.0.0.1 -p 54322 -U supabase_admin -d postgres"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # Samo čitanje kataloga produkcije.
+      - name: Verzija migracija u produkciji
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          VERSION=$(docker run --rm -e PGPASSWORD "$PGIMAGE" \
+            psql -h "$PROD_HOST" -p 5432 -U "$PROD_USER" -d postgres -tAc \
+            "select max(version) from supabase_migrations.schema_migrations" | tr -d '[:space:]')
+          [[ "$VERSION" =~ ^[0-9]{14}$ ]] || { echo "Neočekivana verzija migracije u produkciji."; exit 1; }
+          echo "PROD_VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "Produkcija je na migraciji $VERSION."
+
+      # Stek se diže samo sa onim što produkcija već ima. Ostalo čeka: kad bi
+      # stek odmah primenio sve, ne bi se znalo da li je vraćanje radilo na
+      # produkcijskoj šemi ili na novoj.
+      - name: Razdvajanje migracija
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/pending"
+          for f in supabase/migrations/*.sql; do
+            v=$(basename "$f" | cut -d_ -f1)
+            if [ "$v" -gt "$PROD_VERSION" ]; then
+              mv "$f" "$RUNNER_TEMP/pending/"
+            fi
+          done
+          echo "Čeka na probu: $(ls "$RUNNER_TEMP/pending" | wc -l) migracija."
+
+      - name: Podizanje Supabase steka
+        run: |
+          set -euo pipefail
+          printf '\n[db.seed]\nenabled = false\n\n[realtime]\nenabled = false\n\n[storage]\nenabled = false\n' >> supabase/config.toml
+          echo "T_STACK=$(date +%s)" >> "$GITHUB_ENV"
+          supabase start -x realtime,storage-api,imgproxy,mailpit,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
+          supabase status -o json > "$RUNNER_TEMP/status.json"
+          {
+            echo "API_URL=$(jq -r .API_URL "$RUNNER_TEMP/status.json")"
+            echo "ANON_KEY=$(jq -r .ANON_KEY "$RUNNER_TEMP/status.json")"
+            echo "SERVICE_ROLE_KEY=$(jq -r .SERVICE_ROLE_KEY "$RUNNER_TEMP/status.json")"
+          } >> "$GITHUB_ENV"
+
+      # Isti put kao u nesreći: od ono što ima i noćna kopija (pun dump šema
+      # public i auth, istim zastavicama), preko običnog Postgresa, do samo
+      # podataka koji se učitavaju u novi Supabase. Šema i prava dolaze iz
+      # migracija, jer dump nosi `--no-privileges`.
+      - name: "Svež dump u obliku noćne kopije (samo čitanje)"
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -euo pipefail
+          docker run --rm -e PGPASSWORD "$PGIMAGE" pg_dump \
+            -h "$PROD_HOST" -p 5432 -U "$PROD_USER" -d postgres \
+            --schema=public --schema=auth --no-owner --no-privileges --quote-all-identifiers \
+            > full.sql
+          echo "Pun dump: $(stat -c%s full.sql) B"
+
+      - name: "Izvlačenje podataka iz kopije (običan Postgres)"
+        run: |
+          set -euo pipefail
+          docker run -d --name scratch -e POSTGRES_PASSWORD=scratch "$PGIMAGE" > /dev/null
+          for i in $(seq 1 30); do docker exec scratch pg_isready -U postgres -q && break; sleep 2; done
+          docker exec -i scratch psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists extensions;
+          create extension if not exists pgcrypto with schema extensions;
+          create extension if not exists btree_gist;
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          SQL
+          docker exec -i scratch psql -U postgres -d postgres -q -v ON_ERROR_STOP=0 < full.sql 2> /dev/null > /dev/null
+          docker exec scratch pg_dump -U postgres -d postgres \
+            --data-only --no-owner --no-privileges --quote-all-identifiers \
+            -t 'public.*' -t auth.users -t auth.identities > data.sql
+          echo "Podaci za učitavanje: $(stat -c%s data.sql) B"
+          docker rm -f scratch > /dev/null
+          rm -f full.sql
+
+      - name: Vraćanje podataka
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          # `replica` isključuje okidače i provere stranih ključeva: bez toga bi
+          # okidač nad `appointments` iznova napravio događaje koji su već u
+          # dump-u. Traži superkorisnika, pa ide `supabase_admin`.
+          { echo "set session_replication_role = replica;"; cat data.sql; } \
+            | docker run --rm -i --network host -e PGPASSWORD=postgres "$PGIMAGE" \
+                psql $LOCAL_DB -v ON_ERROR_STOP=1 -1 -q > /dev/null
+          echo "RESTORE_SECONDS=$(( $(date +%s) - START ))" >> "$GITHUB_ENV"
+          echo "Podaci vraćeni za $(( $(date +%s) - START )) s."
+
+      - name: "Provera 1: redovi"
+        run: |
+          export PSQL="docker run --rm --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
+          .github/scripts/verify-drill.sh data.sql counts
+
+      - name: "Provera 2: prava, javna strana, prijava, RLS (šema produkcije)"
+        run: |
+          export PSQL="docker run --rm --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
+          export PSQL_IN="docker run --rm -i --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
+          .github/scripts/verify-drill.sh data.sql api
+
+      # Razlika znači da migracije iz repoa ne daju istu bazu kao produkcija —
+      # a upravo na njih se oslanja vraćanje. Ispisuju se samo imena objekata.
+      - name: "Provera 3: da li migracije daju šemu produkcije"
+        env:
+          PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -uo pipefail
+          docker run --rm -i -e PGPASSWORD "$PGIMAGE" psql -h "$PROD_HOST" -p 5432 -U "$PROD_USER" -d postgres -tAq \
+            < .github/scripts/catalog.sql > catalog-prod.txt
+          docker run --rm -i --network host -e PGPASSWORD=postgres "$PGIMAGE" psql $LOCAL_DB -tAq \
+            < .github/scripts/catalog.sql > catalog-local.txt
+          echo "Objekata u produkciji: $(wc -l < catalog-prod.txt), u steku: $(wc -l < catalog-local.txt)"
+          if diff -u catalog-prod.txt catalog-local.txt > catalog.diff; then
+            echo "Šema iz migracija je ista kao u produkciji."
+          else
+            echo "::warning::Šema iz migracija se razlikuje od produkcije (vidi izlaz)."
+            echo "RAZLIKE ('-' samo u produkciji, '+' samo u migracijama):"
+            grep -E '^[-+][^-+]' catalog.diff | cut -c1-220 | head -80
+          fi
+
+      - name: Snimak broja redova pre migracija
+        run: |
+          export PSQL="docker run --rm --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
+          .github/scripts/verify-drill.sh data.sql snapshot > before.txt
+          wc -l before.txt
+
+      # Migracije koje produkcija još nema, na kopiji njenih podataka. Ovo je
+      # proba pre objave: pada ovde, a ne u produkciji.
+      - name: Probna primena migracija koje produkcija još nema
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
+        run: |
+          set -euo pipefail
+          if [ -z "$(ls -A "$RUNNER_TEMP/pending" 2>/dev/null)" ]; then
+            echo "Nema migracija koje produkcija nema."
+            exit 0
+          fi
+          cp "$RUNNER_TEMP"/pending/*.sql supabase/migrations/
+          START=$(date +%s)
+          supabase migration up --local
+          echo "Migracije primenjene za $(( $(date +%s) - START )) s."
+          docker run --rm --network host -e PGPASSWORD=postgres "$PGIMAGE" psql $LOCAL_DB -tAc \
+            "select conname || ' ' || case when convalidated then 'potvrđeno' else 'NOT VALID' end from pg_constraint where conname in ('clients_phone_e164_format','limit_exempt_phones_phone_e164_check','push_subscriptions_endpoint_allowed') order by 1"
+
+      - name: "Provera 4: posle migracija nijedan red nije izgubljen"
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
+        run: |
+          export PSQL="docker run --rm --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
+          .github/scripts/verify-drill.sh data.sql snapshot > after.txt
+          if diff before.txt after.txt; then
+            echo "Broj redova je isti pre i posle migracija."
+          else
+            echo "::error::Migracije su promenile broj redova."
+            exit 1
+          fi
+
+      - name: "Provera 5: prava, javna strana, prijava, RLS (šema posle migracija)"
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
+        run: |
+          export PSQL="docker run --rm --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
+          export PSQL_IN="docker run --rm -i --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
+          .github/scripts/verify-drill.sh data.sql api
+
+      - name: Sažetak
+        if: always()
+        run: |
+          {
+            echo "### Vraćanje u Supabase stek"
+            echo ""
+            echo "- produkcija na migraciji: \`${PROD_VERSION:-?}\`"
+            echo "- vraćanje podataka: ${RESTORE_SECONDS:-?} s"
+            echo "- ukupno od početka posla: vidi trajanje posla iznad"
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -f data.sql before.txt after.txt catalog-*.txt catalog.diff
+
+      - name: Zaustavljanje steka
+        if: always()
+        run: supabase stop --no-backup || true

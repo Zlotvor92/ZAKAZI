@@ -51,6 +51,11 @@ export default function ErrorBoundary({
           {sr.error.title}
         </h1>
         <p className="text-muted-foreground text-sm">{sr.error.body}</p>
+        {error.digest ? (
+          <p className="text-muted-foreground text-xs">
+            {sr.error.reference.replace("{sifra}", error.digest)}
+          </p>
+        ) : null}
         <div className="flex flex-col gap-2">
           <Button type="button" onClick={reset}>
             {sr.error.retry}

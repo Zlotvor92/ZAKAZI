@@ -70,6 +70,40 @@ describe("salonJsonLd", () => {
   });
 });
 
+describe("salonJsonLd: cena koja nije upisana", () => {
+  it("cena 0 se ne tvrdi kao besplatna usluga", () => {
+    const out = salonJsonLd({
+      name: "Mila",
+      slug: "mila",
+      logoUrl: null,
+      description: "d",
+      services: [
+        { name: "Konsultacija", description: null, priceRsd: 0 },
+        { name: "Gel", description: null, priceRsd: 2400 },
+      ],
+    });
+    const [free, paid] = out.hasOfferCatalog?.itemListElement ?? [];
+
+    expect(free).not.toHaveProperty("price");
+    expect(free?.itemOffered.name).toBe("Konsultacija");
+    expect(paid).toMatchObject({ price: "2400" });
+  });
+
+  it("ne izmišlja lokalne podatke koje salon nije uneo", () => {
+    const out = salonJsonLd({
+      name: "Mila",
+      slug: "mila",
+      logoUrl: null,
+      description: "d",
+      services: [{ name: "Gel", description: null, priceRsd: 2400 }],
+    });
+
+    for (const key of ["address", "telephone", "openingHours", "geo", "aggregateRating"]) {
+      expect(out).not.toHaveProperty(key);
+    }
+  });
+});
+
 describe("articleJsonLd", () => {
   it("nosi datum objave i apsolutnu adresu", async () => {
     const { articleJsonLd } = await import("@/lib/domain/seo");

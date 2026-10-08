@@ -9,18 +9,16 @@ export type IndexableSalon = { slug: string; updatedAt: Date };
 
 /**
  * Saloni čije stranice idu u mapu sajta. Pretraživač nije prijavljen, pa
- * bi RLS vratio prazan spisak; zato ide `service_role`, a bira se isto što i
- * stranica za zakazivanje: uključeno zakazivanje i salon koji nije pauziran.
+ * bi RLS vratio prazan spisak; zato ide `service_role`.
+ *
+ * Uslovi su u bazi (`indexable_salons`), iste kao oni po kojima se odlučuje da
+ * li je javna strana otvorena: zakazivanje uključeno, salon nije pauziran,
+ * pristup nije istekao i postoji usluga koja može da se zakaže.
  */
 export async function getIndexableSalons(): Promise<IndexableSalon[]> {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
-    .from("tenants")
-    .select("slug, updated_at")
-    .eq("public_booking_enabled", true)
-    .is("suspended_at", null)
-    .order("slug");
+  const { data, error } = await supabase.rpc("indexable_salons");
 
   if (error) {
     throw new Error(

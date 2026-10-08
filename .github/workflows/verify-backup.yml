@@ -1,0 +1,156 @@
+name: Verify backup
+
+# Provera da šifrovane kopije stvarno postoje i da se mogu otvoriti.
+#
+# Prvi deo ne traži nikakav ključ: da li je svaki dan u poslednje dve nedelje
+# u privatnom repou i na Cloudflare R2, da li je najnovija kopija na oba mesta
+# bajt po bajt ista i da li je ispravan `age` fajl.
+#
+# Drugi deo traži privatni ključ i radi samo ako postoji tajna
+# `AGE_PRIVATE_KEY_TEST`. Ključ se ne čuva u GitHub-u: postavlja se privremeno,
+# samo za ovu proveru, pa se odmah briše. Radnja ga nikad ne ispisuje, upisuje se
+# u fajl samo za trajanje koraka i briše.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-backup
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Provera kopija
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # Javni ključ kojim noćni posao šifruje; isti kao u backup.yml.
+      AGE_PUBLIC_KEY: age1vumv7v3emyr887gg8dr9j9muah2vlk40y25fd5rzgvafm4qyws9qdgnfdt
+      BACKUP_REPO: Zlotvor92/zakazi-backup
+      R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+      R2_BUCKET: ${{ secrets.R2_BUCKET }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: auto
+
+    steps:
+      - name: Alat za šifrovanje
+        run: |
+          set -euo pipefail
+          curl -fsSL --max-time 120 \
+            https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz \
+            | tar -xz -C /tmp
+          sudo install /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
+          age --version
+
+      - name: Kopije u repou i na R2, poslednjih 14 dana
+        env:
+          GIT_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --depth 1 "https://x-access-token:${GIT_TOKEN}@github.com/$BACKUP_REPO.git" repo 2> /dev/null
+          ls repo/dnevno | sort > repo.txt
+
+          if [ -n "$R2_ACCOUNT_ID" ]; then
+            ENDPOINT="https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com"
+            aws s3 ls "s3://$R2_BUCKET/" --endpoint-url "$ENDPOINT" | awk '{print $4}' | grep '^zakazi-' | sort > r2.txt || true
+          else
+            : > r2.txt
+            echo "::warning::R2 nije podešen; proverava se samo privatni repo."
+          fi
+
+          echo "U repou: $(wc -l < repo.txt) kopija, na R2: $(wc -l < r2.txt)"
+          missing_repo=0; missing_r2=0
+          printf '%-12s %-6s %s\n' dan repo R2
+          for i in $(seq 0 13); do
+            day=$(date -u -d "-$i days" +%F)
+            name="zakazi-$day.sql.gz.age"
+            in_repo=$(grep -qx "$name" repo.txt && echo da || echo NE)
+            in_r2=$(grep -qx "$name" r2.txt && echo da || echo NE)
+            [ "$in_repo" = "NE" ] && missing_repo=$((missing_repo + 1))
+            [ "$in_r2" = "NE" ] && missing_r2=$((missing_r2 + 1))
+            printf '%-12s %-6s %s\n' "$day" "$in_repo" "$in_r2"
+          done
+          echo "Nedostaje u repou: $missing_repo od 14, na R2: $missing_r2 od 14."
+          # Danas može još da nema kopije (posao kasni), pa je jedan dan tolerancija.
+          [ "$missing_repo" -le 1 ] || { echo "::error::U repou fali više od jednog dana."; exit 1; }
+          if [ -n "$R2_ACCOUNT_ID" ] && [ "$missing_r2" -gt 1 ]; then
+            echo "::error::Na R2 fali više od jednog dana."
+            exit 1
+          fi
+
+      - name: "Najnovija kopija: isti fajl na oba mesta, ispravan age format"
+        run: |
+          set -euo pipefail
+          LATEST=$(tail -1 repo.txt)
+          echo "LATEST=$LATEST" >> "$GITHUB_ENV"
+          echo "Najnovija u repou: $LATEST"
+          SIZE=$(stat -c%s "repo/dnevno/$LATEST")
+          echo "Veličina: $SIZE B"
+          [ "$SIZE" -gt 10000 ] || { echo "::error::Najnovija kopija je sumnjivo mala."; exit 1; }
+          head -c 21 "repo/dnevno/$LATEST" | grep -q '^age-encryption.org/v1' \
+            || { echo "::error::Fajl nema age zaglavlje."; exit 1; }
+          echo "Zaglavlje je ispravno (age v1)."
+
+          if [ -n "$R2_ACCOUNT_ID" ]; then
+            aws s3 cp "s3://$R2_BUCKET/$LATEST" r2-latest.age \
+              --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" --only-show-errors
+            if cmp -s "repo/dnevno/$LATEST" r2-latest.age; then
+              echo "Kopija na R2 je bajt po bajt ista kao u repou."
+            else
+              echo "::error::Kopija na R2 se razlikuje od one u repou."
+              exit 1
+            fi
+          fi
+
+      - name: Dešifrovanje privatnim ključem (samo ako je tajna postavljena)
+        env:
+          AGE_KEY: ${{ secrets.AGE_PRIVATE_KEY_TEST }}
+        run: |
+          set -euo pipefail
+          if [ -z "$AGE_KEY" ]; then
+            echo "::notice::Privatni ključ nije postavljen (AGE_PRIVATE_KEY_TEST), pa se dešifrovanje ne proverava."
+            exit 0
+          fi
+
+          umask 077
+          printf '%s\n' "$AGE_KEY" > kljuc.txt
+          trap 'rm -f kljuc.txt dump.sql' EXIT
+
+          # Da li je to ključ čiji je javni par u noćnom poslu.
+          if [ "$(age-keygen -y kljuc.txt 2> /dev/null)" = "$AGE_PUBLIC_KEY" ]; then
+            echo "Privatni ključ odgovara javnom ključu koji noćni posao koristi."
+          else
+            echo "::error::Privatni ključ NE odgovara javnom ključu iz noćnog posla. Nove kopije se ne mogu otvoriti ovim ključem."
+            exit 1
+          fi
+
+          if age --decrypt --identity kljuc.txt "repo/dnevno/$LATEST" 2> /dev/null | gunzip > dump.sql; then
+            echo "Dešifrovanje uspelo: $(stat -c%s dump.sql) B."
+          else
+            echo "::error::Dešifrovanje nije uspelo."
+            exit 1
+          fi
+
+          tail -5 dump.sql | grep -q "PostgreSQL database dump complete" \
+            || { echo "::error::Dump je dešifrovan, ali nije potpun."; exit 1; }
+          for t in appointments clients tenants appointment_events; do
+            grep -q "CREATE TABLE \"public\".\"$t\"" dump.sql \
+              || { echo "::error::U dump-u nema tabele $t."; exit 1; }
+          done
+          echo "Kopija se otvara tvojim ključem i sadrži očekivane tabele."
+
+      - name: Sažetak
+        if: always()
+        run: |
+          {
+            echo "### Provera kopija"
+            echo ""
+            echo "- najnovija: \`${LATEST:-?}\`"
+            echo "- u repou: $(wc -l < repo.txt 2>/dev/null || echo ?) kopija, na R2: $(wc -l < r2.txt 2>/dev/null || echo ?)"
+          } >> "$GITHUB_STEP_SUMMARY"
+          rm -rf repo r2-latest.age kljuc.txt dump.sql

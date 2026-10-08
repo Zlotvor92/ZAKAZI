@@ -332,6 +332,29 @@ describe("granice koje i za vlasnicu važe", () => {
     });
   });
 
+  it.each([
+    ["nemački", "+4917612345678"],
+    ["hrvatski", "+385911234567"],
+    ["srpski sa nulom posle koda zemlje", "+3810641234567"],
+  ])(
+    "strani ili nekanonski broj (%s) vraća invalid_phone, ne SQL grešku 23514",
+    async (_name, phone) => {
+      await withRollback(async (db) => {
+        const base = await salon(db);
+
+        const result = await asUser(db, base.userId, () =>
+          create(db, {
+            serviceId: base.serviceId,
+            startAt: "2026-09-14T08:00:00Z",
+            phone,
+          }),
+        );
+
+        expect(result).toEqual({ ok: false, reason: "invalid_phone" });
+      });
+    },
+  );
+
   it("odbijen pokušaj ne ostavlja klijenta", async () => {
     await withRollback(async (db) => {
       const base = await salon(db);

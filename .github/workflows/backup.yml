@@ -13,6 +13,11 @@ on:
   schedule:
     - cron: "20 1 * * *"
   workflow_dispatch:
+    inputs:
+      samo_proba:
+        description: "Samo svež dump i proba vraćanja: ništa se ne šifruje i ne šalje"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -38,6 +43,11 @@ jobs:
       R2_BUCKET: ${{ secrets.R2_BUCKET }}
 
     steps:
+      # Samo skripte za proveru vraćanja; ostatak repoa ovom poslu ne treba.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+
       # Šifrovanje ide statičkim binarnim fajlom umesto preko `apt`-a: prvi
       # pokušaj je dovlačio PGDG repo i posao je visio jedanaest minuta bez
       # ijednog reda ispisa, dok ga nisam prekinuo.
@@ -47,7 +57,7 @@ jobs:
           curl -fsSL --max-time 120 \
             https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz \
             | tar -xz -C /tmp
-          sudo install /tmp/age/age /usr/local/bin/age
+          sudo install /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
           age --version
 
       # Runner nosi pg_dump 16, a server je 17.6 — stariji klijent odbija da
@@ -99,60 +109,8 @@ jobs:
 
           echo "Kopija ima $DUMP_BYTES B i sve očekivane tabele."
 
-      # Kopija koja se nikad nije vratila nije kopija nego fajl kome se nadamo.
-      # Ovde se diže prazan Postgres iste verzije, kopija se uvozi u njega, i
-      # broji se da li je svaki red iz fajla stvarno završio u bazi.
-      #
-      # Proba ide nad nešifrovanim fajlom, jer CI nema čime da dešifruje — i ne
-      # sme da ima. Time se proverava ono što jedino i može da bude pokvareno:
-      # da li je sadržaj dumpa pun i da li se uvozi bez gubitka.
-      - name: Proba vraćanja
-        run: |
-          set -euo pipefail
-
-          docker run -d --name proba -e POSTGRES_PASSWORD=proba postgres:17-alpine
-          for i in $(seq 1 30); do
-            docker exec proba pg_isready -U postgres -q && break
-            sleep 2
-          done
-
-          # Vraćanje u prazan Postgres uvek nešto prijavi: dump nosi i `auth`
-          # šemu, koja se oslanja na Supabase-ove role i proširenja kojih ovde
-          # nema. To se ne prećutkuje nego broji, a presuđuje poređenje redova.
-          docker exec -i proba psql -U postgres -d postgres -q -v ON_ERROR_STOP=0 \
-            < dump.sql 2> greske.txt || true
-          echo "Prijava pri uvozu: $(wc -l < greske.txt) redova."
-
-          # Koliko redova fajl nosi za datu tabelu — broji se blok između
-          # `COPY ... FROM stdin;` i završnog `\.`.
-          u_fajlu() {
-            awk -v t="$1" '
-              $0 ~ "^COPY \"public\".\""t"\" " { u=1; next }
-              u && $0 == "\\." { u=0 }
-              u { n++ }
-              END { print n+0 }
-            ' dump.sql
-          }
-
-          greska=0
-          for t in tenants clients appointments appointment_events services working_hours; do
-            fajl=$(u_fajlu "$t")
-            baza=$(docker exec proba psql -U postgres -d postgres -tAc \
-              "select count(*) from public.\"$t\"" 2>/dev/null || echo "NEMA")
-            if [ "$fajl" = "$baza" ]; then
-              echo "  $t: $baza ✓"
-            else
-              echo "  $t: u fajlu $fajl, u vraćenoj bazi $baza ✗"
-              greska=1
-            fi
-          done
-
-          docker rm -f proba > /dev/null
-          rm -f dump.sql greske.txt
-          test "$greska" -eq 0 || { echo "Vraćanje nije verno — kopija se ne sme smatrati ispravnom."; exit 1; }
-          echo "Vraćanje provereno: svaki red iz kopije je u bazi."
-
       - name: Šifrovanje
+        if: ${{ inputs.samo_proba != true }}
         run: |
           set -euo pipefail
           NAME="zakazi-$(date -u +%Y-%m-%d).sql.gz.age"
@@ -164,7 +122,7 @@ jobs:
       # preskače i kopija svejedno ode u privatni repo. Čim se dodaju, uključi
       # se sam, bez izmene ovog fajla.
       - name: Slanje na Cloudflare R2
-        if: env.R2_ACCOUNT_ID != ''
+        if: env.R2_ACCOUNT_ID != '' && inputs.samo_proba != true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -177,6 +135,7 @@ jobs:
       # Istorija ovog repoa je usput i verzionisanje: svaki dan stoji kao svoj
       # commit, pa se može uzeti stanje od pre nedelju dana, ne samo poslednje.
       - name: Slanje u privatni repo
+        if: ${{ inputs.samo_proba != true }}
         env:
           GIT_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
         run: |
@@ -192,7 +151,94 @@ jobs:
           git commit -m "Kopija $BACKUP_FILE" || { echo "Kopija za danas već postoji."; exit 0; }
           git push
 
+      # Kopija koja se nikad nije vratila nije kopija nego fajl kome se nadamo.
+      # Ovde se diže prazan Postgres iste verzije, kopija se uvozi u njega, i
+      # skripta poredi da li je svaka tabela i svaki red iz fajla stvarno
+      # završio u bazi.
+      #
+      # Ide POSLE slanja kopija, namerno: pad ove provere pocrveni posao i
+      # javi se na banneru u administraciji, ali kopija je tada već sačuvana.
+      # Da je ispred, pogrešna proba bi zaustavila i samu kopiju.
+      #
+      # Proba ide nad nešifrovanim fajlom, jer CI nema čime da dešifruje — i ne
+      # sme da ima. Time se proverava ono što jedino i može da bude pokvareno:
+      # da li je sadržaj dumpa pun i da li se uvozi bez gubitka. Ne proverava se
+      # Supabase kao platforma (GoTrue, PostgREST, storage); za to postoji
+      # povremeno puno vraćanje, opisano u docs/backup-restore.md.
+      - name: Proba vraćanja
+        run: |
+          set -euo pipefail
+
+          RESTORE_STARTED=$(date +%s)
+          docker run -d --name proba -e POSTGRES_PASSWORD=proba postgres:17-alpine
+          for i in $(seq 1 30); do
+            docker exec proba pg_isready -U postgres -q && break
+            sleep 2
+          done
+
+          # Ono što dump ne nosi: `pg_dump --schema` preskače proširenja, a
+          # bez `btree_gist` se ograničenje protiv dvostrukog zakazivanja pri
+          # vraćanju tiho odbije. Role su potrebne politikama (`to authenticated`).
+          docker exec -i proba psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists extensions;
+          create extension if not exists pgcrypto with schema extensions;
+          create extension if not exists btree_gist;
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          SQL
+
+          # Vraćanje ne staje na prvoj grešci: dump nosi i `auth` šemu, koja se
+          # oslanja na Supabase-ove role i proširenja kojih ovde nema, pa nešto
+          # uvek bude odbijeno. Greške se ne prećutkuju — ispisuju se — a
+          # presuđuje skripta. `|| true` nema: pad samog psql-a (veza, kontejner)
+          # mora da obori korak.
+          docker exec -i proba psql -U postgres -d postgres -q -v ON_ERROR_STOP=0 \
+            < dump.sql 2> greske.txt
+          echo "Prijava pri uvozu: $(grep -c '^ERROR' greske.txt || true) grešaka."
+          grep '^ERROR' greske.txt | sort | uniq -c | sort -rn | head -20 || true
+
+          PSQL="docker exec -i proba psql -U postgres -d postgres" \
+            .github/scripts/verify-restore.sh dump.sql
+
+          # Prvo stvarno merenje vremena oporavka: od praznog servera do
+          # provere. Ne uključuje preuzimanje dump-a ni dešifrovanje.
+          echo "RESTORE_SECONDS=$(( $(date +%s) - RESTORE_STARTED ))" >> "$GITHUB_ENV"
+
+      # Dokazuje postupak, ne tvoj ključ: sa privremenim ključem se isti dump
+      # zašifruje istom komandom kao gore, dešifruje i uporedi. Ako `age` ili
+      # `gzip` ikad prestanu da se slažu, vidi se ovde, a ne tek u nesreći.
+      # Da li tvoj stvarni privatni ključ otvara stvarnu kopiju može da proveri
+      # samo onaj ko ga ima: `age -d -i kljuc.txt fajl.age | gunzip | head`.
+      - name: Proba šifrovanja (privremenim ključem)
+        run: |
+          set -euo pipefail
+          age-keygen -o proba.key 2> /dev/null
+          PUB=$(grep -o 'age1[a-z0-9]*' proba.key | head -1)
+          gzip -9 -c dump.sql > proba.sql.gz
+          age --recipient "$PUB" --output proba.sql.gz.age proba.sql.gz
+          age --decrypt --identity proba.key proba.sql.gz.age | gunzip > proba.out.sql
+          cmp dump.sql proba.out.sql
+          echo "Šifrovanje i dešifrovanje vraćaju isti dump ($(stat -c%s proba.out.sql) B)."
+          rm -f proba.key proba.sql.gz proba.sql.gz.age proba.out.sql
+
+      - name: Čišćenje posle probe
+        if: always()
+        run: |
+          docker rm -f proba > /dev/null 2>&1 || true
+          rm -f dump.sql greske.txt
+
+      - name: Sažetak (samo proba)
+        if: ${{ inputs.samo_proba == true }}
+        run: |
+          echo "### Samo proba vraćanja" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ništa nije šifrovano ni poslato" >> "$GITHUB_STEP_SUMMARY"
+          echo "- veličina dump-a: $DUMP_BYTES B" >> "$GITHUB_STEP_SUMMARY"
+          echo "- vraćanje do provere: ${RESTORE_SECONDS:-?} s" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Sažetak
+        if: ${{ inputs.samo_proba != true }}
         run: |
           echo "### Kopija napravljena" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
