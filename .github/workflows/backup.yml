@@ -13,6 +13,11 @@ on:
   schedule:
     - cron: "20 1 * * *"
   workflow_dispatch:
+    inputs:
+      samo_proba:
+        description: "Samo svež dump i proba vraćanja: ništa se ne šifruje i ne šalje"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -47,7 +52,7 @@ jobs:
           curl -fsSL --max-time 120 \
             https://github.com/FiloSottile/age/releases/download/v1.2.1/age-v1.2.1-linux-amd64.tar.gz \
             | tar -xz -C /tmp
-          sudo install /tmp/age/age /usr/local/bin/age
+          sudo install /tmp/age/age /tmp/age/age-keygen /usr/local/bin/
           age --version
 
       # Runner nosi pg_dump 16, a server je 17.6 — stariji klijent odbija da
@@ -100,6 +105,7 @@ jobs:
           echo "Kopija ima $DUMP_BYTES B i sve očekivane tabele."
 
       - name: Šifrovanje
+        if: ${{ inputs.samo_proba != true }}
         run: |
           set -euo pipefail
           NAME="zakazi-$(date -u +%Y-%m-%d).sql.gz.age"
@@ -111,7 +117,7 @@ jobs:
       # preskače i kopija svejedno ode u privatni repo. Čim se dodaju, uključi
       # se sam, bez izmene ovog fajla.
       - name: Slanje na Cloudflare R2
-        if: env.R2_ACCOUNT_ID != ''
+        if: env.R2_ACCOUNT_ID != '' && inputs.samo_proba != true
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -124,6 +130,7 @@ jobs:
       # Istorija ovog repoa je usput i verzionisanje: svaki dan stoji kao svoj
       # commit, pa se može uzeti stanje od pre nedelju dana, ne samo poslednje.
       - name: Slanje u privatni repo
+        if: ${{ inputs.samo_proba != true }}
         env:
           GIT_TOKEN: ${{ secrets.BACKUP_REPO_TOKEN }}
         run: |
@@ -157,6 +164,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          RESTORE_STARTED=$(date +%s)
           docker run -d --name proba -e POSTGRES_PASSWORD=proba postgres:17-alpine
           for i in $(seq 1 30); do
             docker exec proba pg_isready -U postgres -q && break
@@ -188,13 +196,44 @@ jobs:
           PSQL="docker exec -i proba psql -U postgres -d postgres" \
             .github/scripts/verify-restore.sh dump.sql
 
+          # Prvo stvarno merenje vremena oporavka: od praznog servera do
+          # provere. Ne uključuje preuzimanje dump-a ni dešifrovanje.
+          echo "RESTORE_SECONDS=$(( $(date +%s) - RESTORE_STARTED ))" >> "$GITHUB_ENV"
+
+      # Dokazuje postupak, ne tvoj ključ: sa privremenim ključem se isti dump
+      # zašifruje istom komandom kao gore, dešifruje i uporedi. Ako `age` ili
+      # `gzip` ikad prestanu da se slažu, vidi se ovde, a ne tek u nesreći.
+      # Da li tvoj stvarni privatni ključ otvara stvarnu kopiju može da proveri
+      # samo onaj ko ga ima: `age -d -i kljuc.txt fajl.age | gunzip | head`.
+      - name: Proba šifrovanja (privremenim ključem)
+        run: |
+          set -euo pipefail
+          age-keygen -o proba.key 2> /dev/null
+          PUB=$(grep -o 'age1[a-z0-9]*' proba.key | head -1)
+          gzip -9 -c dump.sql > proba.sql.gz
+          age --recipient "$PUB" --output proba.sql.gz.age proba.sql.gz
+          age --decrypt --identity proba.key proba.sql.gz.age | gunzip > proba.out.sql
+          cmp dump.sql proba.out.sql
+          echo "Šifrovanje i dešifrovanje vraćaju isti dump ($(stat -c%s proba.out.sql) B)."
+          rm -f proba.key proba.sql.gz proba.sql.gz.age proba.out.sql
+
       - name: Čišćenje posle probe
         if: always()
         run: |
           docker rm -f proba > /dev/null 2>&1 || true
           rm -f dump.sql greske.txt
 
+      - name: Sažetak (samo proba)
+        if: ${{ inputs.samo_proba == true }}
+        run: |
+          echo "### Samo proba vraćanja" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- ništa nije šifrovano ni poslato" >> "$GITHUB_STEP_SUMMARY"
+          echo "- veličina dump-a: $DUMP_BYTES B" >> "$GITHUB_STEP_SUMMARY"
+          echo "- vraćanje do provere: ${RESTORE_SECONDS:-?} s" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Sažetak
+        if: ${{ inputs.samo_proba != true }}
         run: |
           echo "### Kopija napravljena" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
