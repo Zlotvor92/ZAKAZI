@@ -161,19 +161,19 @@ jobs:
       - name: Playwright (Android, produkcioni build)
         run: npm run test:e2e
 
-      # iPhone koristi WebKit. Za sada informativno: ni jednom nije prošao u CI-ju,
-      # a ne sme da obara ostale provere zbog sistemskih biblioteka. Kad nekoliko
-      # puta zaredom prođe, `continue-on-error` se skida i korak postaje obavezan.
-      - name: Playwright (iPhone, WebKit — informativno)
-        continue-on-error: true
+      # iPhone koristi WebKit, preko HTTPS-a i sa sopstvenom korpom ograničenja
+      # (`tests/e2e/tls-proxy.mjs`): WebKit ne prima `Secure` kolačiće preko
+      # običnog HTTP-a. Obavezan od 8. oktobra 2026, kad je dva puta zaredom
+      # prošao 6/6.
+      - name: Playwright (iPhone, WebKit, produkcioni build)
         env:
           E2E_WEBKIT: "1"
         run: |
           npx playwright install --with-deps webkit
           npx playwright test --project=iphone
 
-      # Uvek, ne samo kad posao padne: iPhone korak ima `continue-on-error`, pa
-      # njegov pad ne obara posao, a bez ovoga ne ostavlja nikakav trag.
+      # Uvek, ne samo kad posao padne: tragovi (`test-results/`) su jedino što
+      # ostaje posle neuspelog pokušaja.
       - uses: actions/upload-artifact@v4
         if: always()
         with:

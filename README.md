@@ -131,7 +131,7 @@ tests/domain/             testovi poslovne logike
 tests/actions/            testovi server akcija i ruta (sa mock-ovanom bazom)
 tests/pwa/                testovi servisnog radnika
 tests/db/                 testovi baze i RLS politika
-tests/e2e/                tok kroz pregledač (Android; iPhone/WebKit informativno)
+tests/e2e/                tok kroz pregledač (Android/Chromium i iPhone/WebKit, oba obavezna)
 .github/scripts/          provera vraćanja kopije baze
 ```
 
