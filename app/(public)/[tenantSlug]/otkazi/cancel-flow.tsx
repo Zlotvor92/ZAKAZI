@@ -1,9 +1,10 @@
 "use client";
 
 import { formatInTimeZone } from "date-fns-tz";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { display } from "@/app/fonts";
 import type { UpcomingAppointment } from "@/lib/db/public-cancel";
+import { proofFromFragment } from "@/lib/domain/manage-proof";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import { cancelAppointment, lookupAppointments, type LookupState } from "./actions";
@@ -33,12 +34,14 @@ function AppointmentRow({
   appointment,
   slug,
   phone,
+  linkSecret,
   timeZone,
   onCancelled,
 }: {
   appointment: UpcomingAppointment;
   slug: string;
   phone: string;
+  linkSecret: string | null;
   timeZone: string;
   onCancelled: (appointment: UpcomingAppointment) => void;
 }) {
@@ -54,6 +57,9 @@ function AppointmentRow({
     const formData = new FormData();
     formData.set("slug", slug);
     formData.set("phone", phone);
+    if (linkSecret) {
+      formData.set("linkSecret", linkSecret);
+    }
 
     try {
       const lookup = await lookupAppointments(formData);
@@ -72,6 +78,9 @@ function AppointmentRow({
       formData.set("slug", slug);
       formData.set("phone", phone);
       formData.set("appointmentId", appointment.id);
+      if (linkSecret) {
+        formData.set("linkSecret", linkSecret);
+      }
 
       // Prekinuta veza ili pad servera ne smeju da odvedu na granicu greške:
       // otkazivanje je zadnji korak pre nego što salon ostane sa praznim
@@ -225,11 +234,34 @@ export function CancelFlow({
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<LookupState>({ status: "idle" });
   const [cancelled, setCancelled] = useState<UpcomingAppointment[]>([]);
+  // Tajna iz linka sa kojim je klijentkinja stigla (`#k=…`). Fragment ne ide
+  // serveru, pa je ovo jedino mesto na kom se čita; server je dobija uz broj.
+  const [linkSecret, setLinkSecret] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLinkSecret(proofFromFragment(window.location.hash));
+  }, []);
 
   function onLookup(formData: FormData) {
     startTransition(async () => {
       try {
-        setState(await lookupAppointments(formData));
+        const result = await lookupAppointments(formData);
+        setState(result);
+
+        // Tajna je sada u kolačiću ovog pregledača, pa link ne mora da stoji u
+        // adresi (istorija, deljenje ekrana). Pre toga ostaje, da osvežavanje
+        // strane ne izgubi tajnu.
+        if (
+          linkSecret &&
+          result.status === "found" &&
+          result.appointments.length > 0
+        ) {
+          window.history.replaceState(
+            null,
+            "",
+            `${window.location.pathname}${window.location.search}`,
+          );
+        }
       } catch {
         setState({ status: "error", message: sr.error.unreachable });
       }
@@ -258,9 +290,10 @@ export function CancelFlow({
         </div>
 
         {remaining.length === 0 && cancelled.length === 0 ? (
-          <p className="py-6 text-center text-sm text-[#554C44]">
-            {sr.cancel.empty}
-          </p>
+          <div className="flex flex-col gap-2 py-6 text-sm leading-relaxed text-[#554C44]">
+            <p className="font-medium text-[#211D1A]">{sr.cancel.empty}</p>
+            <p>{sr.cancel.emptyHelp}</p>
+          </div>
         ) : null}
 
         {remaining.length > 0 ? (
@@ -271,6 +304,7 @@ export function CancelFlow({
                 appointment={appointment}
                 slug={slug}
                 phone={state.phone}
+                linkSecret={linkSecret}
                 timeZone={timeZone}
                 onCancelled={(done) =>
                   setCancelled((current) => [...current, done])
@@ -313,8 +347,10 @@ export function CancelFlow({
     <form action={onLookup} className="flex flex-col gap-4">
       <input type="hidden" name="slug" value={slug} />
 
+      {linkSecret ? <input type="hidden" name="linkSecret" value={linkSecret} /> : null}
+
       <p className="text-sm leading-relaxed text-[#554C44]">
-        {sr.cancel.intro}
+        {linkSecret ? sr.cancel.introLink : sr.cancel.intro}
       </p>
 
       <div className="flex flex-col gap-1.5">

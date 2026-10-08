@@ -8,12 +8,14 @@ import { bookPublicAppointment } from "@/lib/db/public-booking";
 import { sequenceProblemSchema } from "@/lib/db/services";
 import { deviceId } from "@/lib/device";
 import { dashboardLink } from "@/lib/domain/dashboard-link";
+import { isManageProof } from "@/lib/domain/manage-proof";
 import { priorNoShowsLine } from "@/lib/domain/no-shows";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sequenceMessage } from "@/lib/domain/service-sequence";
 import { sr } from "@/lib/i18n/sr";
 import { notifyTenant } from "@/lib/messaging/push";
 import { networkHash } from "@/lib/network";
+import { rememberProof } from "@/lib/proof-cookie";
 
 const bookingSchema = z.object({
   slug: z.string().min(1),
@@ -23,6 +25,11 @@ const bookingSchema = z.object({
   phone: z.string(),
   /** Isti za ponovljen pokušaj istog zakazivanja; vidi `public_book`. */
   requestId: z.uuid().nullish(),
+  /**
+   * Tajna termina. Smišlja je pregledač, ne server, da ponovljen zahtev posle
+   * izgubljenog odgovora nosi istu; vidi `lib/domain/manage-proof.ts`.
+   */
+  manageProof: z.string().refine(isManageProof),
 });
 
 export type BookingState =
@@ -56,6 +63,7 @@ export async function submitBooking(
     name: formData.get("name"),
     phone: formData.get("phone"),
     requestId: formData.get("requestId"),
+    manageProof: formData.get("manageProof"),
   });
 
   if (!parsed.success) {
@@ -81,6 +89,7 @@ export async function submitBooking(
     deviceId: await deviceId(),
     networkHash: await networkHash(parsed.data.slug),
     requestId: parsed.data.requestId ?? null,
+    manageProof: parsed.data.manageProof,
   });
 
   if (!result.ok) {
@@ -109,6 +118,10 @@ export async function submitBooking(
 
     return { status: "error", message: rejectionMessage(result.reason) };
   }
+
+  // I kad je zahtev ponovljen: odgovor na prvi pokušaj se izgubio, a s njim i
+  // kolačić, pa tek ovaj ga postavlja.
+  await rememberProof(parsed.data.slug, parsed.data.manageProof);
 
   // Ponovljen zahtev je vratio termin koji već postoji; obaveštenje je otišlo
   // pri prvom pokušaju i ne šalje se dvaput.

@@ -745,7 +745,7 @@ export const sr = {
       slot_taken: "Neko je upravo uzeo taj termin. Izaberi drugi.",
       blocked: "Sa ovog broja nije moguće zakazati preko interneta. Javi se salonu.",
       too_many_this_week:
-        "Već imaš dva termina te nedelje. Izaberi drugi datum ili otkaži jedan.",
+        "Već imaš dva termina te nedelje. Izaberi drugi datum, otkaži jedan ili se javi salonu.",
       too_many_upcoming:
         "Već imaš više zakazanih termina u ovom salonu. Otkaži neki ili se javi salonu.",
       too_many_from_device:
@@ -762,7 +762,7 @@ export const sr = {
       after:
         "Usluga „{usluga}“ nije moguća posle usluge „{prepreka}“ ({datum}). Izaberi „{potrebna}“.",
       before:
-        "Već imaš zakazanu uslugu „{kasnija}“ za {datum}. Posle usluge „{usluga}“ ona nije moguća. Prvo je otkaži, pa zakaži ponovo.",
+        "Već imaš zakazanu uslugu „{kasnija}“ za {datum}. Posle usluge „{usluga}“ ona nije moguća. Prvo je otkaži (ili se javi salonu), pa zakaži ponovo.",
     },
     /** Problemi koje vraća `normalizePhone`. */
     phoneProblem: {
@@ -775,7 +775,16 @@ export const sr = {
     },
     haveAppointment: "Već imaš zakazan termin?",
     manageLink: "Pronađi svoj termin",
-    manageHint: "Pogledaj termin preko broja telefona ili ga otkaži.",
+    manageHint: "Pogledaj svoj termin ili ga otkaži.",
+    /** Posle zakazivanja: link za otkazivanje sa drugog telefona. */
+    saveLink: {
+      title: "Otkazivanje sa drugog telefona",
+      body: "Termin možeš da otkažeš na ovom telefonu, preko „Pronađi svoj termin“. Zakazuješ li u Instagramu ili ćeš otkazivati sa drugog telefona, sačuvaj link.",
+      button: "Sačuvaj link za otkazivanje",
+      copied: "Link je kopiran. Sačuvaj ga u poruke ili beleške.",
+      manual: "Pritisni i drži link da ga kopiraš:",
+      shareTitle: "Link za otkazivanje termina",
+    },
   },
   blog: {
     navLabel: "Blog",
@@ -835,7 +844,7 @@ export const sr = {
           {
             heading: "Ako ne možeš da dođeš",
             paragraphs: [
-              "Na stranici salona pritisni „Pronađi svoj termin“, upiši isti broj telefona sa kog si zakazala i izaberi termin koji otkazuješ. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
+              "Na stranici salona pritisni „Pronađi svoj termin“, upiši isti broj telefona sa kog si zakazala i izaberi termin koji otkazuješ. Radi na telefonu na kom si zakazala; sa drugog telefona otvori link koji si sačuvala pri zakazivanju. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
               "Ako si termin dodala u kalendar telefona, obriši ga i odatle, da ti podsetnik ne zvoni za termin koji više ne postoji.",
             ],
           },
@@ -1071,11 +1080,15 @@ export const sr = {
     title: "Pronađi svoj termin",
     back: "Nazad na zakazivanje",
     intro:
-      "Upiši broj telefona sa kog si zakazala. Prikazaćemo tvoje zakazane termine, a svaki možeš i da otkažeš.",
+      "Upiši broj telefona sa kog si zakazala. Prikazaćemo tvoje zakazane termine, a svaki možeš i da otkažeš — na telefonu na kom si zakazala ili preko linka koji si sačuvala.",
+    introLink:
+      "Otvorila si link za otkazivanje. Upiši broj telefona sa kog si zakazala.",
     submit: "Pronađi termine",
     submitting: "Tražim…",
     changePhone: "Drugi broj",
-    empty: "Nema zakazanih termina za taj broj.",
+    empty: "Nismo našli termin za taj broj na ovom telefonu.",
+    emptyHelp:
+      "Ako si zakazala termin, on i dalje važi. Otkazivanje radi na telefonu na kom si zakazala ili preko linka koji si sačuvala pri zakazivanju. Zakazivala si iz Instagrama? Otvori stranicu salona iz iste aplikacije, ili se javi salonu na Instagramu.",
     cancelButton: "Otkaži",
     cancelConfirm: "Sigurno otkazujem?",
     cancelling: "Otkazujem…",
@@ -1090,7 +1103,8 @@ export const sr = {
       "Nismo dobili potvrdu da je termin otkazan. Pokušaj ponovo — termin se neće otkazati dvaput.",
     notCancelled: "Termin nije otkazan jer zahtev nije stigao. Pokušaj ponovo.",
     rejected: {
-      not_found: "Taj termin nije pronađen za uneti broj telefona.",
+      not_found:
+        "Termin nije pronađen na ovom telefonu. Ako si ga zakazala, on i dalje važi — javi se salonu.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
       invalid_phone: "Broj telefona nije ispravan.",
       too_many_cancellations:

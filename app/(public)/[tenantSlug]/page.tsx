@@ -65,8 +65,11 @@ export const viewport: Viewport = { themeColor: "#FBF7F0" };
  * što je njen telefon podešen na tamno.
  */
 export function PublicPage({ children }: { children: React.ReactNode }) {
+  // `overflow-x-clip`: puls oko dugmeta „Dodaj u kalendar" se širi preko ivica
+  // ekrana, a mobilni pregledač zbog toga proširi prozor stranice na 558 px,
+  // pa se stranica pomera u stranu i ne može da se skroluje do kraja.
   return (
-    <div className="min-h-dvh bg-[#FBF7F0] text-[#211D1A]">
+    <div className="min-h-dvh overflow-x-clip bg-[#FBF7F0] text-[#211D1A]">
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-6 pb-8">
         {children}
       </main>
@@ -128,7 +131,8 @@ export function SalonHeader({
 /**
  * Ulaz za klijentkinju koja već ima termin. Stoji odmah ispod zaglavlja, ne u
  * podnožju: ko dođe da vidi ili otkaže termin ne sme da pretražuje celu stranu
- * za sitan link. Ispod je isti tok kao i ranije — broj telefona.
+ * za sitan link. Termin se otvara brojem telefona i dokazom da je zakazan sa
+ * ovog pregledača (ili linkom koji je sačuvan); vidi `lib/domain/manage-proof.ts`.
  */
 export function FindAppointmentLink({ slug }: { slug: string }) {
   return (

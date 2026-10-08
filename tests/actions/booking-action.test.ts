@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { book, notify, pending } = vi.hoisted(() => ({
+const { book, notify, pending, remember } = vi.hoisted(() => ({
   book: vi.fn(),
   notify: vi.fn(),
   pending: [] as Promise<unknown>[],
+  remember: vi.fn(),
 }));
 
 vi.mock("next/server", () => ({
@@ -21,10 +22,12 @@ vi.mock("@/lib/db/services", () => ({
 vi.mock("@/lib/device", () => ({ deviceId: async () => "device-1" }));
 vi.mock("@/lib/network", () => ({ networkHash: async () => "net-hash" }));
 vi.mock("@/lib/messaging/push", () => ({ notifyTenant: notify }));
+vi.mock("@/lib/proof-cookie", () => ({ rememberProof: remember }));
 
 import { submitBooking } from "@/app/(public)/[tenantSlug]/actions";
 
 const REQUEST_ID = "6f1c3a52-0a9e-4a2e-9f0e-0d5b4c1f7a11";
+const PROOF = "P".repeat(43);
 
 function form(extra: Record<string, string> = {}): FormData {
   const data = new FormData();
@@ -33,6 +36,7 @@ function form(extra: Record<string, string> = {}): FormData {
   data.set("startAt", "2026-11-02T09:00:00+01:00");
   data.set("name", "Jelena Petrović");
   data.set("phone", "064 512 3480");
+  data.set("manageProof", PROOF);
   for (const [key, value] of Object.entries(extra)) data.set(key, value);
   return data;
 }
@@ -50,6 +54,7 @@ const appointment = {
 beforeEach(() => {
   book.mockReset();
   notify.mockReset();
+  remember.mockReset();
   pending.length = 0;
 });
 
@@ -109,5 +114,52 @@ describe("submitBooking", () => {
       },
     });
     expect(notify).not.toHaveBeenCalled();
+  });
+});
+
+describe("submitBooking: tajna termina", () => {
+  it("prosleđuje tajnu bazi i pamti je u kolačiću ovog salona", async () => {
+    book.mockResolvedValue({ ok: true, appointment });
+
+    await submitBooking(form({ requestId: REQUEST_ID }));
+
+    expect(book).toHaveBeenCalledWith(
+      expect.objectContaining({ manageProof: PROOF }),
+    );
+    expect(remember).toHaveBeenCalledWith("studio", PROOF);
+  });
+
+  it("i ponovljen zahtev postavlja kolačić, jer se prvi odgovor izgubio", async () => {
+    book.mockResolvedValue({ ok: true, replayed: true, appointment });
+
+    await submitBooking(form({ requestId: REQUEST_ID }));
+
+    expect(remember).toHaveBeenCalledWith("studio", PROOF);
+  });
+
+  it("odbijeno zakazivanje ne pamti tajnu", async () => {
+    book.mockResolvedValue({ ok: false, reason: "slot_taken" });
+
+    await submitBooking(form());
+
+    expect(remember).not.toHaveBeenCalled();
+  });
+
+  it("bez tajne se zahtev odbija pre poziva baze", async () => {
+    const data = form();
+    data.delete("manageProof");
+
+    const result = await submitBooking(data);
+
+    expect(result.status).toBe("error");
+    expect(book).not.toHaveBeenCalled();
+    expect(remember).not.toHaveBeenCalled();
+  });
+
+  it("tajna pogrešnog oblika se odbija pre poziva baze", async () => {
+    const result = await submitBooking(form({ manageProof: "kratka" }));
+
+    expect(result.status).toBe("error");
+    expect(book).not.toHaveBeenCalled();
   });
 });

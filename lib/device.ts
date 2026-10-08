@@ -28,3 +28,13 @@ export async function deviceId(): Promise<string> {
 
   return fresh;
 }
+
+/**
+ * Uređaj iz kolačića, bez pravljenja novog. Za čitanje u stranici: tamo se
+ * kolačić ne sme postavljati, a nov uređaj ionako ne bi poklopio nijedan termin.
+ */
+export async function existingDeviceId(): Promise<string | null> {
+  const jar = await cookies();
+
+  return jar.get(DEVICE_COOKIE)?.value ?? null;
+}

@@ -100,13 +100,13 @@ describe("srpski broj je kanonski: bez nule posle +381", () => {
       const s = await salon(db);
       await asServer(db, async () => {
         const found = await db.query<{ r: unknown[] }>(
-          "select public_appointments_for_phone($1, $2, 'h') as r",
+          "select public_appointments_for_proof($1, $2, array['x']::text[], null) as r",
           [s.slug, WITH_ZERO],
         );
         expect(found.rows[0]!.r).toEqual([]);
 
         const cancelled = await db.query<{ r: Result }>(
-          "select public_cancel_appointment($1, $2, gen_random_uuid(), null, 'h') as r",
+          "select public_cancel_appointment($1, $2, gen_random_uuid(), array[]::text[], null, 'h') as r",
           [s.slug, WITH_ZERO],
         );
         expect(cancelled.rows[0]!.r).toEqual({ ok: false, reason: "invalid_phone" });

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import pg from "pg";
 import { sr } from "../../lib/i18n/sr";
 
@@ -23,23 +23,40 @@ async function statusFor(e164: string): Promise<string[]> {
   }
 }
 
-test("„Pronađi svoj termin“ je vidljiv na početnoj strani salona i vodi do otkazivanja preko broja", async ({
-  page,
-}) => {
-  const tail = String(Date.now()).slice(-7);
-  const written = `064${tail}`;
-  const e164 = `+38164${tail}`;
-
+/** Zakazuje kao klijentkinja i vraća tajnu termina koju je stranica smislila. */
+async function bookAs(
+  page: Page,
+  written: string,
+  name: string,
+): Promise<string> {
   await page.goto(`/${SLUG}`);
   await page.getByTestId("service-option").first().click();
   await page.getByTestId("day-option").nth(3).click();
   await page.getByTestId("slot-option").first().click();
-  await page.getByLabel(sr.booking.nameLabel).fill("Ana Pronalazak");
+  await page.getByLabel(sr.booking.nameLabel).fill(name);
   await page.getByLabel(sr.booking.phoneLabel).fill(written);
+
+  const secret = await page.locator('input[name="manageProof"]').inputValue();
+  expect(secret).toMatch(/^[A-Za-z0-9_-]{43}$/);
+
   await page.getByRole("button", { name: sr.booking.submit }).click();
   await expect(
     page.getByRole("heading", { name: sr.booking.confirmedTitle }),
   ).toBeVisible();
+
+  return secret;
+}
+
+function freshPhone() {
+  const tail = String(Date.now()).slice(-7);
+  return { written: `064${tail}`, e164: `+38164${tail}` };
+}
+
+test("„Pronađi svoj termin“ je vidljiv na početnoj strani i otkazuje uz broj na telefonu na kom je zakazano", async ({
+  page,
+}) => {
+  const { written, e164 } = freshPhone();
+  await bookAs(page, written, "Ana Pronalazak");
 
   await page.goto(`/${SLUG}`);
 
@@ -50,7 +67,7 @@ test("„Pronađi svoj termin“ je vidljiv na početnoj strani salona i vodi do
 
   await expect(page).toHaveURL(new RegExp(`/${SLUG}/otkazi$`));
 
-  // Tuđ broj ne vidi ništa.
+  // Tuđ broj ne vidi ništa, makar bio na istom telefonu.
   await page.getByLabel(sr.booking.phoneLabel).fill("0653829471");
   await page.getByRole("button", { name: sr.cancel.submit }).click();
   await expect(page.getByText(sr.cancel.empty)).toBeVisible();
@@ -72,4 +89,91 @@ test("„Pronađi svoj termin“ je vidljiv na početnoj strani salona i vodi do
 
   await expect(page.getByText(sr.cancel.cancelledTitle)).toBeVisible();
   expect(await statusFor(e164)).toEqual(["cancelled_by_client"]);
+});
+
+test("ko zna samo broj telefona ne otvara termin, a sačuvan link ga otvara na drugom pregledaču", async ({
+  browser,
+  browserName,
+  context,
+  page,
+}) => {
+  const { written, e164 } = freshPhone();
+  const secret = await bookAs(page, written, "Jelena Zaštićena");
+  const origin = new URL(page.url()).origin;
+  let link = `${origin}/${SLUG}/otkazi#k=${secret}`;
+
+  // Potvrda ne sme da širi stranicu preko ivice telefona: mobilni pregledač
+  // tada proširi prozor i stranica se ne skroluje do kraja.
+  expect(
+    await page.evaluate(() => innerWidth === visualViewport?.width),
+  ).toBe(true);
+
+  // Link koji potvrda nudi nosi tajnu termina. Dozvola za međuspremnik postoji
+  // samo u Chromium-u; drugde se link sastavlja iz iste tajne.
+  await expect(page.getByText(sr.booking.saveLink.title)).toBeVisible();
+  if (browserName === "chromium") {
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await page
+      .getByRole("button", { name: sr.booking.saveLink.button })
+      .click();
+    await expect(page.getByText(sr.booking.saveLink.copied)).toBeVisible();
+    link = await page.evaluate(() => navigator.clipboard.readText());
+    expect(link).toBe(`${origin}/${SLUG}/otkazi#k=${secret}`);
+  }
+
+  // Drugi pregledač, isti broj: bez linka ne vidi ništa.
+  const stranger = await browser.newContext();
+  const guest = await stranger.newPage();
+  await guest.goto(`/${SLUG}/otkazi`);
+  await guest.getByLabel(sr.booking.phoneLabel).fill(written);
+  await guest.getByRole("button", { name: sr.cancel.submit }).click();
+  await expect(guest.getByText(sr.cancel.empty)).toBeVisible();
+  await expect(guest.getByText(sr.cancel.emptyHelp)).toBeVisible();
+  await expect(
+    guest.getByRole("button", { name: sr.cancel.cancelButton, exact: true }),
+  ).toHaveCount(0);
+  expect(await statusFor(e164)).toEqual(["confirmed"]);
+  await stranger.close();
+
+  // Izmišljen link ne otvara ništa, ni uz pravi broj.
+  const forger = await browser.newContext();
+  const fake = await forger.newPage();
+  await fake.goto(`/${SLUG}/otkazi#k=${"x".repeat(43)}`);
+  await fake.getByLabel(sr.booking.phoneLabel).fill(written);
+  await fake.getByRole("button", { name: sr.cancel.submit }).click();
+  await expect(fake.getByText(sr.cancel.empty)).toBeVisible();
+  expect(await statusFor(e164)).toEqual(["confirmed"]);
+  await forger.close();
+
+  // Pravi link otvara termin tek uz pravi broj.
+  const second = await browser.newContext();
+  const other = await second.newPage();
+  await other.goto(link);
+  await expect(other.getByText(sr.cancel.introLink)).toBeVisible();
+  await other.getByLabel(sr.booking.phoneLabel).fill("0653829471");
+  await other.getByRole("button", { name: sr.cancel.submit }).click();
+  await expect(other.getByText(sr.cancel.empty)).toBeVisible();
+  expect(await statusFor(e164)).toEqual(["confirmed"]);
+
+  await other.getByRole("button", { name: sr.cancel.changePhone }).click();
+  await other.getByLabel(sr.booking.phoneLabel).fill(written);
+  await other.getByRole("button", { name: sr.cancel.submit }).click();
+  await expect(
+    other.getByRole("button", { name: sr.cancel.cancelButton, exact: true }),
+  ).toBeVisible();
+  // Tajna je sada u kolačiću tog pregledača, pa link nestaje iz adrese.
+  await expect(other).toHaveURL(new RegExp(`/${SLUG}/otkazi$`));
+
+  // I bez linka sada radi na tom pregledaču.
+  await other.goto(`/${SLUG}/otkazi`);
+  await other.getByLabel(sr.booking.phoneLabel).fill(written);
+  await other.getByRole("button", { name: sr.cancel.submit }).click();
+  await other
+    .getByRole("button", { name: sr.cancel.cancelButton, exact: true })
+    .click();
+  await other.getByRole("button", { name: sr.cancel.cancelConfirm }).click();
+
+  await expect(other.getByText(sr.cancel.cancelledTitle)).toBeVisible();
+  expect(await statusFor(e164)).toEqual(["cancelled_by_client"]);
+  await second.close();
 });

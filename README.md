@@ -21,17 +21,28 @@ Na stranici salona stoji „**Pronađi svoj termin**" odmah ispod zaglavlja. Kli
 upiše broj telefona sa kog je zakazala, vidi svoje buduće termine u tom salonu i
 svaki može da otkaže (dva dodira, drugi je potvrda). Adresa je `/<slug>/otkazi`.
 
-Broj telefona je jedini dokaz identiteta. To je namerna odluka (nema naloga, tokena
-ni SMS potvrde) i zato je zaštita oko nje, ne umesto nje:
+**Sam broj telefona ne otvara ništa.** Uz broj treba i dokaz da je termin zakazan
+sa ovog pregledača (nema naloga, tokena za kucanje ni SMS-a):
 
-- najviše 20 pretraga/otkazivanja na sat po mreži i salonu;
+- pri zakazivanju pregledač smisli tajnu od 256 bita; server je stavlja u `httpOnly`
+  kolačić vezan za putanju salona, a baza čuva samo njen SHA-256
+  (`appointments.manage_proof_hash`);
+- potvrda nudi „Sačuvaj link za otkazivanje" (`/<slug>/otkazi#k=<tajna>`): otvara
+  termin i sa drugog telefona ili iz drugog pregledača (Instagram → Safari). Tajna
+  stoji iza `#`, pa ne ide serveru ni u log; i tamo se i dalje upisuje broj;
+- termini zakazani pre ove izmene nemaju tajnu; njih otvara uređaj sa kog su
+  zakazani (`appointment_events.device_id`), i ta grana nestaje sama kad prođe
+  horizont zakazivanja;
+- pogrešan broj, nema dokaza, tuđ salon i nepostojeći termin daju isti odgovor;
+- termin koji je upisala vlasnica salona nema dokaz, pa se preko sajta ne otkazuje
+  (klijentkinja se javi salonu);
 - najviše **3 otkazivanja preko sajta na dan po broju i salonu**, bez obzira na mrežu;
 - svaka promena statusa se upisuje u `appointment_events` (ko, kada, sa kog uređaja),
-  a salon odmah dobija obaveštenje, ako ima uključena obaveštenja na telefonu;
-- odgovor ne razlikuje „nema termina" od „previše pokušaja".
+  a salon odmah dobija obaveštenje, ako ima uključena obaveštenja na telefonu.
 
-Ko zna tuđ broj i dalje može da vidi i otkaže tuđe termine u okviru ovih granica.
-Ako to postane problem, sledeći korak je potvrda porukom, ne još jedno ograničenje.
+Ko je promenio telefon, obrisao podatke pregledača ili otvara stranicu u drugoj
+aplikaciji nego što je zakazivala (a nije sačuvala link), ne može sama da otkaže: javlja
+se salonu, koji otkazuje iz kalendara. Detalji i odluke: [`docs/otkazivanje-zastita.md`](./docs/otkazivanje-zastita.md).
 
 ## Šta treba imati
 
@@ -153,7 +164,7 @@ VAPID_SUBJECT
 
 `SUPABASE_SERVICE_ROLE_KEY` zaobilazi RLS i zato ide **samo** na server, nikad
 u promenljivu sa `NEXT_PUBLIC_` prefiksom. **Obavezan je:** javno zakazivanje,
-otkazivanje i pretragu po broju zove isključivo server (`anon` ni `authenticated`
+otkazivanje i pretragu termina zove isključivo server (`anon` ni `authenticated`
 nemaju pravo nad tim funkcijama, da hash mreže ne bi birao pozivalac), a
 obaveštenja idu na uređaje koje neprijavljena klijentkinja po RLS-u ne sme da
 vidi. Nalog vlasnice se pravi kroz Supabase Auth, kome anonimni ključ ne daje

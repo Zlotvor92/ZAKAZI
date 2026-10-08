@@ -5,15 +5,17 @@ import { after } from "next/server";
 import { z } from "zod";
 import {
   cancelPublicAppointment,
-  getAppointmentsForPhone,
+  getAppointmentsForProof,
   type UpcomingAppointment,
 } from "@/lib/db/public-cancel";
-import { deviceId } from "@/lib/device";
+import { deviceId, existingDeviceId } from "@/lib/device";
 import { dashboardLink } from "@/lib/domain/dashboard-link";
+import { isManageProof, withProof } from "@/lib/domain/manage-proof";
 import { normalizePhone } from "@/lib/domain/phone";
 import { sr } from "@/lib/i18n/sr";
 import { notifyTenant } from "@/lib/messaging/push";
 import { networkHash } from "@/lib/network";
+import { readProofs, rememberProof } from "@/lib/proof-cookie";
 
 export type LookupState =
   | { status: "idle" }
@@ -23,7 +25,22 @@ export type LookupState =
 const lookupSchema = z.object({
   slug: z.string().min(1),
   phone: z.string(),
+  /** Tajna iz linka (`#k=…`), kad je klijentkinja stigla preko njega. */
+  linkSecret: z.string().nullish(),
 });
+
+/**
+ * Tajne kojima ovaj zahtev dokazuje vlasništvo: one iz kolačića, plus ona iz
+ * linka ako je stigla. Oblik se proverava ovde; da li otvara termin odlučuje
+ * baza.
+ */
+async function secretsFor(linkSecret: string | null | undefined) {
+  const remembered = await readProofs();
+
+  return isManageProof(linkSecret)
+    ? withProof(remembered, linkSecret)
+    : remembered;
+}
 
 export async function lookupAppointments(
   formData: FormData,
@@ -31,6 +48,7 @@ export async function lookupAppointments(
   const parsed = lookupSchema.safeParse({
     slug: formData.get("slug"),
     phone: formData.get("phone"),
+    linkSecret: formData.get("linkSecret"),
   });
 
   if (!parsed.success) {
@@ -42,11 +60,30 @@ export async function lookupAppointments(
     return { status: "error", message: sr.booking.phoneProblem[phone.reason] };
   }
 
-  const appointments = await getAppointmentsForPhone(
-    parsed.data.slug,
-    phone.e164,
-    await networkHash(parsed.data.slug),
-  );
+  const slug = parsed.data.slug;
+  const linkSecret = parsed.data.linkSecret;
+
+  // Tajna iz linka se pamti tek kad sama otvara neki termin ovog broja. Inače
+  // bi svaki izmišljen link mogao da istisne prave tajne iz kolačića.
+  if (isManageProof(linkSecret)) {
+    const viaLink = await getAppointmentsForProof({
+      slug,
+      phoneE164: phone.e164,
+      secrets: [linkSecret],
+      deviceId: null,
+    });
+
+    if (viaLink !== null && viaLink.length > 0) {
+      await rememberProof(slug, linkSecret);
+    }
+  }
+
+  const appointments = await getAppointmentsForProof({
+    slug,
+    phoneE164: phone.e164,
+    secrets: await secretsFor(linkSecret),
+    deviceId: await existingDeviceId(),
+  });
 
   if (appointments === null) {
     return { status: "error", message: sr.booking.closed };
@@ -72,6 +109,7 @@ const cancelSchema = z.object({
   slug: z.string().min(1),
   phone: z.string(),
   appointmentId: z.uuid(),
+  linkSecret: z.string().nullish(),
 });
 
 export async function cancelAppointment(
@@ -81,6 +119,7 @@ export async function cancelAppointment(
     slug: formData.get("slug"),
     phone: formData.get("phone"),
     appointmentId: formData.get("appointmentId"),
+    linkSecret: formData.get("linkSecret"),
   });
 
   if (!parsed.success) {
@@ -91,6 +130,7 @@ export async function cancelAppointment(
     slug: parsed.data.slug,
     phoneE164: parsed.data.phone,
     appointmentId: parsed.data.appointmentId,
+    secrets: await secretsFor(parsed.data.linkSecret),
     deviceId: await deviceId(),
     networkHash: await networkHash(parsed.data.slug),
   });

@@ -45,23 +45,29 @@ export type UpcomingAppointment = z.infer<typeof upcomingAppointmentSchema>;
 
 /**
  * Pretraga i otkazivanje idu preko `service_role`, iz istog razloga kao
- * zakazivanje: hash mreže mora da računa server, ne pozivalac.
+ * zakazivanje: hash mreže i uređaj mora da određuje server, ne pozivalac.
  *
- * Budući termini datog broja telefona u salonu. `null` kad salon ne postoji
- * ili je suspendovan; prazan niz kad salon postoji ali taj broj nema termina —
- * dve različite poruke na strani.
+ * Budući termini datog broja telefona u salonu, ali samo oni koje otvara i
+ * dokaz: tajna termina iz kolačića ili linka, ili (za termine zakazane pre
+ * tajne) uređaj sa kog su zakazani. Sam broj telefona ne otvara ništa.
+ *
+ * `null` kad salon ne postoji ili je suspendovan; prazan niz u svakom drugom
+ * slučaju — pogrešan broj, nema dokaza, nema termina — jedna poruka na strani,
+ * da odgovor ne otkrije šta postoji.
  */
-export async function getAppointmentsForPhone(
-  slug: string,
-  phoneE164: string,
-  networkHash: string | null,
-): Promise<UpcomingAppointment[] | null> {
+export async function getAppointmentsForProof(input: {
+  slug: string;
+  phoneE164: string;
+  secrets: string[];
+  deviceId: string | null;
+}): Promise<UpcomingAppointment[] | null> {
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase.rpc("public_appointments_for_phone", {
-    p_slug: slug,
-    p_phone_e164: phoneE164,
-    p_network_hash: networkHash,
+  const { data, error } = await supabase.rpc("public_appointments_for_proof", {
+    p_slug: input.slug,
+    p_phone_e164: input.phoneE164,
+    p_secrets: input.secrets,
+    p_device_id: input.deviceId,
   });
 
   if (error) {
@@ -93,6 +99,7 @@ export async function cancelPublicAppointment(input: {
   slug: string;
   phoneE164: string;
   appointmentId: string;
+  secrets: string[];
   deviceId: string | null;
   networkHash: string | null;
 }): Promise<CancelResult> {
@@ -102,6 +109,7 @@ export async function cancelPublicAppointment(input: {
     p_slug: input.slug,
     p_phone_e164: input.phoneE164,
     p_appointment_id: input.appointmentId,
+    p_secrets: input.secrets,
     p_device_id: input.deviceId,
     p_network_hash: input.networkHash,
   });

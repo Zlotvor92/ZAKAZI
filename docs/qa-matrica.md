@@ -15,7 +15,10 @@ viđen zelen.
 | Usluga 75 min → 105 min, ručni override | `tests/domain/appointment-form.test.ts` (opcije i početni izbor), `tests/domain/durations.test.ts` | Menjanje usluge u formi i ručni izbor trajanja (izbor se ne simulira, samo početno stanje) |
 | Izmena radnog vremena / odsustvo / gašenje usluge | `tests/domain/working-hours.test.ts`, `tests/db/time-off.test.ts`, `manage-services.test.ts`, `appointments-outside-hours.test.ts` | Kombinacije u prijavljenom interfejsu |
 | Ponoć i prelazak na zimsko (25.10.2026) | `tests/db/availability-parity.test.ts`, `tests/domain/calendar.test.ts` | |
-| Tuđ telefon, pogrešan/istekao token | **Nema tokena** — otkazivanje je namerno samo preko broja. Ograničenje: najviše 3 otkazivanja dnevno po broju (`tests/db/public-cancel.test.ts`) i po mreži (20/h) | |
+| Tuđ telefon: ko zna samo broj | `tests/db/public-cancel.test.ts` (broj bez tajne, pogrešan broj, tuđa tajna, tuđ salon: isti odgovor), `tests/e2e/find-appointment.spec.ts` (drugi pregledač ne vidi ništa; izmišljen link ne otvara) | |
+| Pregledač bez kolačića, sa sačuvanim linkom | `find-appointment.spec.ts` (link + broj otvara termin, tajna se pamti, link nestaje iz adrese), `tests/actions/cancel-action.test.ts` (izmišljen link ne ulazi u kolačić) | **Na uređaju**: zakazivanje u Instagram/Facebook pregledaču → otkazivanje preko linka u Safariju/Chrome-u |
+| Termini zakazani pre tajne | `public-cancel.test.ts` (prelazna grana: uređaj; vlasničin uređaj se ne priznaje) | |
+| Istek kolačića, novi telefon | — | Nema samostalnog puta: klijentkinja se javlja salonu. Meri se brojem takvih poruka |
 | Uspešno otkazivanje pa izgubljen odgovor | `tests/actions/cancel-action.test.ts` (već otkazan = uspeh), DB `already_cancelled` | Prekid veze usred otkazivanja u pravom pregledaču |
 | Istek access tokena pri ulasku preko početne/prijave | `tests/supabase/middleware.test.ts` (kolačići na redirectu; sa mock-ovanim Supabase klijentom) | Stvarna prijava i istekla sesija |
 | Korisnik A → salon B | `tests/db/rls.test.ts`, `cross-tenant-writes.test.ts` | |
@@ -42,6 +45,10 @@ Klijentkinja, bez prijave:
 2. Zakaži termin. Tastatura ne pokriva dugme za slanje.
 3. „Pronađi svoj termin" → upiši isti broj → termin je u spisku → otkaži (dva
    dodira, drugi je potvrda). Salon dobija obaveštenje.
+   Isti broj iz drugog pregledača ili privatnog prozora **ne** pokazuje termin;
+   isti broj uz sačuvan link („Sačuvaj link za otkazivanje" na potvrdi) pokazuje.
+   Zakazano u Instagram pregledaču: zatvori aplikaciju, otvori link iz poruke
+   u Safariju/Chrome-u, upiši broj → termin se vidi.
 4. Isključi mrežu usred popunjavanja: dugme za slanje je neaktivno, poruka kaže da
    termin nije zakazan. Vrati mrežu: dugme radi.
 
