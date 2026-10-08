@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { send, setVapid, inserted, deleted, members } = vi.hoisted(() => ({
+const { send, setVapid, inserted, deleted, members, logged } = vi.hoisted(() => ({
+  logged: [] as string[],
   send: vi.fn(),
   setVapid: vi.fn(),
   inserted: [] as Record<string, unknown>[][],
@@ -9,6 +10,11 @@ const { send, setVapid, inserted, deleted, members } = vi.hoisted(() => ({
   members: { current: ["u1"] as string[] },
 }));
 
+vi.mock("@/lib/db/errors", () => ({
+  logError: async (report: { message: string }) => {
+    logged.push(report.message);
+  },
+}));
 vi.mock("web-push", () => ({
   default: { sendNotification: send, setVapidDetails: setVapid },
 }));
@@ -86,6 +92,7 @@ beforeEach(() => {
   send.mockReset();
   inserted.length = 0;
   deleted.length = 0;
+  logged.length = 0;
   members.current = ["u1"];
   process.env["VAPID_SUBJECT"] = "mailto:test@example.com";
   process.env["NEXT_PUBLIC_VAPID_PUBLIC_KEY"] = "pub";
@@ -216,5 +223,37 @@ describe("članstvo pri slanju", () => {
 
     expect(send).toHaveBeenCalledTimes(2);
     expect(deleted).toHaveLength(0);
+  });
+});
+
+describe("razlog neuspele isporuke", () => {
+  const payload = { title: "x", body: "y", url: "/dashboard", tag: "z" };
+
+  it("upisuje HTTP kod servisa pregledača", async () => {
+    send.mockRejectedValue({ statusCode: 413 });
+
+    await notifyTenant({
+      tenantId: "t",
+      appointmentId: "a",
+      template: "new_booking",
+      payload,
+    });
+
+    expect(logged).toContain("Push nije isporučen: HTTP 413.");
+  });
+
+  it("odbačen endpoint se prijavljuje drugačije od pada servisa", async () => {
+    send.mockResolvedValue({ statusCode: 201 });
+
+    await notifyTenant({
+      tenantId: "t",
+      appointmentId: "a",
+      template: "new_booking",
+      payload,
+    });
+
+    expect(logged).toEqual([
+      "Push nije poslat: endpoint nije push servis pregledača.",
+    ]);
   });
 });

@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { logError } from "@/lib/db/errors";
 import { requireEnv } from "@/lib/env";
 import { isAllowedPushEndpoint } from "@/lib/domain/push-endpoint";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -147,6 +148,10 @@ async function deliver(input: {
   const results = await Promise.all(
     eligible.map(async (target): Promise<DeliveryStatus> => {
       if (!isAllowedPushEndpoint(target.endpoint)) {
+        await logError({
+          source: "server",
+          message: "Push nije poslat: endpoint nije push servis pregledača.",
+        });
         return "failed";
       }
 
@@ -165,6 +170,14 @@ async function deliver(input: {
           dead.push(target.id);
           return "expired";
         }
+
+        // Razlog je jedino što govori da li je pao servis pregledača (5xx),
+        // ključ (401/403) ili poruka (413); u `messages` stoji samo „failed".
+        const code = (sendError as { statusCode?: number }).statusCode;
+        await logError({
+          source: "server",
+          message: `Push nije isporučen: ${code ? `HTTP ${code}` : "bez odgovora servisa"}.`,
+        });
         return "failed";
       }
     }),

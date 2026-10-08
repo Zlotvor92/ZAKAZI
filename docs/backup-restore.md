@@ -18,7 +18,10 @@ Stanje na 8. oktobar 2026. Ovde piše šta kopija stvarno jeste i šta je do sad
 
 - **Slike (logo salona).** SQL dump nosi samo adresu slike. Same datoteke su u
   Supabase Storage bucket-u `logos` i nemaju nikakvu kopiju. Posle gubitka
-  projekta salon bi imao adresu koja vodi u prazno. Nije rešeno.
+  projekta salon bi imao adresu koja vodi u prazno. Kopija se ne pravi (danas je to
+  jedan logo). Postupak posle gubitka: napravi javni bucket `logos` (migracije ga ne
+  definišu; ime je `LOGO_BUCKET` u `lib/db/logo.ts`), pa svaki salon ponovo otpremi
+  logo u podešavanjima. Zato **originalne logoe čuvaj i van Supabase-a**.
 - **Podešavanja Supabase-a**: Auth provajderi (Google), SMTP, redirect adrese,
   tajne u Vercel-u (`SUPABASE_SERVICE_ROLE_KEY`, VAPID ključevi, `CRON_SECRET`).
   Lista tajni je u `.env.example`; njihove vrednosti moraju da se čuvaju odvojeno.
@@ -63,9 +66,12 @@ indeksi (24) se poklapaju, `appointments_no_overlap` je vraćen, a vraćanje je
 trajalo 5 s. Jedina greška pri uvozu je očekivana (`schema "public" already
 exists`). Šifrovanje i dešifrovanje privremenim ključem vraćaju isti dump.
 
-Ono što **ne** može da se proveri bez tebe: da li tvoj stvarni privatni `age` ključ
-otvara stvarnu kopiju iz `zakazi-backup`. Jedna komanda:
-`age -d -i kljuc.txt zakazi-YYYY-MM-DD.sql.gz.age | gunzip | head`.
+Stvarni privatni `age` ključ je **8. oktobra 2026.** otvorio stvarnu kopiju iz
+`zakazi-backup` (workflow `Verify backup`, run 37794711792): ključ odgovara javnom
+ključu koji koristi noćni posao, dešifrovanje je uspelo (352.463 B) i kopija
+sadrži očekivane tabele. To je jednokratan dokaz. Ponoviti posle rotacije ključa
+ili jednom kvartalno: privremeno postavi tajnu `AGE_PRIVATE_KEY_TEST`, pokreni
+`Verify backup` ručno, pa tajnu odmah obriši. Privatni ključ ne ide u repo ni u chat.
 
 ## Puno vraćanje u Supabase stek (izvedeno)
 
@@ -112,9 +118,39 @@ Izmereno 8. oktobra 2026 (tri uzastopna prolaza, isti rezultat):
 - Pravi Supabase projekat (hosted): ovde je lokalni stek. Na hostovanom projektu
   `postgres` rola ne mora da sme `session_replication_role`; to treba potvrditi
   prvi put kad se to stvarno radi.
-- Podešavanja Supabase-a, tajne, domen, Vercel, Storage (logo datoteke).
-- Dešifrovanje stvarnog `age` ključa.
+- Podešavanja Supabase-a, tajne, domen, Vercel, Storage (logo datoteke); za to
+  postoji kontrolna lista ispod, ali nikad nije izvedena na pravom projektu.
 - Obaveštenja na uređaju: pretplate se vraćaju, ali ih uređaji moraju ponovo
   potvrditi ako se promeni VAPID par.
 
 Ako se `restore-drill` ikad zacrveni, to je ono što bi se desilo u nesreći.
+
+## Kontrolna lista: povratak u novi hostovani Supabase projekat
+
+Nije izvedena na pravom projektu i vreme nije izmereno. Prvi put kad se radi,
+upiši koliko je trajalo svako od koraka.
+
+1. Napravi novi Supabase projekat u istom regionu. Zabeleži URL, `anon` i `service_role` ključ.
+2. Uključi proširenje `btree_gist` (bez njega se `appointments_no_overlap` pri vraćanju tiho odbije).
+3. Primeni migracije iz repoa: `supabase db push`. One nose i prava; dump ih ne nosi (`--no-privileges`).
+4. Dešifruj najnoviju kopiju privatnim `age` ključem i vrati **samo podatke** (postupak iz `restore-drill.yml`). Na hostovanom projektu `postgres` rola ne mora da sme `session_replication_role`; ako ne sme, vraćaj redom po tabelama.
+5. Auth: Google provajder, redirect adrese, SMTP (`docs/resend-smtp.md`), šabloni mejlova.
+6. Storage: napravi javni bucket `logos`, pa ponovo otpremi logoe.
+7. Vercel promenljive (`.env.example`): `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `NEXT_PUBLIC_GOOGLE_SIGN_IN`. Ako se VAPID par promeni, svaki uređaj mora ponovo da uključi obaveštenja.
+8. GitHub tajne za noćni posao: `SUPABASE_DB_PASSWORD` (novi projekat), `BACKUP_REPO_TOKEN`, `R2_ACCOUNT_ID`, `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`. Javni `age` ključ je u `backup.yml`.
+9. Ponovo pokreni deploy na Vercel-u, pa ručno pokreni `Backup` i `Verify backup`.
+10. Provera: prijava vlasnice, javna strana salona, probno zakazivanje i otkazivanje (na kraju obriši test termin).
+
+Gde je vrednost svake tajne sačuvana (menadžer lozinki, Vercel, GitHub) treba da
+stoji uz svaki red kad se lista prvi put prođe; ovde namerno nema vrednosti.
+
+## Šta javlja kad nešto prestane da radi
+
+- **Noćna kopija:** crvena oznaka u konzoli platforme (`/admin`) ako je poslednji prolaz pao
+  ili je stariji od 26 sati. Vidi se samo kad neko otvori konzolu. GitHub šalje mejl
+  za pao zakazan posao, ali samo ako je to uključeno u podešavanjima obaveštenja
+  naloga — proveri jednom.
+- **Cron `obavljeni-termini`:** nema signala. Posledica ćutanja je mala (termini iz
+  prošlosti ostaju „potvrđeni" dok se ne označe), a tragove ostavlja Vercel → Cron Jobs.
+- **Obaveštenja:** razlog neuspele isporuke (HTTP kod servisa pregledača) upisuje se u
+  `error_events`, a u `messages` ostaje „failed".
