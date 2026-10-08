@@ -95,19 +95,41 @@ jobs:
             echo "SERVICE_ROLE_KEY=$(jq -r .SERVICE_ROLE_KEY "$RUNNER_TEMP/status.json")"
           } >> "$GITHUB_ENV"
 
-      # Jedan `pg_dump`, jedan snimak: public (svi podaci) i korisnici. Samo
-      # podaci — šema dolazi iz migracija.
-      - name: Svež dump produkcije (samo čitanje)
+      # Isti put kao u nesreći: od ono što ima i noćna kopija (pun dump šema
+      # public i auth, istim zastavicama), preko običnog Postgresa, do samo
+      # podataka koji se učitavaju u novi Supabase. Šema i prava dolaze iz
+      # migracija, jer dump nosi `--no-privileges`.
+      - name: "Svež dump u obliku noćne kopije (samo čitanje)"
         env:
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -euo pipefail
           docker run --rm -e PGPASSWORD "$PGIMAGE" pg_dump \
             -h "$PROD_HOST" -p 5432 -U "$PROD_USER" -d postgres \
+            --schema=public --schema=auth --no-owner --no-privileges --quote-all-identifiers \
+            > full.sql
+          echo "Pun dump: $(stat -c%s full.sql) B"
+
+      - name: "Izvlačenje podataka iz kopije (običan Postgres)"
+        run: |
+          set -euo pipefail
+          docker run -d --name scratch -e POSTGRES_PASSWORD=scratch "$PGIMAGE" > /dev/null
+          for i in $(seq 1 30); do docker exec scratch pg_isready -U postgres -q && break; sleep 2; done
+          docker exec -i scratch psql -U postgres -d postgres -q -v ON_ERROR_STOP=1 <<'SQL'
+          create schema if not exists extensions;
+          create extension if not exists pgcrypto with schema extensions;
+          create extension if not exists btree_gist;
+          create role anon nologin;
+          create role authenticated nologin;
+          create role service_role nologin bypassrls;
+          SQL
+          docker exec -i scratch psql -U postgres -d postgres -q -v ON_ERROR_STOP=0 < full.sql 2> /dev/null > /dev/null
+          docker exec scratch pg_dump -U postgres -d postgres \
             --data-only --no-owner --no-privileges --quote-all-identifiers \
-            -t 'public.*' -t auth.users -t auth.identities \
-            > data.sql
-          echo "Dump: $(stat -c%s data.sql) B"
+            -t 'public.*' -t auth.users -t auth.identities > data.sql
+          echo "Podaci za učitavanje: $(stat -c%s data.sql) B"
+          docker rm -f scratch > /dev/null
+          rm -f full.sql
 
       - name: Vraćanje podataka
         run: |
