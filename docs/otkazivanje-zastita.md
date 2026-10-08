@@ -1,6 +1,6 @@
 # Zaštita otkazivanja: broj telefona sam ne otvara termin
 
-Stanje: 8. oktobar 2026. Migracija `20261008050000_cancel_requires_proof.sql`.
+Stanje: 8. oktobar 2026. Otkazivanje preko sajta je moguće najkasnije 24 sata pre termina (migracija `20261008060000`); posle toga samo salon. Migracija `20261008050000_cancel_requires_proof.sql`.
 
 ## Problem
 
