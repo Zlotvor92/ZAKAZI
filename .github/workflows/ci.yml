@@ -179,11 +179,12 @@ jobs:
 
       - run: npm ci
 
-      # Blokira: kritična ranjivost u zavisnostima koje idu u produkciju
-      # (`--omit=dev`) ne sme da prođe. Preostale ranjivosti nižeg stepena su
-      # ispisane u `docs/security-advisories.md`, sa razlogom zašto ostaju.
-      - name: Kritične ranjivosti u produkcionim zavisnostima
-        run: npm audit --omit=dev --audit-level=critical
+      # Blokira: ranjivost stepena `high` ili višeg u zavisnostima koje idu u
+      # produkciju (`--omit=dev`) ne sme da prođe. Produkcija je čista od
+      # 8. oktobra 2026, pa prag sme da bude ovde. Preostale ranjivosti u
+      # razvojnim zavisnostima su u `docs/security-advisories.md`, sa razlogom.
+      - name: Ozbiljne ranjivosti u produkcionim zavisnostima
+        run: npm audit --omit=dev --audit-level=high
 
       # Informativno: cela slika, uključujući razvojne zavisnosti.
       - name: Odakle dolaze ostale ranjivosti
