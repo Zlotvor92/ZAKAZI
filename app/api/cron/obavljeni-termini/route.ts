@@ -8,6 +8,11 @@ import { requireEnv } from "@/lib/env";
  * Noćni posao: termini iz prošlog dana postaju obavljeni, a pokušaji pretrage
  * po broju stariji od dana se brišu.
  *
+ * „Obavljeno" znači samo „prošlo", ne „klijentkinja je došla": ovaj posao to ne
+ * može da zna. Vlasnica koja nedolazak ne označi sama dobija `completed`, a to
+ * je jedino što od klijentkinje pravi poznatog klijenta (viši limit pri
+ * zakazivanju). Vidi README, odeljak o noćnom poslu.
+ *
  * Vercel ga zove po rasporedu iz `vercel.json` i šalje `CRON_SECRET` kao
  * Bearer token. Ko ga nema, dobija 401. Kad promenljiva nije podešena, ruta
  * puca sa porukom koja kaže šta fali — zaboravljen ključ ne sme da znači

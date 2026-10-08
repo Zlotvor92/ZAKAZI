@@ -1,5 +1,23 @@
 # DoterajMe Full Technical Audit
 
+> **ISTORIJA, nije stanje danas.** Ovo je revizija od 29. septembra 2026. za commit
+> `6c52330`. Većina nalaza je zatvorena; tabela ispod kaže šta i gde. Stanje na dan
+> 8. oktobra 2026. je u QA izveštaju iz tog datuma, a ono što je od njega urađeno u
+> `docs/qa-matrica.md`. Tehnologija je Next.js 15 / React 19 / TypeScript / Supabase,
+> ne Vite.
+>
+> | Nalaz | Stanje | Gde |
+> |---|---|---|
+> | F-01, F-02, F-03, F-05, F-06, F-07, F-08, F-09, F-10, F-18 | zatvoreno | `docs/security-fixes-2026-09.md` |
+> | F-04 (`next`) | zatvoreno; produkcija 0 ranjivosti od 8.10.2026. | `docs/security-advisories.md` |
+> | F-11 (push endpoint) | zatvoreno: Zod + `check` u bazi + provera pri slanju | migracija `20261008010000` |
+> | F-13 (strani broj u `create_appointment`) | zatvoreno | migracija `20261008030000` |
+> | F-14 (zaglavlja) | zatvoreno; CSP je za sada samo `Report-Only` | `lib/domain/security-headers.ts` |
+> | F-15 (offline) | zatvoreno; ostaje: Back dugme kroz korake, dugme „Promeni" < 44 px | `tests/pwa`, `ConnectionStatus` |
+> | F-12 (odjava gasi sve uređaje) | **otvoreno** | — |
+> | F-16 (nema buffera posle usluge), F-17 (`pending` nije implementiran) | **otvoreno, odluka proizvoda**; `CLAUDE.md` ih i dalje opisuje kao da postoje | — |
+
+
 Commit revizije: `6c52330` (main, PR #52). Grana sa dokazima: `audit/full-audit`.
 Datum: 2026-09-29. Produkcioni kod NIJE menjan; dodat je samo `tests/audit/` i ovaj fajl.
 

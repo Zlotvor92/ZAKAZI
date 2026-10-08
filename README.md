@@ -9,11 +9,33 @@ Vlasnica u kalendaru vidi svoj dan, sama unosi termine dogovorene uživo, menja
 im status, podešava radno vreme i pravila, blokira brojeve i unosi odsustva.
 Plan faze je u [`docs/faza-2.md`](./docs/faza-2.md).
 
-Poruke i podsetnici, kapare i reputacioni skor tek dolaze.
+Uz to postoje: obaveštenja na telefon vlasnice (Web Push), kalendar koji se
+pretplaćuje preko `.ics` adrese, više salona po jednom nalogu, konzola
+vlasnika platforme, blog i stranice po zanimanju.
+
+Poruke i podsetnici klijentkinjama, kapare i reputacioni skor tek dolaze.
+
+### Klijentkinja pronalazi i otkazuje svoj termin
+
+Na stranici salona stoji „**Pronađi svoj termin**" odmah ispod zaglavlja. Klijentkinja
+upiše broj telefona sa kog je zakazala, vidi svoje buduće termine u tom salonu i
+svaki može da otkaže (dva dodira, drugi je potvrda). Adresa je `/<slug>/otkazi`.
+
+Broj telefona je jedini dokaz identiteta. To je namerna odluka (nema naloga, tokena
+ni SMS potvrde) i zato je zaštita oko nje, ne umesto nje:
+
+- najviše 20 pretraga/otkazivanja na sat po mreži i salonu;
+- najviše **3 otkazivanja preko sajta na dan po broju i salonu**, bez obzira na mrežu;
+- svaka promena statusa se upisuje u `appointment_events` (ko, kada, sa kog uređaja),
+  a salon odmah dobija obaveštenje, ako ima uključena obaveštenja na telefonu;
+- odgovor ne razlikuje „nema termina" od „previše pokušaja".
+
+Ko zna tuđ broj i dalje može da vidi i otkaže tuđe termine u okviru ovih granica.
+Ako to postane problem, sledeći korak je potvrda porukom, ne još jedno ograničenje.
 
 ## Šta treba imati
 
-- Node.js 20 ili noviji
+- Node.js 22 (isti kao u CI-ju)
 - [Supabase CLI](https://supabase.com/docs/guides/local-development) za lokalni rad
 - Docker, ako želiš da baza radi lokalno (`supabase start`)
 
@@ -63,7 +85,7 @@ klijent.
 | `npm run lint` | ESLint |
 | `npm test` | testovi poslovne logike, bez baze |
 | `npm run test:db` | testovi ograničenja i RLS politika, traže Postgres |
-| `npm run test:e2e` | kritični tok kroz pregledač, traži pokrenut Supabase |
+| `npm run test:e2e` | tok kroz pregledač (telefon), traži pokrenut Supabase; u CI-ju nad `next build` + `next start` |
 
 `npm run test:db` pravi bazu `zakazi_test` na serveru iz `DATABASE_URL`
 (podrazumevano lokalni Supabase na portu 54322), primeni migracije i radi nad
@@ -78,20 +100,36 @@ ga za sobom — pokreni `supabase db reset` kad hoćeš čist kalendar.
 
 ```
 app/(auth)/prijava/       prijava magic linkom
-app/(public)/             javna stranica za zakazivanje
-app/(dashboard)/          kalendar, unos termina i podešavanja
+app/(public)/             javna stranica za zakazivanje i „Pronađi svoj termin"
+app/(dashboard)/          kalendar, unos termina, podešavanja, konzola platforme
+app/api/                  cron, kalendar (.ics), prijava grešaka, CSP izveštaji
 app/auth/callback/        razmena koda za sesiju
-components/calendar/      traka nedelje i dnevni spisak
+components/               kalendar, prekidač obaveštenja, status veze
 lib/db/                   pristup podacima, po entitetu
 lib/domain/               poslovna logika, čiste funkcije bez I/O
 lib/i18n/sr.ts            svi tekstovi interfejsa
+lib/messaging/            slanje obaveštenja (Web Push)
 lib/supabase/             klijenti za server i middleware
+public/sw.js              servisni radnik: obaveštenja i strana „nema veze"
 supabase/migrations/      numerisane SQL migracije
 supabase/seed.sql         početni podaci
 tests/domain/             testovi poslovne logike
+tests/actions/            testovi server akcija i ruta (sa mock-ovanom bazom)
+tests/pwa/                testovi servisnog radnika
 tests/db/                 testovi baze i RLS politika
-tests/e2e/                kritični tok kroz pregledač
+tests/e2e/                tok kroz pregledač (Android; iPhone/WebKit informativno)
+.github/scripts/          provera vraćanja kopije baze
 ```
+
+## Dokumentacija
+
+| Fajl | O čemu |
+|---|---|
+| [`docs/qa-matrica.md`](./docs/qa-matrica.md) | šta koji test dokazuje, šta je ručno, provera na telefonu |
+| [`docs/backup-restore.md`](./docs/backup-restore.md) | šta kopija pokriva, a šta ne; ciljevi; plan punog vraćanja |
+| [`docs/security-advisories.md`](./docs/security-advisories.md) | preostale ranjivosti u zavisnostima i zašto |
+| [`docs/security-fixes-2026-09.md`](./docs/security-fixes-2026-09.md) | popravke iz revizije od 29. septembra |
+| [`DOTERAJME_FULL_AUDIT.md`](./DOTERAJME_FULL_AUDIT.md) | **istorija**: revizija od 29. septembra, nije stanje danas |
 
 ## Objavljivanje
 
@@ -104,8 +142,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 Obe se ugrađuju u toku build-a, pa posle izmene treba napraviti novu verziju.
 
-Za obaveštenja na telefon i za pravljenje salona iz konzole potrebne su još
-četiri:
+Još pet promenljivih je potrebno za rad javnog dela i obaveštenja:
 
 ```
 SUPABASE_SERVICE_ROLE_KEY
@@ -115,11 +152,12 @@ VAPID_SUBJECT
 ```
 
 `SUPABASE_SERVICE_ROLE_KEY` zaobilazi RLS i zato ide **samo** na server, nikad
-u promenljivu sa `NEXT_PUBLIC_` prefiksom. Potreban je za dva posla koja se
-bez njega ne mogu odraditi: obaveštenje o zakazivanju šalje se na uređaje
-vlasnice, a zakazuje neprijavljena klijentkinja koja te uređaje po RLS-u ne
-sme ni da vidi; i nalog vlasnice se pravi kroz Supabase Auth, kome anonimni
-ključ ne daje pravo. Sve ostalo radi sa anonimnim ključem i RLS-om.
+u promenljivu sa `NEXT_PUBLIC_` prefiksom. **Obavezan je:** javno zakazivanje,
+otkazivanje i pretragu po broju zove isključivo server (`anon` ni `authenticated`
+nemaju pravo nad tim funkcijama, da hash mreže ne bi birao pozivalac), a
+obaveštenja idu na uređaje koje neprijavljena klijentkinja po RLS-u ne sme da
+vidi. Nalog vlasnice se pravi kroz Supabase Auth, kome anonimni ključ ne daje
+pravo. Vidi `.env.example`.
 
 Za noćni posao koji termine iz prošlog dana obeležava kao obavljene potrebna
 je još `CRON_SECRET` — bilo koji dug nasumičan tekst (`openssl rand -hex 32`).
@@ -127,6 +165,16 @@ Vercel ga sam šalje ruti `/api/cron/obavljeni-termini`, koju zove svake noći u
 01:00 UTC (02:00 ili 03:00 u Beogradu, zavisno od letnjeg računanja vremena).
 Bez te promenljive posao se ne izvršava, a termini ostaju „potvrđeni" dok ih
 vlasnica ne obeleži sama.
+
+**Šta „obavljeno" ovde znači.** Posao ne zna da li je klijentkinja došla; on samo
+kaže da je termin prošao. Svaki potvrđen termin čiji je dan prošao (po vremenu
+salona) postaje `completed`, a u istoriji termina stoji da je to uradio sistem.
+Ono što je vlasnica već obeležila kao nedolazak ostaje nedolazak. To ima
+posledice: `completed` je jedino što od klijentkinje pravi „poznatog" klijenta
+(viši limit budućih termina pri zakazivanju), a kartica klijentkinje ga prikazuje
+kao „Došla". Ko nije došao a vlasnica to nije označila, računa se kao da jeste.
+Da li to treba promeniti (npr. poseban status „prošlo, nije potvrđeno") je odluka
+proizvoda i nije donesena.
 
 Bez `VAPID_*` ključeva obaveštenja se prosto ne uključuju i ostatak
 aplikacije radi normalno. `VAPID_SUBJECT` je `mailto:` adresa za koju ti

@@ -10,7 +10,11 @@ const SERBIA_NATIONAL_MAX = 9;
 /** Mobilni broj je `06x`, pa nacionalni oblik počinje šesticom. */
 const SERBIA_MOBILE_PREFIX = "6";
 
-/** Ista provera koju radi ograničenje `clients_phone_e164_format` u bazi. */
+/**
+ * Oblik međunarodnog broja. Baza je stroža: `clients_phone_e164_format` traži
+ * srpski broj (`+381[1-9]…`), pa se strani broj odbija ovde kao `foreign`, pre
+ * nego što stigne do ograničenja.
+ */
 const E164 = /^\+[1-9][0-9]{7,14}$/;
 
 /** Razmak, crta, kosa crta, tačka i zagrada su način na koji ljudi pišu broj. */
