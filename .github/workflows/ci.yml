@@ -156,8 +156,21 @@ jobs:
           echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=$(supabase status -o json | jq -r '.ANON_KEY')" >> "$GITHUB_ENV"
           echo "SUPABASE_SERVICE_ROLE_KEY=$(supabase status -o json | jq -r '.SERVICE_ROLE_KEY')" >> "$GITHUB_ENV"
 
-      - name: Playwright
+      # Ide nad `next build` + `next start` (vidi `playwright.config.ts`), ne nad
+      # razvojnim serverom.
+      - name: Playwright (Android, produkcioni build)
         run: npm run test:e2e
+
+      # iPhone koristi WebKit. Za sada informativno: ni jednom nije prošao u CI-ju,
+      # a ne sme da obara ostale provere zbog sistemskih biblioteka. Kad nekoliko
+      # puta zaredom prođe, `continue-on-error` se skida i korak postaje obavezan.
+      - name: Playwright (iPhone, WebKit — informativno)
+        continue-on-error: true
+        env:
+          E2E_WEBKIT: "1"
+        run: |
+          npx playwright install --with-deps webkit
+          npx playwright test --project=iphone
 
       - uses: actions/upload-artifact@v4
         if: failure()
