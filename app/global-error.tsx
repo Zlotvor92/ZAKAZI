@@ -49,6 +49,11 @@ export default function GlobalError({
               {sr.error.title}
             </h1>
             <p className="text-sm text-neutral-600">{sr.error.body}</p>
+            {error.digest ? (
+              <p className="text-xs text-neutral-500">
+                {sr.error.reference.replace("{sifra}", error.digest)}
+              </p>
+            ) : null}
             {/* Obična veza, ne `next/link`: ovde je pukao sam omotač
                 aplikacije, pa se klijentskom rutiranju ne veruje. Puno
                 učitavanje je jedini put koji sigurno radi. */}

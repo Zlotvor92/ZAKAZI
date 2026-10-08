@@ -1,4 +1,14 @@
 import type { NextConfig } from "next";
+import { securityHeaders } from "./lib/domain/security-headers";
+
+/** Host Supabase projekta, za CSP: odatle dolaze slike salona. */
+function supabaseHost(): string | null {
+  try {
+    return new URL(process.env["NEXT_PUBLIC_SUPABASE_URL"] ?? "").host;
+  } catch {
+    return null;
+  }
+}
 
 const nextConfig: NextConfig = {
   experimental: {
@@ -10,6 +20,12 @@ const nextConfig: NextConfig = {
       // Ista vrednost je u `SERVER_ACTION_BODY_LIMIT_BYTES`; test ih poredi.
       bodySizeLimit: "3mb",
     },
+  },
+  async headers() {
+    return securityHeaders({
+      production: process.env.NODE_ENV === "production",
+      supabaseHost: supabaseHost(),
+    });
   },
 };
 

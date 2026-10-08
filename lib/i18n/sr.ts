@@ -107,6 +107,12 @@ export const sr = {
     retry: "Pokušaj ponovo",
     home: "Nazad na početnu",
     /**
+     * `{sifra}` je Next-ov `digest`: ista vrednost je u evidenciji grešaka, pa
+     * se prijava „pukla mi je strana" može povezati sa tačnom greškom, bez
+     * ijednog podatka o korisniku.
+     */
+    reference: "Šifra greške: {sifra}",
+    /**
      * Radnja nije stigla do servera ili se odatle nije vratila. Poruka pokriva
      * oba slučaja namerno: u pregledaču se prekinuta veza i pukao server ne
      * razlikuju, pa ne sme da tvrdi da ništa nije sačuvano — zahtev je mogao da
