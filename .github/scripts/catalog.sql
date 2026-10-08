@@ -1,6 +1,13 @@
 -- Spisak objekata šeme public, jedan red po objektu. Pušta se nad produkcijom
 -- (samo čitanje kataloga) i nad stekom izgrađenim iz migracija; razlika znači
 -- da migracije ne daju istu bazu kao produkcija. Bez podataka iz tabela.
+--
+-- Isti `search_path` na obe strane, da se `auth.users` ne ispisuje jednom kao
+-- `auth.users`, a jednom kao `users`. Krajevi redova (`\r`) se ignorišu:
+-- produkcija ima funkcije iz prvih migracija sa Windows prelomima, što menja
+-- tekst, a ne ponašanje.
+set search_path = pg_catalog, public;
+
 select line from (
   select 'tabela ' || c.relname || ' rls=' || c.relrowsecurity as line
   from pg_class c join pg_namespace n on n.oid = c.relnamespace
@@ -19,7 +26,7 @@ select line from (
   from pg_policies where schemaname = 'public'
   union all
   select 'funkcija ' || p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ') '
-         || md5(pg_get_functiondef(p.oid))
+         || md5(replace(pg_get_functiondef(p.oid), E'\r', ''))
   from pg_proc p
   where p.pronamespace = 'public'::regnamespace and p.prokind = 'f'
     and not exists (select 1 from pg_depend d where d.objid = p.oid and d.deptype in ('e', 'i'))
@@ -37,7 +44,7 @@ select line from (
   union all
   select 'indeks ' || indexdef from pg_indexes where schemaname = 'public'
   union all
-  select 'okidač ' || tgrelid::regclass || ' ' || tgname || ' ' || md5(pg_get_triggerdef(t.oid))
+  select 'okidač ' || tgrelid::regclass || ' ' || tgname || ' ' || md5(replace(pg_get_triggerdef(t.oid), E'\r', ''))
   from pg_trigger t
   where not tgisinternal and tgrelid in (select oid from pg_class where relnamespace = 'public'::regnamespace)
   union all

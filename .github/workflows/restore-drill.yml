@@ -70,7 +70,7 @@ jobs:
       # stek odmah primenio sve, ne bi se znalo da li je vraćanje radilo na
       # produkcijskoj šemi ili na novoj.
       - name: Razdvajanje migracija
-        if: ${{ inputs.samo_prod_migracije != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
         run: |
           set -euo pipefail
           mkdir -p "$RUNNER_TEMP/pending"
@@ -140,9 +140,9 @@ jobs:
           PGPASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
           set -uo pipefail
-          docker run --rm -i -e PGPASSWORD "$PGIMAGE" psql -h "$PROD_HOST" -p 5432 -U "$PROD_USER" -d postgres -tA \
+          docker run --rm -i -e PGPASSWORD "$PGIMAGE" psql -h "$PROD_HOST" -p 5432 -U "$PROD_USER" -d postgres -tAq \
             < .github/scripts/catalog.sql > catalog-prod.txt
-          docker run --rm -i --network host -e PGPASSWORD=postgres "$PGIMAGE" psql $LOCAL_DB -tA \
+          docker run --rm -i --network host -e PGPASSWORD=postgres "$PGIMAGE" psql $LOCAL_DB -tAq \
             < .github/scripts/catalog.sql > catalog-local.txt
           echo "Objekata u produkciji: $(wc -l < catalog-prod.txt), u steku: $(wc -l < catalog-local.txt)"
           if diff -u catalog-prod.txt catalog-local.txt > catalog.diff; then
@@ -162,7 +162,7 @@ jobs:
       # Migracije koje produkcija još nema, na kopiji njenih podataka. Ovo je
       # proba pre objave: pada ovde, a ne u produkciji.
       - name: Probna primena migracija koje produkcija još nema
-        if: ${{ inputs.samo_prod_migracije != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
         run: |
           set -euo pipefail
           if [ -z "$(ls -A "$RUNNER_TEMP/pending" 2>/dev/null)" ]; then
@@ -177,7 +177,7 @@ jobs:
             "select conname || ' ' || case when convalidated then 'potvrđeno' else 'NOT VALID' end from pg_constraint where conname in ('clients_phone_e164_format','limit_exempt_phones_phone_e164_check','push_subscriptions_endpoint_allowed') order by 1"
 
       - name: "Provera 4: posle migracija nijedan red nije izgubljen"
-        if: ${{ inputs.samo_prod_migracije != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
         run: |
           export PSQL="docker run --rm --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
           .github/scripts/verify-drill.sh data.sql snapshot > after.txt
@@ -189,7 +189,7 @@ jobs:
           fi
 
       - name: "Provera 5: prava, javna strana, prijava, RLS (šema posle migracija)"
-        if: ${{ inputs.samo_prod_migracije != false }}
+        if: ${{ github.event_name != 'workflow_dispatch' || inputs.samo_prod_migracije }}
         run: |
           export PSQL="docker run --rm --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
           export PSQL_IN="docker run --rm -i --network host -e PGPASSWORD=postgres $PGIMAGE psql $LOCAL_DB"
