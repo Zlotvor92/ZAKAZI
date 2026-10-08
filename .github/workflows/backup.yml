@@ -43,6 +43,11 @@ jobs:
       R2_BUCKET: ${{ secrets.R2_BUCKET }}
 
     steps:
+      # Samo skripte za proveru vraćanja; ostatak repoa ovom poslu ne treba.
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/scripts
+
       # Šifrovanje ide statičkim binarnim fajlom umesto preko `apt`-a: prvi
       # pokušaj je dovlačio PGDG repo i posao je visio jedanaest minuta bez
       # ijednog reda ispisa, dok ga nisam prekinuo.
