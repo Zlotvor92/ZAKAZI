@@ -95,6 +95,13 @@ export async function cancelAppointment(
     networkHash: await networkHash(parsed.data.slug),
   });
 
+  // Ponovljen zahtev (odgovor se izgubio, ili dva dodira) na termin koji je već
+  // otkazan: klijentkinja je dobila ono što traži, pa je to uspeh. Salon se
+  // ne obaveštava drugi put.
+  if (!result.ok && result.reason === "already_cancelled") {
+    return { status: "cancelled" };
+  }
+
   if (!result.ok) {
     return { status: "error", message: rejectionMessage(result.reason) };
   }

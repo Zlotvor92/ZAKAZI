@@ -83,3 +83,26 @@ describe("cancelAppointment", () => {
     );
   });
 });
+
+describe("cancelAppointment: ponavljanje", () => {
+  it("već otkazan termin je uspeh i ne šalje drugo obaveštenje salonu", async () => {
+    cancel.mockResolvedValue({ ok: false, reason: "already_cancelled" });
+
+    const result = await cancelAppointment(form());
+    await Promise.all(pending);
+
+    expect(result).toEqual({ status: "cancelled" });
+    expect(notify).not.toHaveBeenCalled();
+  });
+
+  it("ostali razlozi i dalje ostaju greške", async () => {
+    cancel.mockResolvedValue({ ok: false, reason: "invalid_transition" });
+
+    const result = await cancelAppointment(form());
+
+    expect(result).toEqual({
+      status: "error",
+      message: sr.cancel.rejected.invalid_transition,
+    });
+  });
+});

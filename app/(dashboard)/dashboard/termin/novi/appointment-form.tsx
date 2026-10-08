@@ -11,6 +11,16 @@ import { saveAppointment, type NewAppointmentState } from "./actions";
 /** Trajanja koja solo majstor stvarno koristi; ostalo je kucanje bez potrebe. */
 const DURATIONS = [30, 45, 60, 90, 120, 150, 180, 240];
 
+/**
+ * Bez `crypto.randomUUID` (nije bezbedan kontekst) zahtev ide bez oznake i
+ * ponavljanje nema zaštitu — isto kao kod javnog zakazivanja.
+ */
+function newRequestId(): string | null {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : null;
+}
+
 export function AppointmentForm({
   services,
   date,
@@ -22,11 +32,16 @@ export function AppointmentForm({
 }) {
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<NewAppointmentState>({ status: "idle" });
+  const [requestId, setRequestId] = useState(newRequestId);
 
   function onSubmit(formData: FormData) {
     startTransition(async () => {
       try {
-        setState(await saveAppointment(formData));
+        const result = await saveAppointment(formData);
+        setState(result);
+
+        // Odgovor je stigao, pa je ishod poznat: sledeći pokušaj je nov unos.
+        setRequestId(newRequestId());
       } catch (cause) {
         // Uspeh se iz ove akcije vraća kao `redirect()`, a on do pregledača
         // ume da stigne kao greška. Takva mora da ide dalje do rutera —
@@ -35,7 +50,9 @@ export function AppointmentForm({
         if (isRedirect(cause)) {
           throw cause;
         }
-        setState({ status: "error", message: sr.error.unreachable });
+        // Oznaka se ne menja: unos je mogao da stigne, pa ponovni pokušaj mora
+        // da vrati isti termin, ne da javi da je vreme zauzeto.
+        setState({ status: "error", message: sr.newAppointment.connectionLost });
       }
     });
   }
@@ -58,6 +75,10 @@ export function AppointmentForm({
       }
       className="space-y-4"
     >
+      {requestId ? (
+        <input type="hidden" name="requestId" value={requestId} />
+      ) : null}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-2">
           <label htmlFor="date" className="text-sm font-medium">

@@ -101,7 +101,12 @@ export async function getDashboardWeek(
 }
 
 const writeResultSchema = z.discriminatedUnion("ok", [
-  z.object({ ok: z.literal(true), appointment_id: z.uuid() }),
+  z.object({
+    ok: z.literal(true),
+    appointment_id: z.uuid(),
+    /** Isti `request_id` poslat ponovo: termin je već postojao. */
+    replayed: z.boolean().optional(),
+  }),
   z.object({ ok: z.literal(false), reason: z.string() }),
 ]);
 
@@ -114,6 +119,8 @@ export async function createAppointment(input: {
   clientName: string;
   phoneE164: string;
   deviceId: string;
+  /** Isti za ponovljen pokušaj istog unosa; vidi `create_appointment`. */
+  requestId: string | null;
 }): Promise<AppointmentWriteResult> {
   const supabase = await createClient();
 
@@ -124,6 +131,7 @@ export async function createAppointment(input: {
     p_client_name: input.clientName,
     p_phone_e164: input.phoneE164,
     p_device_id: input.deviceId,
+    p_request_id: input.requestId,
   });
 
   if (error) {

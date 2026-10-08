@@ -109,10 +109,11 @@ export const sr = {
     /**
      * Radnja nije stigla do servera ili se odatle nije vratila. Poruka pokriva
      * oba slučaja namerno: u pregledaču se prekinuta veza i pukao server ne
-     * razlikuju, a korisnici je bitno samo da ništa nije upisano.
+     * razlikuju, pa ne sme da tvrdi da ništa nije sačuvano — zahtev je mogao da
+     * prođe, a odgovor da se izgubi.
      */
     unreachable:
-      "Nije uspelo — ništa nije sačuvano. Proveri internet i pokušaj ponovo.",
+      "Nismo dobili potvrdu da je radnja završena. Osveži stranicu i proveri stanje pre nego što pokušaš ponovo.",
   },
   callback: {
     failed: "Link nije važeći ili je istekao. Zatraži novi.",
@@ -557,6 +558,12 @@ export const sr = {
     noServices: "Prvo unesi bar jednu uslugu.",
     hint: "Termin van radnog vremena je dozvoljen — kalendar je tvoj.",
     failed: "Upis nije uspeo. Pokušaj ponovo.",
+    /**
+     * Ponovni pritisak je bezbedan: isti `request_id` vraća termin koji je već
+     * upisan umesto da pravi drugi, ili javlja da je vreme zauzeto tuđim.
+     */
+    connectionLost:
+      "Nismo dobili potvrdu da je termin upisan. Pritisni „Sačuvaj“ ponovo — ako je već upisan, neće se duplirati.",
     rejected: {
       invalid_name: "Upiši ime klijenta.",
       invalid_phone: "Broj telefona nije ispravan.",
@@ -564,6 +571,8 @@ export const sr = {
       no_staff: "Salon nema nijednog aktivnog izvođača.",
       slot_taken: "To vreme je već zauzeto. Izaberi drugo.",
       invalid_duration: "Trajanje termina nije ispravno.",
+      request_conflict:
+        "Ovaj unos je već poslat sa drugačijim podacima. Osveži stranicu i unesi termin ponovo.",
     },
   },
   push: {
@@ -1058,9 +1067,12 @@ export const sr = {
     removeFromCalendarHint:
       "Ako si termin dodala u kalendar telefona, otvori ovo da ga obrišeš — inače će podsetnici zvoniti za termin koji više ne postoji.",
     failed: "Otkazivanje nije uspelo. Pokušaj ponovo.",
+    /** Ponavljanje je bezbedno: već otkazan termin se prikazuje kao otkazan. */
+    connectionLost:
+      "Nismo dobili potvrdu da je termin otkazan. Pokušaj ponovo — termin se neće otkazati dvaput.",
+    notCancelled: "Termin nije otkazan jer zahtev nije stigao. Pokušaj ponovo.",
     rejected: {
       not_found: "Taj termin nije pronađen za uneti broj telefona.",
-      already_cancelled: "Taj termin je već otkazan.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
       invalid_phone: "Broj telefona nije ispravan.",
       too_many_cancellations:

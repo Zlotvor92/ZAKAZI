@@ -46,6 +46,26 @@ function AppointmentRow({
   const [armed, setArmed] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Da li termin još stoji. `null` kad se to ne može saznati — i provera ume da
+   * padne na istoj mreži zbog koje je pao zahtev.
+   */
+  async function stillBooked(): Promise<boolean | null> {
+    const formData = new FormData();
+    formData.set("slug", slug);
+    formData.set("phone", phone);
+
+    try {
+      const lookup = await lookupAppointments(formData);
+
+      return lookup.status === "found"
+        ? lookup.appointments.some((item) => item.id === appointment.id)
+        : null;
+    } catch {
+      return null;
+    }
+  }
+
   function confirmCancel() {
     startTransition(async () => {
       const formData = new FormData();
@@ -55,12 +75,23 @@ function AppointmentRow({
 
       // Prekinuta veza ili pad servera ne smeju da odvedu na granicu greške:
       // otkazivanje je zadnji korak pre nego što salon ostane sa praznim
-      // satom, i mora da kaže da nije prošlo.
+      // satom, i mora da kaže tačno šta zna.
+      //
+      // Zahtev je mogao da prođe a odgovor da se izgubi, pa se stanje proverava
+      // umesto da se pogađa. Ponavljanje je u svakom slučaju bezbedno: već
+      // otkazan termin se vraća kao otkazan.
       let result;
       try {
         result = await cancelAppointment(formData);
       } catch {
-        setError(sr.error.unreachable);
+        const booked = await stillBooked();
+
+        if (booked === false) {
+          onCancelled(appointment);
+          return;
+        }
+
+        setError(booked === true ? sr.cancel.notCancelled : sr.cancel.connectionLost);
         setArmed(false);
         return;
       }

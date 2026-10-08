@@ -2,6 +2,7 @@
 
 import { formatInTimeZone } from "date-fns-tz";
 import { Phone } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -377,6 +378,7 @@ function Row({
   appointment: DashboardAppointment;
   timeZone: string;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [open, setOpen] = useState(false);
   const [armed, setArmed] = useState(false);
@@ -394,7 +396,11 @@ function Row({
         const result = await action();
         setError(result.ok ? null : result.message);
       } catch {
+        // Promena je mogla da prođe a odgovor da se izgubi. Kalendar se
+        // osvežava da pokaže stvarno stanje; ponavljanje je bezbedno jer
+        // isti status dvaput nije greška.
         setError(sr.error.unreachable);
+        router.refresh();
       }
       setArmed(false);
     });
