@@ -101,7 +101,7 @@ describe("A pokušava da upiše tuđe identifikatore", () => {
       await asUser(db, a.userId, async () => {
         expect(await rejected(db, "insert into blocklist (tenant_id, phone_e164, created_by) values ($1,'+381641112223',$2)", [b.tenantId, a.userId])).toBe(true);
         expect(await rejected(db, "insert into error_events (source,message) values ('client','x')", [])).toBe(true);
-        expect(await rejected(db, "insert into push_subscriptions (tenant_id,user_id,endpoint,p256dh,auth) values ($1,$2,'https://x.y/z','a','b')", [b.tenantId, a.userId])).toBe(true);
+        expect(await rejected(db, "insert into push_subscriptions (tenant_id,user_id,endpoint,p256dh,auth) values ($1,$2,'https://fcm.googleapis.com/fcm/send/z','a','b')", [b.tenantId, a.userId])).toBe(true);
       });
     });
   });

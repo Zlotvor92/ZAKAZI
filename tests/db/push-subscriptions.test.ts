@@ -24,7 +24,7 @@ async function saveSubscription(
   await db.query(
     `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
      values ($1, $2, $3, 'kljuc', $4)
-     on conflict (endpoint) do update
+     on conflict (tenant_id, endpoint) do update
      set tenant_id = excluded.tenant_id,
          user_id = excluded.user_id,
          p256dh = excluded.p256dh,
@@ -109,6 +109,153 @@ describe("uključivanje obaveštenja na istom telefonu", () => {
         [ENDPOINT],
       );
       expect(rows.rows[0]?.auth).toBe("njihov");
+    });
+  });
+});
+
+describe("isti telefon, dva salona istog korisnika", () => {
+  it("uključivanje za drugi salon ne prepisuje pretplatu prvog", async () => {
+    await withRollback(async (db) => {
+      const first = await createTenant(db);
+      const second = await createTenant(db);
+      const userId = await createUser(db, first);
+      await db.query(
+        "insert into memberships (user_id, tenant_id, role) values ($1, $2, 'owner')",
+        [userId, second],
+      );
+
+      // Upis ide preko ključa (salon, endpoint), kao `savePushSubscription`.
+      for (const tenantId of [first, second]) {
+        await asUser(db, userId, () =>
+          db.query(
+            `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
+             values ($1, $2, $3, 'kljuc', 'a')
+             on conflict (tenant_id, endpoint) do update set auth = excluded.auth`,
+            [tenantId, userId, ENDPOINT],
+          ),
+        );
+      }
+
+      const rows = await db.query<{ tenant_id: string }>(
+        "select tenant_id from push_subscriptions where endpoint = $1 order by tenant_id",
+        [ENDPOINT],
+      );
+      expect(rows.rows.map((row) => row.tenant_id).sort()).toEqual(
+        [first, second].sort(),
+      );
+    });
+  });
+
+  it("gašenje jednog salona ne dira pretplatu drugog", async () => {
+    await withRollback(async (db) => {
+      const first = await createTenant(db);
+      const second = await createTenant(db);
+      const userId = await createUser(db, first);
+      await db.query(
+        "insert into memberships (user_id, tenant_id, role) values ($1, $2, 'owner')",
+        [userId, second],
+      );
+
+      for (const tenantId of [first, second]) {
+        await db.query(
+          `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
+           values ($1, $2, $3, 'kljuc', 'a')`,
+          [tenantId, userId, ENDPOINT],
+        );
+      }
+
+      await asUser(db, userId, () =>
+        db.query(
+          "delete from push_subscriptions where tenant_id = $1 and endpoint = $2",
+          [first, ENDPOINT],
+        ),
+      );
+
+      const rows = await db.query<{ tenant_id: string }>(
+        "select tenant_id from push_subscriptions where endpoint = $1",
+        [ENDPOINT],
+      );
+      expect(rows.rows.map((row) => row.tenant_id)).toEqual([second]);
+    });
+  });
+
+  it("isti salon i isti endpoint ostaju jedinstveni", async () => {
+    await withRollback(async (db) => {
+      const tenantId = await createTenant(db);
+      const userId = await createUser(db, tenantId);
+
+      await db.query(
+        `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
+         values ($1, $2, $3, 'kljuc', 'a')`,
+        [tenantId, userId, ENDPOINT],
+      );
+
+      await expect(
+        inSavepoint(db, () =>
+          db.query(
+            `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
+             values ($1, $2, $3, 'kljuc', 'b')`,
+            [tenantId, userId, ENDPOINT],
+          ),
+        ),
+      ).rejects.toThrow();
+    });
+  });
+});
+
+describe("endpoint mora biti push servis pregledača", () => {
+  async function accepted(
+    db: pg.PoolClient,
+    userId: string,
+    tenantId: string,
+    endpoint: string,
+  ): Promise<boolean> {
+    try {
+      await inSavepoint(db, () =>
+        asUser(db, userId, () =>
+          db.query(
+            `insert into push_subscriptions (tenant_id, user_id, endpoint, p256dh, auth)
+             values ($1, $2, $3, 'kljuc', 'a')`,
+            [tenantId, userId, endpoint],
+          ),
+        ),
+      );
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  it.each([
+    "https://fcm.googleapis.com/fcm/send/abc",
+    "https://updates.push.services.mozilla.com/wpush/v2/abc",
+    "https://web.push.apple.com/QKC1Muic0H7",
+    "https://wns2-par02p.notify.windows.com/w/?token=abc",
+  ])("prima %s", async (endpoint) => {
+    await withRollback(async (db) => {
+      const tenantId = await createTenant(db);
+      const userId = await createUser(db, tenantId);
+
+      expect(await accepted(db, userId, tenantId, endpoint)).toBe(true);
+    });
+  });
+
+  it.each([
+    "https://attacker.example.test/collect",
+    "http://fcm.googleapis.com/fcm/send/abc",
+    "https://localhost/x",
+    "https://127.0.0.1/x",
+    "https://169.254.169.254/latest/meta-data",
+    "https://fcm.googleapis.com@evil.test/x",
+    "https://fcm.googleapis.com:8443/x",
+    "https://fcm.googleapis.com.evil.test/x",
+    "https://evil.test/fcm.googleapis.com/x",
+  ])("odbija %s, i direktnim upisom vlasnice", async (endpoint) => {
+    await withRollback(async (db) => {
+      const tenantId = await createTenant(db);
+      const userId = await createUser(db, tenantId);
+
+      expect(await accepted(db, userId, tenantId, endpoint)).toBe(false);
     });
   });
 });

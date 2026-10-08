@@ -470,6 +470,21 @@ export const sr = {
       "Telefon nije dozvolio obaveštenja. Ako si u pregledaču unutar Instagrama ili Fejsbuka, otvori doterajme.rs u Chrome-u pa pokušaj tamo.",
     pushSaveFailed:
       "Telefon je dozvolio obaveštenja, ali upis nije uspeo. Pokušaj ponovo.",
+    pushUnverified:
+      "Ne možemo da proverimo da li su obaveštenja uključena za ovaj salon. Proveri vezu pa pokušaj ponovo.",
+    pushRecheck: "Proveri ponovo",
+    pushDisableFailed:
+      "Gašenje nije uspelo, obaveštenja su i dalje uključena. Pokušaj ponovo.",
+    pushTest: "Pošalji probno obaveštenje",
+    pushTesting: "Šaljem…",
+    pushTestAccepted:
+      "Probno obaveštenje je poslato. Ako ga ne vidiš za nekoliko sekundi, proveri podešavanja telefona.",
+    pushTestNoDevices:
+      "Server nema nijedan tvoj uređaj za ovaj salon. Isključi pa ponovo uključi obaveštenja.",
+    pushTestFailed:
+      "Servis za obaveštenja nije primio poruku. Isključi pa ponovo uključi obaveštenja.",
+    pushTestUnavailable:
+      "Obaveštenja trenutno nisu dostupna na serveru. Javi se podršci.",
 
     blockedTitle: "Blokirani brojevi",
     blockedEmpty: "Nijedan broj nije blokiran.",
@@ -562,6 +577,9 @@ export const sr = {
      */
     priorNoShows: "Ranije nije došla {puta}×: {termini}",
     priorNoShowEntry: "{vreme} ({usluga})",
+    testTitle: "Probno obaveštenje",
+    /** `{salon}` se zamenjuje pre slanja. */
+    testBody: "Obaveštenja za salon „{salon}“ rade.",
     clientCancelledTitle: "Termin otkazan",
     /** `{klijent}`, `{usluga}`, `{vreme}` se zamenjuju pre slanja. */
     clientCancelledBody: "{klijent} — {usluga}, {vreme}",

@@ -1,5 +1,6 @@
 import webpush from "web-push";
 import { requireEnv } from "@/lib/env";
+import { isAllowedPushEndpoint } from "@/lib/domain/push-endpoint";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 export type PushPayload = {
@@ -64,42 +65,55 @@ function isGone(error: unknown): boolean {
   return status === 404 || status === 410;
 }
 
+type DeliveryStatus = "sent" | "failed" | "expired";
+
 /**
- * Šalje obaveštenje na sve uređaje salona i upisuje šta se desilo.
+ * Šalje poruku na uređaje salona i upisuje svaku u `messages`. Vraća ishod po
+ * uređaju, ili `null` kad ključevi nisu podešeni ili čitanje spiska padne.
  *
- * Ne baca. Zakazivanje je već upisano u bazu kad se ovo pozove; pad slanja ne
- * sme da postane pad zakazivanja, jer bi klijentkinja videla grešku za termin
- * koji je zapravo njen.
+ * Endpoint koji nije push servis pregledača se ne zove: red je mogao ući pre
+ * nego što je baza počela da ih proverava, a server ne sme da šalje na
+ * proizvoljan host. Takav uređaj se računa kao neuspeo i ne briše se.
  */
-export async function notifyTenant(input: {
+async function deliver(input: {
   tenantId: string;
-  appointmentId: string;
+  appointmentId: string | null;
   payload: PushPayload;
   template: string;
-}): Promise<void> {
+  /** Samo uređaji jednog korisnika — za probno obaveštenje. */
+  userId?: string;
+}): Promise<DeliveryStatus[] | null> {
   try {
     configure();
   } catch {
     // Ključevi nisu podešeni — salon prosto nema obaveštenja.
-    return;
+    return null;
   }
 
   const supabase = createAdminClient();
 
-  const { data, error } = await supabase
+  const query = supabase
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
     .eq("tenant_id", input.tenantId);
 
+  const { data, error } = await (input.userId === undefined
+    ? query
+    : query.eq("user_id", input.userId));
+
   if (error || !data || data.length === 0) {
-    return;
+    return error ? null : [];
   }
 
   const body = JSON.stringify(input.payload);
   const dead: string[] = [];
 
   const results = await Promise.all(
-    (data as Target[]).map(async (target) => {
+    (data as Target[]).map(async (target): Promise<DeliveryStatus> => {
+      if (!isAllowedPushEndpoint(target.endpoint)) {
+        return "failed";
+      }
+
       try {
         await webpush.sendNotification(
           {
@@ -109,13 +123,13 @@ export async function notifyTenant(input: {
           body,
           SEND_OPTIONS,
         );
-        return "sent" as const;
+        return "sent";
       } catch (sendError) {
         if (isGone(sendError)) {
           dead.push(target.id);
-          return "expired" as const;
+          return "expired";
         }
-        return "failed" as const;
+        return "failed";
       }
     }),
   );
@@ -134,4 +148,63 @@ export async function notifyTenant(input: {
   if (dead.length > 0) {
     await supabase.from("push_subscriptions").delete().in("id", dead);
   }
+
+  return results;
+}
+
+/**
+ * Šalje obaveštenje na sve uređaje salona i upisuje šta se desilo.
+ *
+ * Ne baca. Zakazivanje je već upisano u bazu kad se ovo pozove; pad slanja ne
+ * sme da postane pad zakazivanja, jer bi klijentkinja videla grešku za termin
+ * koji je zapravo njen.
+ */
+export async function notifyTenant(input: {
+  tenantId: string;
+  appointmentId: string;
+  payload: PushPayload;
+  template: string;
+}): Promise<void> {
+  await deliver(input);
+}
+
+export type TestPushResult =
+  | { status: "accepted"; devices: number }
+  | { status: "no_devices" }
+  | { status: "failed" }
+  | { status: "unavailable" };
+
+/**
+ * Probno obaveštenje koje korisnik sam pokreće, samo na svoje uređaje.
+ *
+ * `accepted` znači da je push servis pregledača primio poruku, ne da je stigla
+ * na ekran: servis ne javlja isporuku, pa ovo ne sme da se prikaže kao
+ * potvrda prijema.
+ */
+export async function sendTestPush(input: {
+  tenantId: string;
+  userId: string;
+  payload: PushPayload;
+}): Promise<TestPushResult> {
+  const results = await deliver({
+    tenantId: input.tenantId,
+    userId: input.userId,
+    appointmentId: null,
+    payload: input.payload,
+    template: "test",
+  });
+
+  if (results === null) {
+    return { status: "unavailable" };
+  }
+
+  if (results.length === 0) {
+    return { status: "no_devices" };
+  }
+
+  const accepted = results.filter((status) => status === "sent").length;
+
+  return accepted > 0
+    ? { status: "accepted", devices: accepted }
+    : { status: "failed" };
 }
