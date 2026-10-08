@@ -448,3 +448,216 @@ describe("otkazivanje termina brojem telefona", () => {
     });
   });
 });
+
+describe("ograničenje samootkazivanja po broju telefona", () => {
+  /** Još termina za isti salon i istog klijenta, svaki sledećeg dana. */
+  async function extraAppointments(
+    db: pg.PoolClient,
+    base: Awaited<ReturnType<typeof salonWithAppointment>>,
+    count: number,
+  ): Promise<string[]> {
+    const ids = [base.appointmentId];
+
+    for (let index = 1; index < count; index += 1) {
+      const startAt = new Date(
+        new Date(futureStartAt()).getTime() + index * 24 * 60 * 60 * 1000,
+      ).toISOString();
+      const created = await insertAppointment(db, {
+        tenantId: base.tenantId,
+        staffId: base.staffId,
+        serviceId: base.serviceId,
+        clientId: base.clientId,
+        startAt,
+      });
+      ids.push(created.id);
+    }
+
+    return ids;
+  }
+
+  it("četvrto otkazivanje istog broja u 24 sata odbija, termin ostaje aktivan", async () => {
+    await withRollback(async (db) => {
+      const phone = "+381645553001";
+      const base = await salonWithAppointment(db, phone);
+      const ids = await extraAppointments(db, base, 4);
+
+      for (const id of ids.slice(0, 3)) {
+        const result = await asAnon(db, () =>
+          cancel(db, { slug: base.slug, phone, appointmentId: id }),
+        );
+        expect(result.ok).toBe(true);
+      }
+
+      const fourth = await asAnon(db, () =>
+        cancel(db, { slug: base.slug, phone, appointmentId: ids[3]! }),
+      );
+      expect(fourth).toEqual({ ok: false, reason: "too_many_cancellations" });
+
+      const row = await db.query<{ status: string }>(
+        "select status from appointments where id = $1",
+        [ids[3]],
+      );
+      expect(row.rows[0]!.status).toBe("confirmed");
+    });
+  });
+
+  it("promena mreže ne zaobilazi brojač: ograničenje je po broju, ne po mreži", async () => {
+    await withRollback(async (db) => {
+      const phone = "+381645553002";
+      const base = await salonWithAppointment(db, phone);
+      const ids = await extraAppointments(db, base, 4);
+
+      for (const [index, id] of ids.slice(0, 3).entries()) {
+        await asAnon(db, () =>
+          cancel(db, {
+            slug: base.slug,
+            phone,
+            appointmentId: id,
+            networkHash: `mreza-${index}`,
+          }),
+        );
+      }
+
+      const fourth = await asAnon(db, () =>
+        cancel(db, {
+          slug: base.slug,
+          phone,
+          appointmentId: ids[3]!,
+          networkHash: "potpuno-nova-mreza",
+        }),
+      );
+
+      expect(fourth).toEqual({ ok: false, reason: "too_many_cancellations" });
+    });
+  });
+
+  it("ponovljen zahtev za već otkazan termin i dalje kaže „već otkazan“", async () => {
+    await withRollback(async (db) => {
+      const phone = "+381645553003";
+      const base = await salonWithAppointment(db, phone);
+      const ids = await extraAppointments(db, base, 3);
+
+      for (const id of ids) {
+        await asAnon(db, () =>
+          cancel(db, { slug: base.slug, phone, appointmentId: id }),
+        );
+      }
+
+      const replay = await asAnon(db, () =>
+        cancel(db, { slug: base.slug, phone, appointmentId: ids[0]! }),
+      );
+
+      expect(replay).toEqual({ ok: false, reason: "already_cancelled" });
+    });
+  });
+
+  it("drugi broj u istom salonu i isti broj u drugom salonu nisu pogođeni", async () => {
+    await withRollback(async (db) => {
+      const phone = "+381645553004";
+      const base = await salonWithAppointment(db, phone);
+      const ids = await extraAppointments(db, base, 3);
+
+      for (const id of ids) {
+        await asAnon(db, () =>
+          cancel(db, { slug: base.slug, phone, appointmentId: id }),
+        );
+      }
+
+      const otherPhone = "+381645553005";
+      const otherClient = await createClient(db, base.tenantId, otherPhone);
+      const otherAppointment = await insertAppointment(db, {
+        tenantId: base.tenantId,
+        staffId: base.staffId,
+        serviceId: base.serviceId,
+        clientId: otherClient,
+        startAt: new Date(
+          new Date(futureStartAt()).getTime() + 10 * 24 * 60 * 60 * 1000,
+        ).toISOString(),
+      });
+
+      const otherNumber = await asAnon(db, () =>
+        cancel(db, {
+          slug: base.slug,
+          phone: otherPhone,
+          appointmentId: otherAppointment.id,
+        }),
+      );
+      expect(otherNumber.ok).toBe(true);
+
+      const otherSalon = await salonWithAppointment(db, phone);
+      const inOtherSalon = await asAnon(db, () =>
+        cancel(db, {
+          slug: otherSalon.slug,
+          phone,
+          appointmentId: otherSalon.appointmentId,
+        }),
+      );
+      expect(inOtherSalon.ok).toBe(true);
+    });
+  });
+
+  it("otkazivanja starija od 24 sata se ne računaju", async () => {
+    await withRollback(async (db) => {
+      const phone = "+381645553006";
+      const base = await salonWithAppointment(db, phone);
+      const ids = await extraAppointments(db, base, 4);
+
+      for (const id of ids.slice(0, 3)) {
+        await asAnon(db, () =>
+          cancel(db, { slug: base.slug, phone, appointmentId: id }),
+        );
+      }
+
+      await db.query(
+        `update appointment_events set created_at = now() - interval '25 hours'
+         where tenant_id = $1 and to_status = 'cancelled_by_client'`,
+        [base.tenantId],
+      );
+
+      const fourth = await asAnon(db, () =>
+        cancel(db, { slug: base.slug, phone, appointmentId: ids[3]! }),
+      );
+      expect(fourth.ok).toBe(true);
+    });
+  });
+
+  it("otkazivanje koje je izvršila vlasnica ili salon se ne računa klijentkinji", async () => {
+    await withRollback(async (db) => {
+      const phone = "+381645553007";
+      const base = await salonWithAppointment(db, phone);
+      const ids = await extraAppointments(db, base, 4);
+
+      // Salon otkazuje direktno u bazi: akter je `system`, ne `client`.
+      for (const id of ids.slice(0, 3)) {
+        await db.query(
+          "update appointments set status = 'cancelled_by_salon' where id = $1",
+          [id],
+        );
+      }
+
+      const last = await asAnon(db, () =>
+        cancel(db, { slug: base.slug, phone, appointmentId: ids[3]! }),
+      );
+      expect(last.ok).toBe(true);
+    });
+  });
+
+  it("izuzet broj (limit_exempt_phones) preskače brojač", async () => {
+    await withRollback(async (db) => {
+      const phone = "+381645553008";
+      const base = await salonWithAppointment(db, phone);
+      await db.query(
+        "insert into limit_exempt_phones (tenant_id, phone_e164, note) values ($1, $2, 'test')",
+        [base.tenantId, phone],
+      );
+      const ids = await extraAppointments(db, base, 5);
+
+      for (const id of ids) {
+        const result = await asAnon(db, () =>
+          cancel(db, { slug: base.slug, phone, appointmentId: id }),
+        );
+        expect(result.ok).toBe(true);
+      }
+    });
+  });
+});

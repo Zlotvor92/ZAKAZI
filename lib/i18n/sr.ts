@@ -729,7 +729,8 @@ export const sr = {
       foreign: "Upiši srpski broj telefona — salon te zove nazad na njega.",
     },
     haveAppointment: "Već imaš zakazan termin?",
-    manageLink: "Otkaži ga ovde",
+    manageLink: "Pronađi svoj termin",
+    manageHint: "Pogledaj termin preko broja telefona ili ga otkaži.",
   },
   blog: {
     navLabel: "Blog",
@@ -789,7 +790,7 @@ export const sr = {
           {
             heading: "Ako ne možeš da dođeš",
             paragraphs: [
-              "Na stranici salona pritisni „Otkaži ga ovde“, upiši isti broj telefona sa kog si zakazala i izaberi termin. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
+              "Na stranici salona pritisni „Pronađi svoj termin“, upiši isti broj telefona sa kog si zakazala i izaberi termin koji otkazuješ. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
               "Ako si termin dodala u kalendar telefona, obriši ga i odatle, da ti podsetnik ne zvoni za termin koji više ne postoji.",
             ],
           },
@@ -1022,9 +1023,10 @@ export const sr = {
     home: "Nazad na početak",
   },
   cancel: {
-    title: "Otkazivanje termina",
+    title: "Pronađi svoj termin",
     back: "Nazad na zakazivanje",
-    intro: "Upiši broj telefona sa kog si zakazala.",
+    intro:
+      "Upiši broj telefona sa kog si zakazala. Prikazaćemo tvoje zakazane termine, a svaki možeš i da otkažeš.",
     submit: "Pronađi termine",
     submitting: "Tražim…",
     changePhone: "Drugi broj",
@@ -1043,6 +1045,8 @@ export const sr = {
       already_cancelled: "Taj termin je već otkazan.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
       invalid_phone: "Broj telefona nije ispravan.",
+      too_many_cancellations:
+        "Sa ovog broja je danas već otkazano više termina preko sajta. Javi se salonu.",
     },
   },
 } as const;

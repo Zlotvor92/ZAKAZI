@@ -1,3 +1,4 @@
+import { CalendarSearch, ChevronRight } from "lucide-react";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -124,6 +125,37 @@ export function SalonHeader({
   );
 }
 
+/**
+ * Ulaz za klijentkinju koja već ima termin. Stoji odmah ispod zaglavlja, ne u
+ * podnožju: ko dođe da vidi ili otkaže termin ne sme da pretražuje celu stranu
+ * za sitan link. Ispod je isti tok kao i ranije — broj telefona.
+ */
+export function FindAppointmentLink({ slug }: { slug: string }) {
+  return (
+    <Link
+      href={`/${slug}/otkazi`}
+      className="flex min-h-14 items-center gap-3.5 border border-[#211D1A] px-4 py-3 transition-[transform,background-color] duration-150 active:scale-[0.985] active:bg-[#F2EADC] motion-reduce:transition-none motion-reduce:active:scale-100"
+    >
+      <CalendarSearch
+        aria-hidden="true"
+        className="size-5 shrink-0 text-[#8C1D3F]"
+      />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-[11px] font-bold tracking-[0.16em] uppercase">
+          {sr.booking.manageLink}
+        </span>
+        <span className="text-xs leading-snug text-[#554C44]">
+          {sr.booking.manageHint}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0 text-[#6B6055]"
+      />
+    </Link>
+  );
+}
+
 /** Podnožje koje nosi svaka javna strana. */
 export function LegalLinks() {
   return (
@@ -185,15 +217,7 @@ export default async function PublicBookingPage({ params }: PageProps) {
 
     return (
       <Notice title={salon.name} message={sr.booking.closed}>
-        <p className="text-sm text-[#554C44]">
-          {sr.booking.haveAppointment}{" "}
-          <Link
-            href={`/${tenantSlug}/otkazi`}
-            className="inline-block py-3.5 text-[#8C1D3F] underline"
-          >
-            {sr.booking.manageLink}
-          </Link>
-        </p>
+        <FindAppointmentLink slug={tenantSlug} />
       </Notice>
     );
   }
@@ -227,6 +251,8 @@ export default async function PublicBookingPage({ params }: PageProps) {
         logoUrl={data.tenant.logo_url}
         eyebrow={sr.booking.eyebrow}
       />
+
+      <FindAppointmentLink slug={tenantSlug} />
 
       <BookingFlow data={data} />
 
