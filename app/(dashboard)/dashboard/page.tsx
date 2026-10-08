@@ -6,8 +6,8 @@ import { DayList } from "@/components/calendar/day-list";
 import { WeekStrip, type StripDay } from "@/components/calendar/week-strip";
 import { ConnectionStatus } from "@/components/dashboard/connection-status";
 import { LiveRefresh } from "@/components/dashboard/live-refresh";
+import { SignOutButton } from "@/components/dashboard/sign-out-button";
 import { TenantSwitcher } from "@/components/dashboard/tenant-switcher";
-import { Button } from "@/components/ui/button";
 import {
   getDashboardWeek,
   LIVE_STATUSES,
@@ -27,7 +27,7 @@ import { dayFullyOff, timeOffOfDay } from "@/lib/domain/time-off";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
 import { selectedTenantId } from "@/lib/tenant";
-import { signOut, switchTenant } from "./actions";
+import { switchTenant } from "./actions";
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -221,15 +221,7 @@ export default async function DashboardPage({ searchParams }: PageProps) {
             >
               <Settings size={18} strokeWidth={1.8} aria-hidden />
             </Link>
-            <form action={signOut}>
-              <Button
-                type="submit"
-                variant="ghost"
-                className="h-11 rounded-full px-4 text-[11px] font-bold tracking-[0.12em] uppercase hover:bg-white"
-              >
-                {sr.dashboard.signOut}
-              </Button>
-            </form>
+            <SignOutButton />
           </div>
         </header>
 

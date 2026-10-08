@@ -4,6 +4,8 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 import {
   isRefreshMessage,
+  POLL_INTERVAL_MS,
+  shouldPoll,
   shouldRefreshAfterAbsence,
 } from "@/lib/domain/live-refresh";
 
@@ -12,9 +14,10 @@ import {
  * vlasnica koja je ostavila kalendar otvoren vidi stari raspored i posle novog
  * zakazivanja i posle dodira na obaveštenje.
  *
- * Osvežava se u tri slučaja: kad servisni radnik javi da je stiglo
- * obaveštenje, kad se prozor vrati posle duže pauze, i kad se stranica vrati
- * iz keša pregledača (dugme „nazad").
+ * Osvežava se u četiri slučaja: kad servisni radnik javi da je stiglo
+ * obaveštenje, kad se prozor vrati posle duže pauze, kad se stranica vrati
+ * iz keša pregledača (dugme „nazad"), i na svakih nekoliko desetina sekundi
+ * dok je kalendar vidljiv — za one koji obaveštenja nisu uključili.
  */
 export function LiveRefresh() {
   const router = useRouter();
@@ -47,11 +50,23 @@ export function LiveRefresh() {
       }
     }
 
+    const poll = window.setInterval(() => {
+      if (
+        shouldPoll({
+          visible: document.visibilityState === "visible",
+          online: navigator.onLine,
+        })
+      ) {
+        router.refresh();
+      }
+    }, POLL_INTERVAL_MS);
+
     document.addEventListener("visibilitychange", onVisibility);
     window.addEventListener("pageshow", onPageShow);
     navigator.serviceWorker?.addEventListener("message", onMessage);
 
     return () => {
+      window.clearInterval(poll);
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("pageshow", onPageShow);
       navigator.serviceWorker?.removeEventListener("message", onMessage);

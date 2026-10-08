@@ -68,6 +68,10 @@ test("izgubljen odgovor: poruka ne laže, a ponovni pritisak vraća isti termin"
 
   // Kolačić sa tajnom je izgubljen sa prvim odgovorom; ponovljen zahtev ga
   // postavlja, pa otkazivanje radi na ovom telefonu.
+  //
+  // Posle potvrde stranica još osvežava podatke (`router.refresh`); u WebKit-u
+  // taj zahtev ume da prekine navigaciju koja krene tokom njega.
+  await page.waitForLoadState("networkidle");
   await page.goto(`/${SLUG}/otkazi`);
   await page.getByLabel(sr.booking.phoneLabel).fill(written);
   await page.getByRole("button", { name: sr.cancel.submit }).click();

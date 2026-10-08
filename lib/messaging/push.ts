@@ -1,4 +1,5 @@
 import webpush from "web-push";
+import { logError } from "@/lib/db/errors";
 import { requireEnv } from "@/lib/env";
 import { isAllowedPushEndpoint } from "@/lib/domain/push-endpoint";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -33,6 +34,7 @@ export const SEND_OPTIONS = { urgency: "high", TTL: 24 * 60 * 60 } as const;
 /** Uređaj koji je pretplaćen, u obliku koji `web-push` očekuje. */
 type Target = {
   id: string;
+  user_id: string;
   endpoint: string;
   p256dh: string;
   auth: string;
@@ -94,7 +96,7 @@ async function deliver(input: {
 
   const query = supabase
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth")
+    .select("id, user_id, endpoint, p256dh, auth")
     .eq("tenant_id", input.tenantId);
 
   const { data, error } = await (input.userId === undefined
@@ -105,12 +107,51 @@ async function deliver(input: {
     return error ? null : [];
   }
 
+  // Pretplata pripada uređaju, ne članstvu: korisnica koja se odjavila ili je
+  // izgubila pristup salonu ne sme da dobija ime klijentkinje i vreme termina
+  // na telefon. Članstvo se proverava pri svakom slanju, pa ne zavisi od toga
+  // da li je neko pretplatu obrisao.
+  const targets = data as Target[];
+  const { data: members, error: membersError } = await supabase
+    .from("memberships")
+    .select("user_id")
+    .eq("tenant_id", input.tenantId)
+    .in("user_id", [...new Set(targets.map((target) => target.user_id))]);
+
+  if (membersError || !members) {
+    return null;
+  }
+
+  const memberIds = new Set(
+    (members as { user_id: string }[]).map((member) => member.user_id),
+  );
+  const orphaned = targets.filter((target) => !memberIds.has(target.user_id));
+  const eligible = targets.filter((target) => memberIds.has(target.user_id));
+
+  if (orphaned.length > 0) {
+    await supabase
+      .from("push_subscriptions")
+      .delete()
+      .in(
+        "id",
+        orphaned.map((target) => target.id),
+      );
+  }
+
+  if (eligible.length === 0) {
+    return [];
+  }
+
   const body = JSON.stringify(input.payload);
   const dead: string[] = [];
 
   const results = await Promise.all(
-    (data as Target[]).map(async (target): Promise<DeliveryStatus> => {
+    eligible.map(async (target): Promise<DeliveryStatus> => {
       if (!isAllowedPushEndpoint(target.endpoint)) {
+        await logError({
+          source: "server",
+          message: "Push nije poslat: endpoint nije push servis pregledača.",
+        });
         return "failed";
       }
 
@@ -129,6 +170,14 @@ async function deliver(input: {
           dead.push(target.id);
           return "expired";
         }
+
+        // Razlog je jedino što govori da li je pao servis pregledača (5xx),
+        // ključ (401/403) ili poruka (413); u `messages` stoji samo „failed".
+        const code = (sendError as { statusCode?: number }).statusCode;
+        await logError({
+          source: "server",
+          message: `Push nije isporučen: ${code ? `HTTP ${code}` : "bez odgovora servisa"}.`,
+        });
         return "failed";
       }
     }),

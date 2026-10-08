@@ -64,6 +64,11 @@ test("„Pronađi svoj termin“: vidljiv, traži broj i dokaz, a sačuvan link 
   const { written, e164 } = freshPhone();
   const secret = await bookAs(page, written, "Jelena Zaštićena");
   const origin = new URL(page.url()).origin;
+
+  // Bez kolačića sa tajnom ništa dalje ne može da radi; ovde se vidi zašto.
+  expect(
+    (await context.cookies()).some((cookie) => cookie.name === "zakazi_termini"),
+  ).toBe(true);
   let link = `${origin}/${SLUG}/otkazi#k=${secret}`;
 
   // Potvrda ne sme da širi stranicu preko ivice telefona: mobilni pregledač

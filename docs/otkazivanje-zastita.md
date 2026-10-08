@@ -60,12 +60,19 @@ ne mogu da se razilaze.
    Otkazati ne može, ali može da sazna da termin postoji i kada. Zatvaranje znači
    opštije poruke, što klijentkinji koja zaista ima sukob oduzima objašnjenje; to je
    odluka vlasnika proizvoda.
-7. **Zaključavanje samootkazivanja na 24 sata.** Ograničenje od 3 otkazivanja dnevno po
+7. **Samootkazivanje se zaključava dnevnim ograničenjem.** Ograničenje od 3 otkazivanja dnevno po
    broju broji i otkazivanja koje je pokrenula treća osoba: ko zna broj može da zakaže
    i otkaže tri termina na njega, pa prava klijentkinja ne može da otkaže sama do
    sutra. Salon otkazuje iz kalendara. Nije šteta po termine, samo po udobnost.
 8. Tabela `phone_lookup_attempts` i njene funkcije ostaju, ali ih otkazivanje više ne
    piše (tajna od 256 bita se ne pogađa). Mogu da se skinu posebnom migracijom.
+
+## Pravilo od 24 sata
+
+Preko sajta se otkazuje najkasnije 24 sata pre početka (`too_late` u
+`public_cancel_appointment`, `cancellable` u spisku). Prag je u bazi i računa se po
+`now()` servera; sat uređaja klijentkinje ne utiče. Salon otkazuje iz kalendara u
+svako doba.
 
 ## Šta bi tražilo SMS ili sličan drugi kanal
 

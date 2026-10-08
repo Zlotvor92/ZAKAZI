@@ -4,9 +4,10 @@ Prati „Završnu QA matricu" iz izveštaja od 8. oktobra 2026. Kolona **Pokrive
 kaže šta automatski test stvarno dokazuje; **Ručno** je ono što test ne može da
 vidi. Prazno polje znači da ništa nije proveravano — ne da je u redu.
 
-CI pokreće browser testove nad `next build` + `next start` (Android/Chromium).
-WebKit (iPhone) je u CI-ju uključen kao informativan korak; ni jednom još nije
-viđen zelen.
+CI pokreće browser testove nad `next build` + `next start`: Android/Chromium i
+iPhone/WebKit, oba obavezna. WebKit ide preko HTTPS-a (`tests/e2e/tls-proxy.mjs`) i ima
+sopstvenu korpu ograničenja zakazivanja. Emulacija nije fizički telefon: lista ispod
+ostaje obavezna.
 
 | Scenario | Pokriveno | Ručno |
 |---|---|---|
@@ -24,13 +25,13 @@ viđen zelen.
 | Korisnik A → salon B | `tests/db/rls.test.ts`, `cross-tenant-writes.test.ts` | |
 | Jedan telefon, dva salona; dva telefona, jedan salon | `tests/db/push-subscriptions.test.ts`, `tests/actions/push-settings.test.ts` | Dva stvarna salona na istom telefonu |
 | Push pri otvorenom kalendaru / ugašenoj aplikaciji | `tests/pwa/service-worker.test.ts` (ponašanje radnika u `vm`-u), `tests/actions/open-dashboard.test.ts` | **Obavezno na uređaju**: stvarna notifikacija, dodir, ispravan salon i dan |
-| Odbijena dozvola, istekao endpoint, promena naloga | `push-settings.test.ts` (status „nepoznato", gašenje po salonu) | Odbijanje dozvole u sistemu, odjava i prijava drugog naloga |
-| iPhone Safari i instalirana PWA; Android Chrome/PWA | WebKit korak u CI-ju (informativno) | **Obavezno** — lista ispod |
+| Odbijena dozvola, istekao endpoint, promena naloga | `push-settings.test.ts` (status „nepoznato", gašenje po salonu), `sign-out.test.ts` (odjava briše pretplatu uređaja), `push-send.test.ts` (nečlan ne prima) | Odbijanje dozvole u sistemu, odjava i prijava drugog naloga |
+| iPhone Safari i instalirana PWA; Android Chrome/PWA | WebKit korak u CI-ju (obavezan) preko HTTPS-a (`tests/e2e/tls-proxy.mjs`), sopstvena korpa ograničenja | **Obavezno** — lista ispod |
 | Offline tokom upisa i povratak online | `tests/e2e/offline-booking.spec.ts` (javno zakazivanje) | Banner u kalendaru vlasnice i „Pokušaj ponovo" |
 | Logo 1,5 MB / 2 MB / preko granice | `tests/domain/logo.test.ts` (funkcija i konfiguracija granice) | Stvarno slanje fajla od ~2 MB u administraciji |
 | Admin: status, istek pristupa, produženje | `tests/db/paid-until.test.ts`, `subscription-expiry.test.ts` | |
 | ICS pretplata i opoziv tokena | `tests/db/calendar-feed.test.ts`, `tests/domain/ics*.test.ts` | Apple/Google kalendar i njihovi intervali osvežavanja |
-| Povratak kopije u izolovano okruženje | Noćna proba i `restore-drill.yml` (pun Supabase stek: prijava, RLS, prava; izvedeno 8.10.2026, `docs/backup-restore.md`) | Vraćanje u pravi (hostovani) Supabase projekat i stvarni `age` ključ — nikad |
+| Povratak kopije u izolovano okruženje | Noćna proba i `restore-drill.yml` (pun Supabase stek: prijava, RLS, prava; izvedeno 8.10.2026, `docs/backup-restore.md`) | Vraćanje u pravi (hostovani) Supabase projekat — nikad (kontrolna lista u `docs/backup-restore.md`). Stvarni `age` ključ otvorio kopiju 8.10.2026 (`Verify backup`) |
 | Tastatura, čitač ekrana, zoom 200%, uzak ekran | | **Nije proveravano** |
 
 ## Kratka provera na fizičkom telefonu (oko 10 minuta)

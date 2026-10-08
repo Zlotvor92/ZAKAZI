@@ -3,6 +3,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,6 +113,7 @@ export function Feedback({ state }: { state: SettingsState }) {
  * pun zahtev više za podatke koji su već stigli.
  */
 export function useSettingsAction() {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [state, setState] = useState<SettingsState>({ status: "idle" });
 
@@ -121,10 +123,16 @@ export function useSettingsAction() {
    * podešavanja se zamene stranom „Nešto je puklo".
    */
   function guard(work: Promise<SettingsState>): Promise<SettingsState> {
-    return work.catch(() => ({
-      status: "error" as const,
-      message: sr.error.unreachable,
-    }));
+    return work.catch(() => {
+      // Zahtev je mogao da stigne a odgovor da se izgubi: osveženi podaci
+      // pokazuju šta je stvarno upisano, umesto da forma pogađa.
+      router.refresh();
+
+      return {
+        status: "error" as const,
+        message: sr.error.unreachable,
+      };
+    });
   }
 
   /**

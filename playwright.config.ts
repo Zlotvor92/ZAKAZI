@@ -3,6 +3,12 @@ import { defineConfig, devices } from "@playwright/test";
 const PORT = 3100;
 const baseURL = `http://127.0.0.1:${PORT}`;
 
+// WebKit ne prima `Secure` kolačiće preko običnog HTTP-a, pa iPhone prolaz ide
+// kroz TLS proxy (`tests/e2e/tls-proxy.mjs`), kao produkcija.
+const TLS_PORT = 3101;
+const tlsBaseURL = `https://127.0.0.1:${TLS_PORT}`;
+const webkit = Boolean(process.env["E2E_WEBKIT"]);
+
 /**
  * U CI-ju se testira ono što se stvarno objavljuje: `next build` pa
  * `next start`. Razvojni server ume da sakrije greške koje produkcija ima
@@ -33,21 +39,38 @@ export default defineConfig({
     // iPhone koristi WebKit, a on ume da se ponaša drugačije od Chrome-a
     // (tastatura, `100dvh`, kolačići). Uključuje se samo uz `E2E_WEBKIT=1`,
     // jer traži sistemske biblioteke koje obični posao ne instalira.
-    ...(process.env["E2E_WEBKIT"]
+    ...(webkit
       ? [
           {
             name: "iphone",
-            use: { ...devices["iPhone 14"] },
+            use: {
+              ...devices["iPhone 14"],
+              baseURL: tlsBaseURL,
+              ignoreHTTPSErrors: true,
+            },
           },
         ]
       : []),
   ],
-  webServer: {
-    command: production
-      ? `npm run build && npm run start -- --port ${PORT}`
-      : `npm run dev -- --port ${PORT}`,
-    url: baseURL,
-    reuseExistingServer: !process.env["CI"],
-    timeout: production ? 300_000 : 180_000,
-  },
+  webServer: [
+    {
+      command: production
+        ? `npm run build && npm run start -- --port ${PORT}`
+        : `npm run dev -- --port ${PORT}`,
+      url: baseURL,
+      reuseExistingServer: !process.env["CI"],
+      timeout: production ? 300_000 : 180_000,
+    },
+    ...(webkit
+      ? [
+          {
+            command: "node tests/e2e/tls-proxy.mjs",
+            url: tlsBaseURL,
+            ignoreHTTPSErrors: true,
+            reuseExistingServer: !process.env["CI"],
+            timeout: 30_000,
+          },
+        ]
+      : []),
+  ],
 });

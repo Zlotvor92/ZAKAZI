@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 import { dashboardLink } from "@/lib/domain/dashboard-link";
 import {
   isRefreshMessage,
+  POLL_INTERVAL_MS,
+  shouldPoll,
   REFRESH_AFTER_AWAY_MS,
   shouldRefreshAfterAbsence,
 } from "@/lib/domain/live-refresh";
@@ -41,5 +43,19 @@ describe("dashboardLink", () => {
     ).toBe(
       "/dashboard/otvori?salon=9a7b4c11-1f0d-4d1a-8d36-2e7c7f2a5e44&dan=2026-10-25",
     );
+  });
+});
+
+describe("shouldPoll", () => {
+  it("osvežava samo vidljiv kalendar sa vezom", () => {
+    expect(shouldPoll({ visible: true, online: true })).toBe(true);
+    expect(shouldPoll({ visible: false, online: true })).toBe(false);
+    expect(shouldPoll({ visible: true, online: false })).toBe(false);
+    expect(shouldPoll({ visible: false, online: false })).toBe(false);
+  });
+
+  it("interval nije ni prečest ni redak", () => {
+    expect(POLL_INTERVAL_MS).toBeGreaterThanOrEqual(60_000);
+    expect(POLL_INTERVAL_MS).toBeLessThanOrEqual(5 * 60_000);
   });
 });
