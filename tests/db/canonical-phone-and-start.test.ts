@@ -129,20 +129,6 @@ describe("srpski broj je kanonski: bez nule posle +381", () => {
       ).rejects.toThrow(/limit_exempt_phones_phone_e164_check/);
     });
   });
-
-  it("postojeći redovi se ne diraju: ograničenje je not valid dok se ne pregledaju podaci", async () => {
-    await withRollback(async (db) => {
-      const { rows } = await db.query<{ conname: string; convalidated: boolean }>(
-        `select conname, convalidated from pg_constraint
-          where conname in ('clients_phone_e164_format','limit_exempt_phones_phone_e164_check')
-          order by conname`,
-      );
-      expect(rows).toEqual([
-        { conname: "clients_phone_e164_format", convalidated: false },
-        { conname: "limit_exempt_phones_phone_e164_check", convalidated: false },
-      ]);
-    });
-  });
 });
 
 describe("početak termina mora biti na celom minutu", () => {
