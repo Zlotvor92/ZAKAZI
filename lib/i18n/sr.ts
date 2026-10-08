@@ -731,6 +731,8 @@ export const sr = {
     hourShort: "h",
     currency: "RSD",
     failed: "Zakazivanje nije uspelo. Pokušaj ponovo za koji trenutak.",
+    /** Stranica otvorena pre objave nove verzije ne nosi tajnu termina. */
+    refreshPage: "Stranica je zastarela. Osveži je pa pokušaj ponovo.",
     /** Razlozi koje vraća `public_book`. */
     rejected: {
       booking_closed: "Ovaj salon trenutno ne prima zakazivanje preko interneta.",
@@ -1088,7 +1090,7 @@ export const sr = {
     changePhone: "Drugi broj",
     empty: "Nismo našli termin za taj broj na ovom telefonu.",
     emptyHelp:
-      "Ako si zakazala termin, on i dalje važi. Otkazivanje radi na telefonu na kom si zakazala ili preko linka koji si sačuvala pri zakazivanju. Zakazivala si iz Instagrama? Otvori stranicu salona iz iste aplikacije, ili se javi salonu na Instagramu.",
+      "Proveri da li si dobro upisala broj. Otkazivanje radi na telefonu na kom si zakazala ili preko linka koji si sačuvala pri zakazivanju. Zakazivala si iz Instagrama? Otvori stranicu salona iz iste aplikacije. Ako ne možeš da pronađeš termin, javi se salonu na Instagramu — salon vidi sve zakazane termine.",
     cancelButton: "Otkaži",
     cancelConfirm: "Sigurno otkazujem?",
     cancelling: "Otkazujem…",
@@ -1104,7 +1106,7 @@ export const sr = {
     notCancelled: "Termin nije otkazan jer zahtev nije stigao. Pokušaj ponovo.",
     rejected: {
       not_found:
-        "Termin nije pronađen na ovom telefonu. Ako si ga zakazala, on i dalje važi — javi se salonu.",
+        "Termin nije pronađen na ovom telefonu. Javi se salonu — salon vidi sve zakazane termine.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",
       invalid_phone: "Broj telefona nije ispravan.",
       too_many_cancellations:

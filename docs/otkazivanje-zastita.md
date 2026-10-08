@@ -50,10 +50,21 @@ ne mogu da se razilaze.
    dala; ovo ga ne skriva, samo ga čini nedovoljnim.
 5. `device_id` u `appointment_events` je isti u svim salonima i vidljiv članovima
    salona. Zato novi termini ne koriste uređaj kao dokaz. Za termine zakazane pre ove
-   izmene (najviše `booking_horizon_days`, podrazumevano 14 dana) uređaj ostaje
+   izmene (najviše `booking_horizon_days`, podrazumevano 14 dana, a salon ga može podići) uređaj ostaje
    jedini dokaz; grana nestaje sama čim takvih termina više nema (`manage_proof_hash is null`
    u `owned_appointment_ids` se tada skida).
-6. Tabela `phone_lookup_attempts` i njene funkcije ostaju, ali ih otkazivanje više ne
+6. **Forma za zakazivanje i dalje odaje ponešto o broju** (nije uvedeno ovom izmenom,
+   a nije ni zatvoreno): ko pokuša da zakaže na tuđ broj dobija poruke koje zavise od
+   njenih termina — „već imaš dva termina te nedelje", rok usluge (`service_window`) i
+   redosled usluga (`service_sequence`, sa nazivom usluge i datumom njenog termina).
+   Otkazati ne može, ali može da sazna da termin postoji i kada. Zatvaranje znači
+   opštije poruke, što klijentkinji koja zaista ima sukob oduzima objašnjenje; to je
+   odluka vlasnika proizvoda.
+7. **Zaključavanje samootkazivanja na 24 sata.** Ograničenje od 3 otkazivanja dnevno po
+   broju broji i otkazivanja koje je pokrenula treća osoba: ko zna broj može da zakaže
+   i otkaže tri termina na njega, pa prava klijentkinja ne može da otkaže sama do
+   sutra. Salon otkazuje iz kalendara. Nije šteta po termine, samo po udobnost.
+8. Tabela `phone_lookup_attempts` i njene funkcije ostaju, ali ih otkazivanje više ne
    piše (tajna od 256 bita se ne pogađa). Mogu da se skinu posebnom migracijom.
 
 ## Šta bi tražilo SMS ili sličan drugi kanal

@@ -25,6 +25,7 @@ vi.mock("@/lib/messaging/push", () => ({ notifyTenant: notify }));
 vi.mock("@/lib/proof-cookie", () => ({ rememberProof: remember }));
 
 import { submitBooking } from "@/app/(public)/[tenantSlug]/actions";
+import { sr } from "@/lib/i18n/sr";
 
 const REQUEST_ID = "6f1c3a52-0a9e-4a2e-9f0e-0d5b4c1f7a11";
 const PROOF = "P".repeat(43);
@@ -151,7 +152,7 @@ describe("submitBooking: tajna termina", () => {
 
     const result = await submitBooking(data);
 
-    expect(result.status).toBe("error");
+    expect(result).toEqual({ status: "error", message: sr.booking.refreshPage });
     expect(book).not.toHaveBeenCalled();
     expect(remember).not.toHaveBeenCalled();
   });
@@ -159,7 +160,7 @@ describe("submitBooking: tajna termina", () => {
   it("tajna pogrešnog oblika se odbija pre poziva baze", async () => {
     const result = await submitBooking(form({ manageProof: "kratka" }));
 
-    expect(result.status).toBe("error");
+    expect(result).toEqual({ status: "error", message: sr.booking.refreshPage });
     expect(book).not.toHaveBeenCalled();
   });
 });

@@ -56,6 +56,12 @@ function rejectionMessage(reason: string): string {
 export async function submitBooking(
   formData: FormData,
 ): Promise<BookingState> {
+  // Stranica otvorena pre objave nove verzije šalje obrazac bez tajne; ponovni
+  // pokušaj sa iste stranice nikad ne bi uspeo, pa joj se kaže šta da uradi.
+  if (!isManageProof(formData.get("manageProof"))) {
+    return { status: "error", message: sr.booking.refreshPage };
+  }
+
   const parsed = bookingSchema.safeParse({
     slug: formData.get("slug"),
     serviceId: formData.get("serviceId"),

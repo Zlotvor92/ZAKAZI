@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   title: `Politika privatnosti — ${sr.app.name}`,
 };
 
-const LAST_UPDATED = "18. avgust 2026.";
+const LAST_UPDATED = "8. oktobar 2026.";
 
 function Section({
   title,
@@ -172,7 +172,19 @@ export default function PrivacyPolicyPage() {
               </span>{" "}
               — nasumičan broj bez podataka o tebi, koristi se da poveže tvoje
               prethodne izmene termina radi istorije, i da prepozna
-              ponavljano zakazivanje sa istog telefona.
+              ponavljano zakazivanje sa istog telefona. Za termine zakazane
+              pre 8. oktobra 2026. još služi i kao dokaz da je termin tvoj,
+              dok ti termini ne prođu.
+            </li>
+            <li>
+              <span className="text-foreground font-medium">
+                Tajna tvog termina
+              </span>{" "}
+              — nasumičan niz znakova koji se pamti na telefonu sa kog si
+              zakazala, do 120 dana i samo za stranicu tog salona. Služi
+              isključivo da bi mogla da vidiš i otkažeš svoj termin; ko zna samo
+              tvoj broj telefona to ne može. Mi čuvamo samo njegov nepovratni
+              heš, ne i sam niz.
             </li>
           </ul>
         </Section>
