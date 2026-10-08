@@ -7,7 +7,11 @@ import type { UpcomingAppointment } from "@/lib/db/public-cancel";
 import { proofFromFragment } from "@/lib/domain/manage-proof";
 import { sr } from "@/lib/i18n/sr";
 import { cn } from "@/lib/utils";
-import { cancelAppointment, lookupAppointments, type LookupState } from "./actions";
+import {
+  cancelAppointment,
+  lookupAppointments,
+  type LookupState,
+} from "./actions";
 
 const pressable =
   "transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.985] motion-reduce:transition-none motion-reduce:active:scale-100";
@@ -100,7 +104,9 @@ function AppointmentRow({
           return;
         }
 
-        setError(booked === true ? sr.cancel.notCancelled : sr.cancel.connectionLost);
+        setError(
+          booked === true ? sr.cancel.notCancelled : sr.cancel.connectionLost,
+        );
         setArmed(false);
         return;
       }
@@ -137,24 +143,30 @@ function AppointmentRow({
         ) : null}
       </div>
 
-      <button
-        type="button"
-        disabled={pending}
-        onClick={() => (armed ? confirmCancel() : setArmed(true))}
-        className={cn(
-          "flex h-11 items-center justify-center self-start px-5 text-[11px] font-bold tracking-[0.16em] uppercase disabled:opacity-60",
-          armed
-            ? "bg-[#8C1D3F] text-[#FBF7F0] active:bg-[#6E162F]"
-            : "border border-[#211D1A] active:bg-[#F2EADC]",
-          pressable,
-        )}
-      >
-        {pending
-          ? sr.cancel.cancelling
-          : armed
-            ? sr.cancel.cancelConfirm
-            : sr.cancel.cancelButton}
-      </button>
+      {!appointment.cancellable ? (
+        <p className="border-l-2 border-[#8C1D3F] pl-3 text-xs leading-relaxed text-[#554C44]">
+          {sr.cancel.tooLate}
+        </p>
+      ) : (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => (armed ? confirmCancel() : setArmed(true))}
+          className={cn(
+            "flex h-11 items-center justify-center self-start px-5 text-[11px] font-bold tracking-[0.16em] uppercase disabled:opacity-60",
+            armed
+              ? "bg-[#8C1D3F] text-[#FBF7F0] active:bg-[#6E162F]"
+              : "border border-[#211D1A] active:bg-[#F2EADC]",
+            pressable,
+          )}
+        >
+          {pending
+            ? sr.cancel.cancelling
+            : armed
+              ? sr.cancel.cancelConfirm
+              : sr.cancel.cancelButton}
+        </button>
+      )}
 
       {error ? (
         <p
@@ -347,7 +359,9 @@ export function CancelFlow({
     <form action={onLookup} className="flex flex-col gap-4">
       <input type="hidden" name="slug" value={slug} />
 
-      {linkSecret ? <input type="hidden" name="linkSecret" value={linkSecret} /> : null}
+      {linkSecret ? (
+        <input type="hidden" name="linkSecret" value={linkSecret} />
+      ) : null}
 
       <p className="text-sm leading-relaxed text-[#554C44]">
         {linkSecret ? sr.cancel.introLink : sr.cancel.intro}
