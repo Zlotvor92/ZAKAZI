@@ -31,7 +31,7 @@ type UpcomingAppointment = {
   end_at: string;
   service_name: string;
   price_rsd: number;
-  cancellable: boolean;
+  late: boolean;
 };
 
 type CancelResult =
@@ -1396,92 +1396,6 @@ describe("ograničenje samootkazivanja po broju telefona", () => {
         );
         expect(result.ok).toBe(true);
       }
-    });
-  });
-});
-
-describe("otkazivanje preko sajta najkasnije 24 sata pre termina", () => {
-  async function at(db: pg.PoolClient, hours: number) {
-    const { rows } = await db.query<{ t: string }>(
-      "select (now() + make_interval(hours => $1))::text as t",
-      [hours],
-    );
-    return rows[0]!.t;
-  }
-
-  it("termin za 2 sata se ne otkazuje, ostaje potvrđen", async () => {
-    await withRollback(async (db) => {
-      const phone = "+381645554001";
-      const base = await salonWithAppointment(db, phone, {
-        startAt: await at(db, 2),
-      });
-
-      const result = await asAnon(db, () =>
-        cancel(db, {
-          slug: base.slug,
-          phone,
-          appointmentId: base.appointmentId,
-          secrets: [base.secret],
-        }),
-      );
-
-      expect(result).toEqual({ ok: false, reason: "too_late" });
-      const row = await db.query<{ status: string }>(
-        "select status from appointments where id = $1",
-        [base.appointmentId],
-      );
-      expect(row.rows[0]!.status).toBe("confirmed");
-    });
-  });
-
-  it("granica: 23 sata ne, 25 sati da", async () => {
-    await withRollback(async (db) => {
-      const phone = "+381645554002";
-      const near = await salonWithAppointment(db, phone, {
-        startAt: await at(db, 23),
-      });
-      const far = await salonWithAppointment(db, phone, {
-        startAt: await at(db, 25),
-      });
-      const run = (b: typeof near) =>
-        asAnon(db, () =>
-          cancel(db, {
-            slug: b.slug,
-            phone,
-            appointmentId: b.appointmentId,
-            secrets: [b.secret],
-          }),
-        );
-
-      expect(await run(near)).toEqual({ ok: false, reason: "too_late" });
-      expect((await run(far)).ok).toBe(true);
-    });
-  });
-
-  it("spisak kaže koji termin sme da se otkaže", async () => {
-    await withRollback(async (db) => {
-      const phone = "+381645554003";
-      const near = await salonWithAppointment(db, phone, {
-        startAt: await at(db, 3),
-      });
-      const far = await insertAppointment(db, {
-        tenantId: near.tenantId,
-        staffId: near.staffId,
-        serviceId: near.serviceId,
-        clientId: near.clientId,
-        startAt: await at(db, 72),
-      });
-      const secret = newSecret();
-      await db.query(
-        "update appointments set manage_proof_hash = $1 where id = $2",
-        [sha256Hex(secret), far.id],
-      );
-
-      const list = await upcoming(db, near.slug, phone, [near.secret, secret]);
-      expect(list!.map((r) => [r.id, r.cancellable])).toEqual([
-        [near.appointmentId, false],
-        [far.id, true],
-      ]);
     });
   });
 });

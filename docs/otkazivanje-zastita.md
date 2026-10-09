@@ -1,6 +1,6 @@
 # Zaštita otkazivanja: broj telefona sam ne otvara termin
 
-Stanje: 8. oktobar 2026. Otkazivanje preko sajta je moguće najkasnije 24 sata pre termina (migracija `20261008060000`); posle toga samo salon. Migracija `20261008050000_cancel_requires_proof.sql`.
+Stanje: 9. oktobar 2026. Otkazivanje preko sajta je moguće u svako doba; otkazivanje manje od 24 sata pre termina se broji, a posle dva takva sajt više ne dozvoljava samostalno zakazivanje (migracija `20261009000000_late_cancel_strikes.sql`). Migracija `20261008050000_cancel_requires_proof.sql`.
 
 ## Problem
 
@@ -67,12 +67,26 @@ ne mogu da se razilaze.
 8. Tabela `phone_lookup_attempts` i njene funkcije ostaju, ali ih otkazivanje više ne
    piše (tajna od 256 bita se ne pogađa). Mogu da se skinu posebnom migracijom.
 
-## Pravilo od 24 sata
+## Kasno otkazivanje (manje od 24 sata)
 
-Preko sajta se otkazuje najkasnije 24 sata pre početka (`too_late` u
-`public_cancel_appointment`, `cancellable` u spisku). Prag je u bazi i računa se po
-`now()` servera; sat uređaja klijentkinje ne utiče. Salon otkazuje iz kalendara u
-svako doba.
+Preko sajta se otkazuje u svako doba, ali otkazivanje kad do početka termina ima manje od 24 sata
+je „kasno" i broji se. Posle **dva** kasna otkazivanja u istom salonu, sa istog broja, `public_book`
+vraća `too_many_late_cancellations` i klijentkinja se šalje salonu.
+
+- Brojač nije posebna kolona: izvodi se iz `appointment_events` (`actor_type = 'client'`,
+  `to_status = 'cancelled_by_client'`, `start_at < trenutak događaja + 24 sata`). Audit log je
+  nepromenljiv, pa brojač ne može da se prepravi; isti prag kao ranije (`now()` servera, sat uređaja
+  ne utiče).
+- Po salonu i po broju. **Bez isteka** — odluka je pretpostavljena iz zahteva (primer: decembar pa
+  januar), nije potvrđena. Prozor (npr. poslednjih 180 dana) je jedan uslov u `booking_limit_reason`.
+- Računa se samo otkazivanje preko sajta. Salon koji u kalendaru označi termin kao „otkazala
+  klijentkinja" ne dodaje ništa.
+- Izuzeti brojevi (`limit_exempt_phones`) preskaču brojač; `blocklist` ostaje ispred svega.
+- Salon i dalje ručno upisuje termin iz kalendara (ne ide kroz `booking_limit_reason`); to je jedini
+  način da zaključanoj klijentkinji vrati termin. Nema dugmeta „oprosti" — brojač je audit podatak.
+- Spisak termina vraća `late` i ekran upozorava pre otkazivanja, da kazna ne stigne neviđena.
+- Otkazivanje koje pokrene treća osoba (ko zna broj i ima dokaz) takođe se računa; dokaz je
+  tajna od 256 bita, pa to ostaje na istom nivou rizika kao samo otkazivanje.
 
 ## Šta bi tražilo SMS ili sličan drugi kanal
 

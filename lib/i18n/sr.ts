@@ -755,6 +755,8 @@ export const sr = {
       too_many_from_network:
         "Sa ove mreže je upravo zakazano previše termina. Pokušaj ponovo za sat vremena ili se javi salonu.",
       too_fast: "Sačekaj pola minuta pa pokušaj ponovo.",
+      too_many_late_cancellations:
+        "Sa ovog broja su dva termina otkazana manje od 24 sata pre početka, pa novi ne možeš da zakažeš preko sajta. Javi se salonu.",
     },
     /** `{dana}` i `{usluga}` se zamenjuju. */
     serviceWindow:
@@ -1092,8 +1094,8 @@ export const sr = {
     emptyHelp:
       "Proveri da li si dobro upisala broj. Otkazivanje radi na telefonu na kom si zakazala ili preko linka koji si sačuvala pri zakazivanju. Zakazivala si iz Instagrama? Otvori stranicu salona iz iste aplikacije. Ako ne možeš da pronađeš termin, javi se salonu na Instagramu — salon vidi sve zakazane termine.",
     cancelButton: "Otkaži",
-    tooLate:
-      "Otkazivanje preko sajta je moguće najkasnije 24 sata pre termina. Javi se salonu.",
+    lateWarning:
+      "Do termina je manje od 24 sata. Ako ga otkažeš, računa se kao kasno otkazivanje — posle dva takva ne možeš sama da zakažeš preko sajta.",
     cancelConfirm: "Sigurno otkazujem?",
     cancelling: "Otkazujem…",
     cancelledTitle: "Termin je otkazan",
@@ -1107,8 +1109,6 @@ export const sr = {
       "Nismo dobili potvrdu da je termin otkazan. Pokušaj ponovo — termin se neće otkazati dvaput.",
     notCancelled: "Termin nije otkazan jer zahtev nije stigao. Pokušaj ponovo.",
     rejected: {
-      too_late:
-        "Otkazivanje preko sajta je moguće najkasnije 24 sata pre termina. Javi se salonu.",
       not_found:
         "Termin nije pronađen na ovom telefonu. Javi se salonu — salon vidi sve zakazane termine.",
       invalid_transition: "Taj termin se više ne može otkazati preko sajta. Javi se salonu.",

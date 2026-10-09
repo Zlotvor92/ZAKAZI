@@ -65,7 +65,7 @@ const found = [
     end_at: "2026-11-02T09:00:00Z",
     service_name: "Manikir",
     price_rsd: 2500,
-    cancellable: true,
+    late: false,
   },
 ];
 
@@ -286,19 +286,5 @@ describe("lookupAppointments", () => {
 
     expect(result.status).toBe("error");
     expect(lookup).not.toHaveBeenCalled();
-  });
-});
-
-describe("cancelAppointment: prekasno", () => {
-  it("manje od 24 sata pre termina aplikacija sama ispisuje poruku i ne javlja salonu", async () => {
-    cancel.mockResolvedValue({ ok: false, reason: "too_late" });
-
-    const result = await cancelAppointment(form());
-
-    expect(result).toEqual({
-      status: "error",
-      message: sr.cancel.rejected.too_late,
-    });
-    expect(notify).not.toHaveBeenCalled();
   });
 });
