@@ -20,9 +20,11 @@ Poruke i podsetnici klijentkinjama, kapare i reputacioni skor tek dolaze.
 Na stranici salona stoji „**Pronađi svoj termin**" odmah ispod zaglavlja. Klijentkinja
 upiše broj telefona sa kog je zakazala, vidi svoje buduće termine u tom salonu i
 svaki može da otkaže (dva dodira, drugi je potvrda). Adresa je `/<slug>/otkazi`.
-Preko sajta se otkazuje najkasnije **24 sata pre termina**; posle toga stranica sama
-ispisuje poruku i javlja se salonu, a salon otkazuje iz kalendara. Provera ide po satu
-servera, ne uređaja.
+Preko sajta se otkazuje u svako doba, ali otkazivanje **manje od 24 sata pre termina**
+se broji: stranica to kaže pre otkazivanja, a posle **dva** takva u istom salonu sajt
+više ne dozvoljava da sa tog broja sama zakaže (poruka šalje na salon, koji termin
+upisuje ručno iz kalendara). Provera ide po satu servera, ne uređaja; detalji u
+`docs/otkazivanje-zastita.md`.
 
 **Sam broj telefona ne otvara ništa.** Uz broj treba i dokaz da je termin zakazan
 sa ovog pregledača (nema naloga, tokena za kucanje ni SMS-a):

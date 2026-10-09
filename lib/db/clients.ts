@@ -14,6 +14,8 @@ const clientCardSchema = z.object({
   upcoming: z.number().int(),
   last_visit: z.string().nullable(),
   blocked: z.boolean(),
+  late_cancellations: z.number().int(),
+  late_cancel_locked: z.boolean(),
 });
 
 export type ClientCard = z.infer<typeof clientCardSchema>;
@@ -53,6 +55,23 @@ export async function saveClientNotes(input: {
 
   if (error) {
     throw new Error(`Upis beleške nije uspeo: ${error.message}`);
+  }
+
+  return notesResultSchema.parse(data);
+}
+
+/** Oprašta kasna otkazivanja broja klijentkinje; audit log ostaje nedirnut. */
+export async function pardonLateCancellations(
+  clientId: string,
+): Promise<z.infer<typeof notesResultSchema>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("pardon_late_cancellations", {
+    p_client_id: clientId,
+  });
+
+  if (error) {
+    throw new Error(`Opraštanje nije uspelo: ${error.message}`);
   }
 
   return notesResultSchema.parse(data);

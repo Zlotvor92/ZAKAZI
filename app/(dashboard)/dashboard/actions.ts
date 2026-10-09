@@ -11,6 +11,7 @@ import {
 } from "@/lib/db/appointments";
 import {
   getClientCard,
+  pardonLateCancellations,
   saveClientNotes,
   type ClientCard,
 } from "@/lib/db/clients";
@@ -202,4 +203,18 @@ export async function saveClientNote(
   }
 
   return { ok: true };
+}
+
+export async function pardonClient(clientId: string): Promise<ActionState> {
+  const parsed = z.uuid().safeParse(clientId);
+
+  if (!parsed.success) {
+    return { ok: false, message: sr.dashboard.actionFailed };
+  }
+
+  const result = await pardonLateCancellations(parsed.data);
+
+  return result.ok
+    ? { ok: true }
+    : { ok: false, message: sr.dashboard.actionFailed };
 }

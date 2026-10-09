@@ -39,8 +39,8 @@ const upcomingAppointmentSchema = z.object({
   end_at: z.string(),
   service_name: z.string(),
   price_rsd: z.number().int(),
-  /** Sajt dozvoljava otkazivanje najkasnije 24 sata pre termina. */
-  cancellable: z.boolean(),
+  /** Manje od 24 sata do početka: otkazivanje se računa kao kasno. */
+  late: z.boolean(),
 });
 
 export type UpcomingAppointment = z.infer<typeof upcomingAppointmentSchema>;

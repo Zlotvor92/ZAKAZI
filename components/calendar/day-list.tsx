@@ -10,6 +10,7 @@ import {
   changeStatus,
   loadClientCard,
   loadHistory,
+  pardonClient,
   saveClientNote,
   type ActionState,
 } from "@/app/(dashboard)/dashboard/actions";
@@ -254,6 +255,64 @@ function ClientNotes({
 }
 
 /**
+ * Kasna otkazivanja preko sajta i „Oprosti". Oproštaj se ne može poništiti,
+ * ali je jedan dodir dovoljan: ako je salon pogrešio, klijentkinja je i dalje
+ * pod istim pravilom, samo od nule.
+ */
+function LateCancellations({
+  card,
+  onPardoned,
+}: {
+  card: ClientCard;
+  onPardoned: () => void;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function pardon() {
+    startTransition(async () => {
+      try {
+        const result = await pardonClient(card.client_id);
+        if (result.ok) {
+          setError(null);
+          onPardoned();
+        } else {
+          setError(result.message);
+        }
+      } catch {
+        setError(sr.error.unreachable);
+      }
+    });
+  }
+
+  return (
+    <div className="space-y-1.5 rounded-xl bg-[#FBF7F0] px-3 py-2">
+      <p className="text-xs font-semibold text-[#554C44]">
+        {`${sr.clientCard.lateCancellations}: ${card.late_cancellations}`}
+      </p>
+      {card.late_cancel_locked ? (
+        <p className="text-xs text-[#B3261E]">{sr.clientCard.lateCancelLocked}</p>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={pending}
+        className="rounded-full border-[#DED5C7] bg-white px-3.5"
+        onClick={pardon}
+      >
+        {sr.clientCard.pardon}
+      </Button>
+      {error ? (
+        <p role="alert" className="text-xs text-[#B3261E]">
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * Sve o klijentkinji na jednom mestu: koliko puta je došla, koliko nije, i
  * beleška. Vezana je za broj telefona, pa zbir obuhvata sve termine sa tog
  * broja, i one zakazane pod drugim imenom.
@@ -348,6 +407,19 @@ function ClientPanel({
                 />
                 <Stat label={sr.clientCard.upcoming} value={card.upcoming} />
               </div>
+
+              {card.late_cancellations > 0 ? (
+                <LateCancellations
+                  card={card}
+                  onPardoned={() =>
+                    setCard({
+                      ...card,
+                      late_cancellations: 0,
+                      late_cancel_locked: false,
+                    })
+                  }
+                />
+              ) : null}
 
               <p className="text-xs text-[#6B6055]">
                 {card.last_visit
