@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { cspReportMessage, stripUrl } from "@/lib/domain/csp-report";
+import {
+  cspReportMessage,
+  isIgnoredCspReport,
+  stripUrl,
+} from "@/lib/domain/csp-report";
 
 describe("stripUrl", () => {
   it("odbacuje upit i fragment", () => {
@@ -57,5 +61,29 @@ describe("cspReportMessage", () => {
     expect(
       cspReportMessage({ "violated-directive": "x".repeat(2000) }).length,
     ).toBeLessThanOrEqual(500);
+  });
+});
+
+describe("isIgnoredCspReport", () => {
+  it("preskače Meta skriptu koju ubacuje Instagram pregledač", () => {
+    expect(
+      isIgnoredCspReport({
+        "blocked-uri": "https://connect.facebook.net/en_US/pcm.js",
+      }),
+    ).toBe(true);
+    expect(
+      isIgnoredCspReport({
+        blockedURL: "https://connect.facebook.net/en_US/pcm.js",
+      }),
+    ).toBe(true);
+  });
+
+  it.each([
+    "https://tudj.example/x.js",
+    "https://connect.facebook.net.evil.example/x.js",
+    "inline",
+    undefined,
+  ])("ostalo se beleži: %j", (blocked) => {
+    expect(isIgnoredCspReport({ "blocked-uri": blocked })).toBe(false);
   });
 });

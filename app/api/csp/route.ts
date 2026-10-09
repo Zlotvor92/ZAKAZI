@@ -1,7 +1,7 @@
 import { type NextRequest } from "next/server";
 import { z } from "zod";
 import { logError } from "@/lib/db/errors";
-import { cspReportMessage } from "@/lib/domain/csp-report";
+import { cspReportMessage, isIgnoredCspReport } from "@/lib/domain/csp-report";
 
 /**
  * Prijemnik izveštaja o CSP-u, dok je politika samo `Report-Only`.
@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
           : [parsed.data["csp-report"]];
 
         for (const body of bodies.slice(0, 5)) {
+          if (isIgnoredCspReport(body)) {
+            continue;
+          }
+
           await logError({
             source: "client",
             message: cspReportMessage(body),

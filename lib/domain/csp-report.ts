@@ -34,3 +34,23 @@ export function cspReportMessage(body: Record<string, unknown>): string {
     500,
   );
 }
+
+/**
+ * Pregledač unutar Instagram/Facebook aplikacije sam ubacuje Meta skriptu u
+ * svaku stranicu. Nije naš kod i nije nešto što možemo da popravimo, pa ne
+ * ide u evidenciju grešaka.
+ */
+const IGNORED_BLOCKED_ORIGINS = new Set(["https://connect.facebook.net"]);
+
+export function isIgnoredCspReport(body: Record<string, unknown>): boolean {
+  const blocked = body["blocked-uri"] ?? body["blockedURL"];
+  if (typeof blocked !== "string") {
+    return false;
+  }
+
+  try {
+    return IGNORED_BLOCKED_ORIGINS.has(new URL(blocked).origin);
+  } catch {
+    return false;
+  }
+}

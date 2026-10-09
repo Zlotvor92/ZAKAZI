@@ -50,6 +50,23 @@ describe("POST /api/csp", () => {
     expect(logError).toHaveBeenCalledTimes(1);
   });
 
+  it("ne upisuje Meta skriptu koju ubacuje Instagram pregledač", async () => {
+    const response = await POST(
+      post(
+        JSON.stringify({
+          "csp-report": {
+            "violated-directive": "script-src-elem",
+            "blocked-uri": "https://connect.facebook.net/en_US/pcm.js",
+            "document-uri": "https://doterajme.test/salon",
+          },
+        }),
+      ),
+    );
+
+    expect(response.status).toBe(204);
+    expect(logError).not.toHaveBeenCalled();
+  });
+
   it.each(["nije json", "{}", "[]", "null", '{"csp-report": 5}'])(
     "smeće (%s) daje 204 i ništa ne upisuje",
     async (body) => {
