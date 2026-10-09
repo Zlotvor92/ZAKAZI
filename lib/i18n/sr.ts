@@ -647,6 +647,11 @@ export const sr = {
     neverVisited: "Još nije dolazila",
     since: "U kalendaru od",
     blocked: "Broj je blokiran",
+    lateCancellations: "Kasno otkazala",
+    lateCancelLocked:
+      "Sajt joj ne dozvoljava da sama zakaže. Možeš da joj upišeš termin ili da oprostiš.",
+    pardon: "Oprosti",
+    pardoned: "Oprošteno.",
     notesLabel: "Beleška",
     notesPlaceholder: "Alergije, omiljena boja, napomene…",
     saveNotes: "Sačuvaj belešku",

@@ -82,8 +82,11 @@ vraća `too_many_late_cancellations` i klijentkinja se šalje salonu.
 - Računa se samo otkazivanje preko sajta. Salon koji u kalendaru označi termin kao „otkazala
   klijentkinja" ne dodaje ništa.
 - Izuzeti brojevi (`limit_exempt_phones`) preskaču brojač; `blocklist` ostaje ispred svega.
-- Salon i dalje ručno upisuje termin iz kalendara (ne ide kroz `booking_limit_reason`); to je jedini
-  način da zaključanoj klijentkinji vrati termin. Nema dugmeta „oprosti" — brojač je audit podatak.
+- Salon oprašta dugmetom „Oprosti" na kartici klijentkinje (vidi se kad broj ima bar jedno kasno
+  otkazivanje). U `late_cancel_pardons` se upiše red (salon, broj, ko, kada) i brojač od tada broji
+  samo otkazivanja posle poslednjeg oproštaja. Audit log se ne dira, a oproštaj se ne menja ni
+  briše. Ne može da se poništi, ali ako je pogrešan, brojač kreće od nule pod istim pravilom.
+  Salon takođe može da upiše termin ručno iz kalendara (ne ide kroz `booking_limit_reason`).
 - Spisak termina vraća `late` i ekran upozorava pre otkazivanja, da kazna ne stigne neviđena.
 - Otkazivanje koje pokrene treća osoba (ko zna broj i ima dokaz) takođe se računa; dokaz je
   tajna od 256 bita, pa to ostaje na istom nivou rizika kao samo otkazivanje.

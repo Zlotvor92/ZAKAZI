@@ -6,6 +6,7 @@ import {
   asServer,
   asUser,
   closePool,
+  inSavepoint,
   createClient,
   createService,
   createStaff,
@@ -130,6 +131,29 @@ async function lateCancel(db: pg.PoolClient, salon: Salon, phone: string, hours:
   const appointment = await appointmentIn(db, salon, phone, hours);
   const result = await cancel(db, salon, phone, appointment);
   expect(result.ok).toBe(true);
+  return appointment.id;
+}
+
+async function pardon(db: pg.PoolClient, salon: Salon, phone: string) {
+  const client = await db.query<{ id: string }>(
+    "select id from clients where tenant_id = $1 and phone_e164 = $2",
+    [salon.tenantId, phone],
+  );
+  const result = await asUser(db, salon.userId, () =>
+    db.query<{ result: { ok: boolean; reason?: string } }>(
+      "select pardon_late_cancellations($1) as result",
+      [client.rows[0]!.id],
+    ),
+  );
+  return result.rows[0]!.result;
+}
+
+async function pardonCount(db: pg.PoolClient, salon: Salon) {
+  const result = await db.query<{ n: string }>(
+    "select count(*)::text as n from late_cancel_pardons where tenant_id = $1",
+    [salon.tenantId],
+  );
+  return Number(result.rows[0]!.n);
 }
 
 describe("otkazivanje manje od 24 sata pre termina", () => {
@@ -300,6 +324,204 @@ describe("spisak termina kaže koji se računa kao kasan", () => {
         [near.id, true],
         [far.id, false],
       ]);
+    });
+  });
+});
+
+describe("salon oprašta kasna otkazivanja", () => {
+  it("posle oproštaja zaključani broj ponovo može da zakaže", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      await lateCancel(db, salon, PHONE, 2);
+      await lateCancel(db, salon, PHONE, 5);
+      expect((await book(db, salon, PHONE)).reason).toBe(
+        "too_many_late_cancellations",
+      );
+
+      expect(await pardon(db, salon, PHONE)).toEqual({ ok: true });
+
+      expect((await book(db, salon, PHONE)).ok).toBe(true);
+    });
+  });
+
+  it("brojač posle oproštaja kreće od nule: treba opet dva kasna", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      await lateCancel(db, salon, PHONE, 2);
+      await lateCancel(db, salon, PHONE, 5);
+      await pardon(db, salon, PHONE);
+      // Prošlost se pomera ručno: stara otkazivanja (i njihovi termini, da
+      // ostanu „kasna") pre tri dana, oproštaj pre dva. Tri dana, da dnevno
+      // ograničenje otkazivanja ne smeta novim.
+      await db.query(
+        `update appointment_events set created_at = created_at - interval '3 days'
+         where tenant_id = $1`,
+        [salon.tenantId],
+      );
+      await db.query(
+        `update appointments set start_at = start_at - interval '3 days'
+         where tenant_id = $1`,
+        [salon.tenantId],
+      );
+      await db.query(
+        `update late_cancel_pardons set created_at = now() - interval '2 days'
+         where tenant_id = $1`,
+        [salon.tenantId],
+      );
+
+      await lateCancel(db, salon, PHONE, 8);
+      expect((await book(db, salon, PHONE)).ok).toBe(true);
+
+      await lateCancel(db, salon, PHONE, 11);
+      expect((await book(db, salon, PHONE)).reason).toBe(
+        "too_many_late_cancellations",
+      );
+    });
+  });
+
+  it("audit log ostaje netaknut", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      await lateCancel(db, salon, PHONE, 2);
+      await lateCancel(db, salon, PHONE, 5);
+      const before = await db.query<{ n: string }>(
+        "select count(*)::text as n from appointment_events where tenant_id = $1",
+        [salon.tenantId],
+      );
+
+      await pardon(db, salon, PHONE);
+
+      const after = await db.query<{ n: string }>(
+        "select count(*)::text as n from appointment_events where tenant_id = $1",
+        [salon.tenantId],
+      );
+      expect(after.rows[0]!.n).toBe(before.rows[0]!.n);
+    });
+  });
+
+  it("upisuje ko je i kada oprostio, a ništa kad nema šta da se oprosti", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      await createClient(db, salon.tenantId, PHONE);
+      await pardon(db, salon, PHONE);
+      expect(await pardonCount(db, salon)).toBe(0);
+
+      await lateCancel(db, salon, PHONE, 2);
+      await pardon(db, salon, PHONE);
+
+      const rows = await db.query<{ created_by: string; phone_e164: string }>(
+        "select created_by, phone_e164 from late_cancel_pardons where tenant_id = $1",
+        [salon.tenantId],
+      );
+      expect(rows.rows).toEqual([{ created_by: salon.userId, phone_e164: PHONE }]);
+    });
+  });
+
+  it("salon ne može da oprosti klijentkinju drugog salona", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const other = await openSalon(db);
+      await lateCancel(db, salon, PHONE, 2);
+      await lateCancel(db, salon, PHONE, 5);
+      const client = await db.query<{ id: string }>(
+        "select id from clients where tenant_id = $1",
+        [salon.tenantId],
+      );
+
+      const result = await asUser(db, other.userId, () =>
+        db.query<{ result: { ok: boolean; reason?: string } }>(
+          "select pardon_late_cancellations($1) as result",
+          [client.rows[0]!.id],
+        ),
+      );
+
+      expect(result.rows[0]!.result).toEqual({ ok: false, reason: "not_found" });
+      expect(await pardonCount(db, salon)).toBe(0);
+      expect((await book(db, salon, PHONE)).reason).toBe(
+        "too_many_late_cancellations",
+      );
+    });
+  });
+
+  it("oproštaj se ne upisuje za tuđ salon ni direktno", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const other = await openSalon(db);
+
+      await asUser(db, other.userId, async () => {
+        await expect(
+          inSavepoint(db, () =>
+            db.query(
+              "insert into late_cancel_pardons (tenant_id, phone_e164) values ($1, $2)",
+              [salon.tenantId, PHONE],
+            ),
+          ),
+        ).rejects.toThrow(/row-level security/i);
+      });
+    });
+  });
+
+  it("oproštaj se ne menja ni briše, ni od vlasnice", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      await lateCancel(db, salon, PHONE, 2);
+      await pardon(db, salon, PHONE);
+
+      await asUser(db, salon.userId, async () => {
+        await expect(
+          inSavepoint(db, () => db.query("delete from late_cancel_pardons")),
+        ).rejects.toThrow(/permission denied/i);
+        await expect(
+          inSavepoint(db, () =>
+            db.query("update late_cancel_pardons set created_at = now()"),
+          ),
+        ).rejects.toThrow(/permission denied/i);
+      });
+    });
+  });
+
+  it("neulogovan posetilac ne dolazi do oproštaja", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      const clientId = await createClient(db, salon.tenantId, PHONE);
+
+      await asAnon(db, async () => {
+        await expect(
+          inSavepoint(db, () =>
+            db.query("select pardon_late_cancellations($1)", [clientId]),
+          ),
+        ).rejects.toThrow(/permission denied/i);
+        await expect(
+          inSavepoint(db, () => db.query("select 1 from late_cancel_pardons")),
+        ).rejects.toThrow(/permission denied/i);
+      });
+    });
+  });
+
+  it("kartica klijentkinje pokazuje broj i zaključanost, pa nulu posle oproštaja", async () => {
+    await withRollback(async (db) => {
+      const salon = await openSalon(db);
+      await lateCancel(db, salon, PHONE, 2);
+      const last = await lateCancel(db, salon, PHONE, 5);
+      const card = () =>
+        asUser(db, salon.userId, async () => {
+          const result = await db.query<{
+            card: { late_cancellations: number; late_cancel_locked: boolean };
+          }>("select client_card($1) as card", [last]);
+          return result.rows[0]!.card;
+        });
+
+      expect(await card()).toMatchObject({
+        late_cancellations: 2,
+        late_cancel_locked: true,
+      });
+
+      await pardon(db, salon, PHONE);
+
+      expect(await card()).toMatchObject({
+        late_cancellations: 0,
+        late_cancel_locked: false,
+      });
     });
   });
 });
