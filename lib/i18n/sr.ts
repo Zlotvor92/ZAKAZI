@@ -750,7 +750,8 @@ export const sr = {
       outside_working_hours: "Salon tada ne radi. Izaberi drugi termin.",
       time_off: "Salon tada ne radi. Izaberi drugi dan.",
       slot_taken: "Neko je upravo uzeo taj termin. Izaberi drugi.",
-      blocked: "Sa ovog broja nije moguće zakazati preko interneta. Javi se salonu.",
+      // Isti tekst kao `failed`, namerno: blokiran broj ne sme da zna da je blokiran.
+      blocked: "Zakazivanje nije uspelo. Pokušaj ponovo za koji trenutak.",
       too_many_this_week:
         "Već imaš dva termina te nedelje. Izaberi drugi datum, otkaži jedan ili se javi salonu.",
       too_many_upcoming:
