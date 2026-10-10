@@ -573,7 +573,7 @@ function Row({
               type="button"
               variant="outline"
               size="sm"
-              disabled={pending}
+              disabled={pending || appointment.client_blocked}
               className={cn(
                 "rounded-full px-3.5",
                 armed
@@ -584,7 +584,11 @@ function Row({
                 armed ? run(() => blockClient(appointment.id)) : setArmed(true)
               }
             >
-              {armed ? sr.dashboard.blockConfirm : sr.dashboard.block}
+              {appointment.client_blocked
+                ? sr.dashboard.blocked
+                : armed
+                  ? sr.dashboard.blockConfirm
+                  : sr.dashboard.block}
             </Button>
 
             <History appointmentId={appointment.id} timeZone={timeZone} />

@@ -24,6 +24,8 @@ const appointmentSchema = z.object({
   service_name: z.string(),
   /** Koliko puta ova klijentkinja ranije nije došla, bez ovog termina. */
   client_no_shows: z.number().int(),
+  /** Broj ove klijentkinje je na listi blokiranih u ovom salonu. */
+  client_blocked: z.boolean(),
 });
 
 export const appointmentListSchema = z.array(appointmentSchema);
