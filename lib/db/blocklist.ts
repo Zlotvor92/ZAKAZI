@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withClientNames } from "@/lib/domain/blocklist";
 import { createClient } from "@/lib/supabase/server";
 
 const blockedSchema = z.object({
@@ -8,7 +9,15 @@ const blockedSchema = z.object({
   created_at: z.string(),
 });
 
-export type BlockedNumber = z.infer<typeof blockedSchema>;
+const clientNameSchema = z.object({
+  phone_e164: z.string(),
+  name: z.string(),
+});
+
+export type BlockedNumber = z.infer<typeof blockedSchema> & {
+  /** Ime iz kartona klijentkinja ovog salona, ako broj ima karton. */
+  client_name: string | null;
+};
 
 /** Blokirani brojevi izabranog salona. Blokada važi po salonu, ne po nalogu. */
 export async function getBlockedNumbers(
@@ -26,7 +35,28 @@ export async function getBlockedNumbers(
     throw new Error(`Čitanje blokiranih brojeva nije uspelo: ${error.message}`);
   }
 
-  return z.array(blockedSchema).parse(data);
+  const blocked = z.array(blockedSchema).parse(data);
+
+  if (blocked.length === 0) {
+    return [];
+  }
+
+  const { data: clients, error: clientsError } = await supabase
+    .from("clients")
+    .select("phone_e164, name")
+    .eq("tenant_id", tenantId)
+    .in(
+      "phone_e164",
+      blocked.map((entry) => entry.phone_e164),
+    );
+
+  if (clientsError) {
+    throw new Error(
+      `Čitanje imena blokiranih klijentkinja nije uspelo: ${clientsError.message}`,
+    );
+  }
+
+  return withClientNames(blocked, z.array(clientNameSchema).parse(clients));
 }
 
 export async function blockNumber(input: {
