@@ -594,7 +594,20 @@ export function BlockedNumbers({ numbers }: { numbers: BlockedNumber[] }) {
               className="flex items-center justify-between gap-3 py-2"
             >
               <div className="min-w-0">
-                <div className="text-sm tabular-nums">{number.phone_e164}</div>
+                {number.client_name ? (
+                  <div className="truncate text-sm font-medium">
+                    {number.client_name}
+                  </div>
+                ) : null}
+                <div
+                  className={
+                    number.client_name
+                      ? "text-[#554C44] text-xs tabular-nums"
+                      : "text-sm tabular-nums"
+                  }
+                >
+                  {number.phone_e164}
+                </div>
                 {number.reason ? (
                   <div className="text-[#554C44] truncate text-xs">
                     {number.reason}
