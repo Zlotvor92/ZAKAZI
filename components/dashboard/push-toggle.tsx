@@ -51,7 +51,9 @@ function decodeKey(base64Url: string): ArrayBuffer {
   return buffer;
 }
 
-function toInput(subscription: PushSubscription): PushSubscriptionInput | null {
+export function toInput(
+  subscription: PushSubscription,
+): PushSubscriptionInput | null {
   const json = subscription.toJSON();
 
   if (!json.endpoint || !json.keys?.["p256dh"] || !json.keys["auth"]) {

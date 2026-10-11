@@ -5,6 +5,7 @@ import { z } from "zod";
 import { blockNumber, unblockNumber } from "@/lib/db/blocklist";
 import { clearCalendarToken, rotateCalendarToken } from "@/lib/db/calendar";
 import {
+  hasAnyPushSubscription,
   hasPushSubscription,
   pushSubscriptionSchema,
   removePushSubscription,
@@ -272,6 +273,53 @@ export async function enableNotifications(
 
   revalidatePath("/dashboard/podesavanja");
   return true;
+}
+
+/**
+ * Vraća obaveštenja posle ponovne prijave.
+ *
+ * Odjava briše pretplatu iz baze, a pregledač ostaje pretplaćen i dozvola ostaje
+ * data; bez ovoga salon posle svake odjave tiho ostaje bez obaveštenja. Upisuje
+ * samo uređaj koji nema nijedan red ni u jednom salonu: ko je namerno isključio
+ * obaveštenja za jedan salon, a drugi mu radi, ne dobija ih nazad.
+ *
+ * Ne baca — poziva se u pozadini pri svakom otvaranju, bez ikakvog ekrana.
+ */
+export async function restoreNotifications(
+  subscription: unknown,
+): Promise<boolean> {
+  const parsed = pushSubscriptionSchema.safeParse(subscription);
+  if (!parsed.success) {
+    return false;
+  }
+
+  try {
+    const tenant = await getCurrentTenant(await selectedTenantId());
+    if (!tenant) {
+      return false;
+    }
+
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getUser();
+    if (!data.user) {
+      return false;
+    }
+
+    if (await hasAnyPushSubscription(parsed.data.endpoint)) {
+      return false;
+    }
+
+    await savePushSubscription({
+      tenantId: tenant.id,
+      userId: data.user.id,
+      subscription: parsed.data,
+    });
+
+    revalidatePath("/dashboard/podesavanja");
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export type PushCheck = "on" | "off" | "unknown";

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
+  hasAnyPushSubscription: vi.fn(),
   hasPushSubscription: vi.fn(),
   removePushSubscription: vi.fn(),
   savePushSubscription: vi.fn(),
@@ -13,6 +14,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 vi.mock("@/lib/db/push", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/db/push")>()),
+  hasAnyPushSubscription: mocks.hasAnyPushSubscription,
   hasPushSubscription: mocks.hasPushSubscription,
   removePushSubscription: mocks.removePushSubscription,
   savePushSubscription: mocks.savePushSubscription,
@@ -31,6 +33,7 @@ import {
   checkNotifications,
   disableNotifications,
   enableNotifications,
+  restoreNotifications,
   sendTestNotification,
 } from "@/app/(dashboard)/dashboard/podesavanja/actions";
 
@@ -128,6 +131,51 @@ describe("enableNotifications", () => {
       }),
     ).toBe(false);
     expect(mocks.savePushSubscription).not.toHaveBeenCalled();
+  });
+});
+
+describe("restoreNotifications", () => {
+  const keys = { p256dh: "k", auth: "a" };
+
+  it("posle odjave, kad uređaj nema nijedan red, upisuje pretplatu za izabrani salon", async () => {
+    mocks.hasAnyPushSubscription.mockResolvedValue(false);
+
+    expect(await restoreNotifications({ endpoint: ENDPOINT, keys })).toBe(true);
+    expect(mocks.savePushSubscription).toHaveBeenCalledWith({
+      tenantId: TENANT_A,
+      userId: "user-1",
+      subscription: { endpoint: ENDPOINT, keys },
+    });
+  });
+
+  it("ne vraća obaveštenja onome ko je isključio jedan salon, a drugi mu radi", async () => {
+    mocks.hasAnyPushSubscription.mockResolvedValue(true);
+
+    expect(await restoreNotifications({ endpoint: ENDPOINT, keys })).toBe(false);
+    expect(mocks.savePushSubscription).not.toHaveBeenCalled();
+  });
+
+  it("bez prijavljenog korisnika ne upisuje ništa", async () => {
+    mocks.getUser.mockResolvedValue({ data: { user: null } });
+
+    expect(await restoreNotifications({ endpoint: ENDPOINT, keys })).toBe(false);
+    expect(mocks.savePushSubscription).not.toHaveBeenCalled();
+  });
+
+  it("odbija endpoint koji nije push servis pregledača", async () => {
+    expect(
+      await restoreNotifications({
+        endpoint: "https://attacker.example.test/collect",
+        keys,
+      }),
+    ).toBe(false);
+    expect(mocks.savePushSubscription).not.toHaveBeenCalled();
+  });
+
+  it("pad baze ne baca: poziva se u pozadini, bez ekrana", async () => {
+    mocks.hasAnyPushSubscription.mockRejectedValue(new Error("mreža"));
+
+    expect(await restoreNotifications({ endpoint: ENDPOINT, keys })).toBe(false);
   });
 });
 

@@ -109,6 +109,28 @@ export async function hasPushSubscription(input: {
   return (count ?? 0) > 0;
 }
 
+/**
+ * Da li ovaj uređaj prati ijedan salon ovog korisnika. RLS vraća samo redove
+ * prijavljenog korisnika, pa nula znači da je pretplata obrisana (odjava), a ne
+ * da je neko isključio jedan salon dok drugi i dalje radi.
+ */
+export async function hasAnyPushSubscription(
+  endpoint: string,
+): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("push_subscriptions")
+    .select("id", { count: "exact", head: true })
+    .eq("endpoint", endpoint);
+
+  if (error) {
+    throw new Error(`Čitanje pretplata nije uspelo: ${error.message}`);
+  }
+
+  return (count ?? 0) > 0;
+}
+
 /** Koliko uređaja ovog korisnika prima obaveštenja za dati salon. */
 export async function countPushSubscriptions(
   tenantId: string,
