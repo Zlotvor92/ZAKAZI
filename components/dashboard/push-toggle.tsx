@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { classifyPushFailure } from "@/lib/domain/push-failure";
 import { sr } from "@/lib/i18n/sr";
+import { subscribeDevice } from "@/lib/push-subscribe";
 import type { PushSubscriptionInput } from "@/lib/db/push";
 
 export type PushCheck = "on" | "off" | "unknown";
@@ -154,10 +155,10 @@ export function PushToggle({
         const registration = await navigator.serviceWorker.register("/sw.js");
         await navigator.serviceWorker.ready;
 
-        subscription = await registration.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: decodeKey(publicKey),
-        });
+        subscription = await subscribeDevice(
+          registration.pushManager,
+          decodeKey(publicKey),
+        );
       } catch (cause) {
         // Ime greške je jedino po čemu se razlikuje telefon bez Google
         // servisa od pogrešnog ključa, a ona nema prevod koji bi značio
