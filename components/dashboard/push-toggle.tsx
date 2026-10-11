@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
+import { classifyPushFailure } from "@/lib/domain/push-failure";
 import { sr } from "@/lib/i18n/sr";
 import type { PushSubscriptionInput } from "@/lib/db/push";
 
@@ -161,12 +162,25 @@ export function PushToggle({
         // Ime greške je jedino po čemu se razlikuje telefon bez Google
         // servisa od pogrešnog ključa, a ona nema prevod koji bi značio
         // više — zato ide u zagradi, da može da se pročita i javi.
-        const name = cause instanceof Error ? cause.name : "";
-        setMessage(
-          name
-            ? `${sr.settings.pushBrowserFailed} (${name})`
-            : sr.settings.pushBrowserFailed,
-        );
+        const failure = classifyPushFailure(cause);
+        const text =
+          failure.kind === "service"
+            ? sr.settings.pushServiceFailed
+            : sr.settings.pushBrowserFailed;
+        setMessage(failure.name ? `${text} (${failure.name})` : text);
+
+        // Ime greške ne razlikuje uzroke, a na serveru se ništa od ovoga ne vidi.
+        void fetch("/api/greske", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          keepalive: true,
+          body: JSON.stringify({
+            message: failure.report,
+            path: window.location.pathname,
+          }),
+        }).catch(() => {
+          // Prijava greške ne sme da napravi drugu.
+        });
         return;
       }
 

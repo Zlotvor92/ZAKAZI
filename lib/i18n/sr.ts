@@ -487,6 +487,8 @@ export const sr = {
     pushUnsupported: "Ovaj pregledač ne podržava obaveštenja.",
     pushBrowserFailed:
       "Telefon nije dozvolio obaveštenja. Ako si u pregledaču unutar Instagrama ili Fejsbuka, otvori doterajme.rs u Chrome-u pa pokušaj tamo.",
+    pushServiceFailed:
+      "Dozvola je data, ali se telefon nije povezao sa servisom za obaveštenja. Pokušaj ponovo za nekoliko sekundi.",
     pushSaveFailed:
       "Telefon je dozvolio obaveštenja, ali upis nije uspeo. Pokušaj ponovo.",
     pushUnverified:
