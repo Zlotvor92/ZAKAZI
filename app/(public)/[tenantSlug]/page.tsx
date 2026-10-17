@@ -1,4 +1,4 @@
-import { CalendarSearch, ChevronRight } from "lucide-react";
+import { CalendarSearch, ChevronRight, Tags } from "lucide-react";
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,6 +7,7 @@ import { display } from "@/app/fonts";
 import { JsonLd } from "@/components/json-ld";
 import { getPublicBookingData } from "@/lib/db/public-booking";
 import { getSalonSummary } from "@/lib/db/public-cancel";
+import { priceListFor } from "@/lib/domain/price-list";
 import { salonDescription, salonJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
 import { BookingFlow } from "./booking-flow";
@@ -160,6 +161,30 @@ export function FindAppointmentLink({ slug }: { slug: string }) {
   );
 }
 
+/** Samo za salone koji imaju cenovnik u slikama; vidi `lib/domain/price-list.ts`. */
+function PriceListLink({ slug }: { slug: string }) {
+  return (
+    <Link
+      href={`/${slug}/cenovnik`}
+      className="flex min-h-14 items-center gap-3.5 border border-[#211D1A] px-4 py-3 transition-[transform,background-color] duration-150 active:scale-[0.985] active:bg-[#F2EADC] motion-reduce:transition-none motion-reduce:active:scale-100"
+    >
+      <Tags aria-hidden="true" className="size-5 shrink-0 text-[#8C1D3F]" />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="text-[11px] font-bold tracking-[0.16em] uppercase">
+          {sr.booking.priceList.link}
+        </span>
+        <span className="text-xs leading-snug text-[#554C44]">
+          {sr.booking.priceList.hint}
+        </span>
+      </span>
+      <ChevronRight
+        aria-hidden="true"
+        className="size-4 shrink-0 text-[#6B6055]"
+      />
+    </Link>
+  );
+}
+
 /** Podnožje koje nosi svaka javna strana. */
 export function LegalLinks() {
   return (
@@ -257,6 +282,8 @@ export default async function PublicBookingPage({ params }: PageProps) {
       />
 
       <FindAppointmentLink slug={tenantSlug} />
+
+      {priceListFor(tenantSlug) ? <PriceListLink slug={tenantSlug} /> : null}
 
       <BookingFlow data={data} />
 

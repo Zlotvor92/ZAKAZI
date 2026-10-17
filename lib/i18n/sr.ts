@@ -788,6 +788,14 @@ export const sr = {
     haveAppointment: "Već imaš zakazan termin?",
     manageLink: "Pronađi svoj termin",
     manageHint: "Pogledaj svoj termin ili ga otkaži.",
+    priceList: {
+      link: "Cenovnik",
+      hint: "Pogledaj cene svih usluga.",
+      /** Naslov kartice i pregleda linka: „Cenovnik — Salon Smiley". */
+      title: (salon: string) => `Cenovnik — ${salon}`,
+      eyebrow: "Cenovnik",
+      back: "Nazad na zakazivanje",
+    },
     /** Posle zakazivanja: link za otkazivanje sa drugog telefona. */
     saveLink: {
       title: "Otkazivanje sa drugog telefona",
