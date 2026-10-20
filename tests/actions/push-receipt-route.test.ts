@@ -6,7 +6,7 @@ const valid={attemptId:"f3c86798-64a2-4f9d-8e95-b70bf6a80bb1",token:"x".repeat(4
 eventId:"c95676df-f098-46a9-9bdf-9f4c812ea531",kind:"received",clientAt:"2026-10-20T16:00:00Z",
 details:{workerVersion:"v1",permission:"granted",userAgent:"test"}};
 function request(body:unknown){return new Request("https://app.test/api/push/receipt",{method:"POST",body:JSON.stringify(body)});}
-beforeEach(()=>record.mockReset());
+beforeEach(()=>{record.mockReset();});
 describe("push receipt route",()=>{
 it("accepts a valid capability without session cookies",async()=>{record.mockResolvedValue(true);expect((await POST(request(valid))).status).toBe(204);expect(record).toHaveBeenCalledWith(valid);});
 it("does not acknowledge invalid capabilities",async()=>{record.mockResolvedValue(false);expect((await POST(request(valid))).status).toBe(403);});
