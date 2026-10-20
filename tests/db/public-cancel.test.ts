@@ -583,7 +583,7 @@ describe("otkazivanje: phone-only access", () => {
       const foreign = await asAnon(db, () =>
         cancel(db, {
           slug: base.slug,
-          phone,
+          phone: "+381645559999",
           appointmentId: base.appointmentId,
           secrets: [newSecret()],
         }),
