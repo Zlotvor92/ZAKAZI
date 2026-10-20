@@ -10,6 +10,10 @@ const { send, setVapid, inserted, deleted, members, logged } = vi.hoisted(() => 
   members: { current: ["u1"] as string[] },
 }));
 
+vi.mock("@/lib/db/push-diagnostics", () => ({
+ startPushAttempt: async () => ({attemptId:"f3c86798-64a2-4f9d-8e95-b70bf6a80bb1",token:"x".repeat(43)}),
+ finishPushAttempt: vi.fn(),
+}));
 vi.mock("@/lib/db/errors", () => ({
   logError: async (report: { message: string }) => {
     logged.push(report.message);
@@ -116,6 +120,9 @@ describe("notifyTenant", () => {
       "https://fcm.googleapis.com/fcm/send/1",
     );
     expect(send.mock.calls[0]![2]).toEqual(SEND_OPTIONS);
+    expect(JSON.parse(send.mock.calls[0]![1]).tracking).toEqual({
+      attemptId:"f3c86798-64a2-4f9d-8e95-b70bf6a80bb1",token:"x".repeat(43),
+    });
     expect(SEND_OPTIONS.urgency).toBe("high");
     expect(SEND_OPTIONS.TTL).toBeGreaterThan(0);
   });

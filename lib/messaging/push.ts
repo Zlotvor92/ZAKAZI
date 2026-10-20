@@ -1,3 +1,4 @@
+import { startPushAttempt, finishPushAttempt } from "@/lib/db/push-diagnostics";
 import webpush from "web-push";
 import { logError } from "@/lib/db/errors";
 import { requireEnv } from "@/lib/env";
@@ -29,7 +30,7 @@ export type PushPayload = {
  * Rok od dana: zakazivanje starije od toga vlasnica ionako vidi u kalendaru, a
  * telefon koji je ceo dan ugašen ne sme da zaspe stotinu starih poruka.
  */
-export const SEND_OPTIONS = { urgency: "high", TTL: 24 * 60 * 60 } as const;
+export const SEND_OPTIONS = { urgency: "high", TTL: 24 * 60 * 60, timeout: 10_000 } as const;
 
 /** Uređaj koji je pretplaćen, u obliku koji `web-push` očekuje. */
 type Target = {
@@ -88,7 +89,7 @@ async function deliver(input: {
   try {
     configure();
   } catch {
-    // Ključevi nisu podešeni — salon prosto nema obaveštenja.
+    await finishPushAttempt(await startPushAttempt({...input,tag:input.payload.tag}),"unavailable",{errorCode:"vapid_configuration"});
     return null;
   }
 
@@ -104,6 +105,7 @@ async function deliver(input: {
     : query.eq("user_id", input.userId));
 
   if (error || !data || data.length === 0) {
+    await finishPushAttempt(await startPushAttempt({...input,tag:input.payload.tag}),error?"failed":"skipped",{errorCode:error?"subscriptions_query_failed":"no_subscriptions"});
     return error ? null : [];
   }
 
@@ -119,6 +121,7 @@ async function deliver(input: {
     .in("user_id", [...new Set(targets.map((target) => target.user_id))]);
 
   if (membersError || !members) {
+    await finishPushAttempt(await startPushAttempt({...input,tag:input.payload.tag}),"failed",{errorCode:"memberships_query_failed"});
     return null;
   }
 
@@ -128,6 +131,7 @@ async function deliver(input: {
   const orphaned = targets.filter((target) => !memberIds.has(target.user_id));
   const eligible = targets.filter((target) => memberIds.has(target.user_id));
 
+  for(const target of orphaned){await finishPushAttempt(await startPushAttempt({...input,tag:input.payload.tag,target}),"skipped",{errorCode:"membership_removed"});}
   if (orphaned.length > 0) {
     await supabase
       .from("push_subscriptions")
@@ -142,12 +146,15 @@ async function deliver(input: {
     return [];
   }
 
-  const body = JSON.stringify(input.payload);
   const dead: string[] = [];
 
   const results = await Promise.all(
     eligible.map(async (target): Promise<DeliveryStatus> => {
+      const tracking=await startPushAttempt({...input,tag:input.payload.tag,target});
+      const started=Date.now();
+      const body=JSON.stringify({...input.payload,...(tracking?{tracking}: {})});
       if (!isAllowedPushEndpoint(target.endpoint)) {
+        await finishPushAttempt(tracking,"failed",{errorCode:"invalid_endpoint"});
         await logError({
           source: "server",
           message: "Push nije poslat: endpoint nije push servis pregledača.",
@@ -156,7 +163,7 @@ async function deliver(input: {
       }
 
       try {
-        await webpush.sendNotification(
+        const response=await webpush.sendNotification(
           {
             endpoint: target.endpoint,
             keys: { p256dh: target.p256dh, auth: target.auth },
@@ -164,9 +171,11 @@ async function deliver(input: {
           body,
           SEND_OPTIONS,
         );
+        await finishPushAttempt(tracking,"accepted",{httpStatus:response.statusCode,durationMs:Date.now()-started,payloadBytes:Buffer.byteLength(body)});
         return "sent";
       } catch (sendError) {
         if (isGone(sendError)) {
+          await finishPushAttempt(tracking,"expired",{httpStatus:(sendError as {statusCode?:number}).statusCode,errorCode:"subscription_expired",durationMs:Date.now()-started});
           dead.push(target.id);
           return "expired";
         }
@@ -174,6 +183,7 @@ async function deliver(input: {
         // Razlog je jedino što govori da li je pao servis pregledača (5xx),
         // ključ (401/403) ili poruka (413); u `messages` stoji samo „failed".
         const code = (sendError as { statusCode?: number }).statusCode;
+        await finishPushAttempt(tracking,"failed",{httpStatus:code,errorCode:code?"push_service_rejected":"network_or_timeout",durationMs:Date.now()-started,payloadBytes:Buffer.byteLength(body),errorName:(sendError as {name?:string}).name,transportCode:(sendError as {code?:string}).code});
         await logError({
           source: "server",
           message: `Push nije isporučen: ${code ? `HTTP ${code}` : "bez odgovora servisa"}.`,

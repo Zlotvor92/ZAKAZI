@@ -1,5 +1,6 @@
 "use client";
 
+import { reportPushInteraction } from "@/lib/push-diagnostics-client";
 import { useEffect } from "react";
 import { restoreNotifications } from "@/app/(dashboard)/dashboard/podesavanja/actions";
 import { toInput } from "@/components/dashboard/push-toggle";
@@ -18,9 +19,18 @@ export function ServiceWorkerRegister() {
       return;
     }
 
+    const flush=() => {
+      navigator.serviceWorker.controller?.postMessage({type:"flush-push-receipts"});
+    };
+    const onVisible=() => {if(document.visibilityState==="visible")flush();};
+    window.addEventListener("online",flush);
+    document.addEventListener("visibilitychange",onVisible);
+    navigator.serviceWorker.addEventListener("controllerchange",flush);
     void (async () => {
       try {
         await navigator.serviceWorker.register("/sw.js");
+        reportPushInteraction("worker_registered");
+        flush();
 
         if (!("Notification" in window) || Notification.permission !== "granted") {
           return;
@@ -37,6 +47,11 @@ export function ServiceWorkerRegister() {
         // Bez radnika ostaje obična strana pregledača; ništa drugo ne zavisi od njega.
       }
     })();
+    return () => {
+      window.removeEventListener("online",flush);
+      document.removeEventListener("visibilitychange",onVisible);
+      navigator.serviceWorker.removeEventListener("controllerchange",flush);
+    };
   }, []);
 
   return null;

@@ -50,53 +50,144 @@ self.addEventListener("fetch", (event) => {
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) =>
-  event.waitUntil(self.clients.claim()),
+  event.waitUntil(Promise.allSettled([self.clients.claim(), flushPushReceipts()])),
 );
 
-self.addEventListener("push", (event) => {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch {
-    data = {};
-  }
 
+const PUSH_DIAGNOSTICS_VERSION = "2026-10-20.1";
+let receiptFlush = null;
+function receiptDb() {
+  return new Promise((resolve, reject) => {
+    if (typeof indexedDB === "undefined") { resolve(null); return; }
+    const request = indexedDB.open("doterajme-push-diagnostics", 1);
+    request.onupgradeneeded = () => request.result.createObjectStore("receipts", { keyPath: "eventId" });
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => reject(new Error("Receipt database blocked"));
+  });
+}
+async function receiptStore(mode, operation) {
+  const db = await receiptDb();
+  if (!db) return null;
+  try {
+    return await new Promise((resolve, reject) => {
+      const tx = db.transaction("receipts", mode);
+      const request = operation(tx.objectStore("receipts"));
+      tx.oncomplete = () => resolve(request.result);
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error);
+    });
+  } finally { db.close(); }
+}
+function validTracking(tracking) {
+  return tracking && /^[0-9a-f-]{36}$/i.test(tracking.attemptId || "") &&
+    /^[A-Za-z0-9_-]{43}$/.test(tracking.token || "");
+}
+function receiptDetails(extra = {}) {
+  return {
+    workerVersion: PUSH_DIAGNOSTICS_VERSION,
+    permission: typeof Notification !== "undefined" ? Notification.permission : "unknown",
+    userAgent: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 512) : "unknown",
+    ...(typeof navigator !== "undefined" ? { online: navigator.onLine } : {}),
+    ...extra,
+  };
+}
+async function postReceipt(receipt) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const response = await fetch("/api/push/receipt", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(receipt), signal: controller.signal,
+    });
+    // Invalid/revoked capabilities cannot improve on retry; leave transient failures queued.
+    return response.ok || [400,403,404,413].includes(response.status);
+  } finally { clearTimeout(timer); }
+}
+function flushPushReceipts() {
+  if (receiptFlush) return receiptFlush;
+  receiptFlush = (async () => {
+    const rows = await receiptStore("readonly", store => store.getAll());
+    if (!rows) return;
+    for (const row of rows.slice(0, 64)) {
+      try {
+        if (await postReceipt(row)) await receiptStore("readwrite", store => store.delete(row.eventId));
+      } catch { break; }
+    }
+  })().catch(() => {}).finally(() => { receiptFlush = null; });
+  return receiptFlush;
+}
+async function reportPushEvent(tracking, kind, extra = {}, at = new Date().toISOString()) {
+  if (!validTracking(tracking)) return;
+  const receipt = {
+    ...tracking, eventId: crypto.randomUUID(), kind, clientAt: at,
+    details: receiptDetails(extra),
+  };
+  let stored = false;
+  try {
+    await receiptStore("readwrite", store => store.put(receipt));
+    stored = typeof indexedDB !== "undefined";
+  } catch { /* Storage can be disabled; still attempt the receipt immediately. */ }
+  if (stored) {
+    await flushPushReceipts();
+    await flushPushReceipts();
+    try { await self.registration.sync?.register("push-receipts"); } catch { /* Not available on every browser. */ }
+  } else {
+    try { await postReceipt(receipt); } catch { /* Never block the notification. */ }
+  }
+}
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "flush-push-receipts") event.waitUntil(flushPushReceipts());
+});
+self.addEventListener("sync", (event) => {
+  if (event.tag === "push-receipts") event.waitUntil(flushPushReceipts());
+});
+self.addEventListener("push", (event) => {
+  const receivedAt = new Date().toISOString();
+  let data = {};
+  let malformed = false;
+  try { data = event.data ? event.data.json() : {}; }
+  catch { malformed = true; }
+  if (!data || typeof data !== "object") { data = {}; malformed = true; }
   const title = data.title || "Novo zakazivanje";
   const url = data.url || "/dashboard";
-
-  event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(title, {
-        body: data.body || "",
-        icon: "/icon-192.png",
-        // `badge` se ne crta kao slika: sistem uzme samo alfa kanal i njime
-        // maskira jednu boju. `icon-192.png` je neprozirna, bez alfe, pa je od
-        // nje ispadao pun beli kvadrat umesto znaka. Ovde stoji silueta na
-        // providnoj pozadini, koja je jedino što tu i može da se prikaže.
-        badge: "/badge-96.png",
-        // Vibracija je jedini deo koji radi i kad je telefon u džepu.
-        vibrate: [80, 40, 80],
-        // Oznaka dolazi iz poruke i nosi i šta se desilo i koji je termin.
-        // Adresa kao rezervni izbor je ista za ceo dan, pa bi otkazivanje tiho
-        // zamenilo zakazivanje umesto da stigne kao novo obaveštenje.
-        tag: data.tag || url,
-        data: { url },
-      }),
-      // Kalendar koji je već otvoren ne zna da se nešto promenilo. Poruka ne
-      // nosi podatke, samo kaže stranici da ih ponovo pročita sa servera.
-      notifyOpenWindows({ type: "refresh" }),
-    ]),
-  );
+  const received = reportPushEvent(data.tracking, "received", {}, receivedAt);
+  // Start display immediately. Neither local storage nor network receipts gate it.
+  const display = (async () => {
+    try {
+      await self.registration.showNotification(title, {
+        body: data.body || "", icon: "/icon-192.png", badge: "/badge-96.png",
+        vibrate: [80, 40, 80], tag: data.tag || url,
+        data: { url, tracking: data.tracking },
+      });
+      await reportPushEvent(data.tracking, "show_resolved");
+    } catch (error) {
+      await reportPushEvent(data.tracking, "show_failed", {
+        errorName: String(error?.name || "Error").slice(0,80),
+      });
+    }
+  })();
+  event.waitUntil(Promise.allSettled([
+    received, display, notifyOpenWindows({ type: "refresh" }), flushPushReceipts(),
+    ...(malformed ? [reportPushEvent(data.tracking, "payload_invalid")] : []),
+  ]));
 });
-
 self.addEventListener("notificationclick", (event) => {
+  const tracking = event.notification.data?.tracking;
+  const clicked = reportPushEvent(tracking, "clicked", { action: String(event.action || "").slice(0,80) });
   event.notification.close();
-  const target = new URL(
-    event.notification.data?.url || "/dashboard",
-    self.location.origin,
-  ).href;
-
-  event.waitUntil(openTarget(target));
+  const target = new URL(event.notification.data?.url || "/dashboard", self.location.origin);
+  // A notification must never navigate outside this app.
+  if (target.origin !== self.location.origin) target.href = self.location.origin + "/dashboard";
+  const opening = openTarget(target.href).then(
+    (opened) => reportPushEvent(tracking,opened ? "click_opened" : "click_failed",opened ? {} : {errorName:"WindowNotOpened"}),
+    (error) => reportPushEvent(tracking,"click_failed",{errorName:String(error?.name || "Error").slice(0,80)}),
+  );
+  event.waitUntil(Promise.allSettled([clicked, opening]));
+});
+self.addEventListener("notificationclose", (event) => {
+  // Browser-reported dismissal only; programmatic close is not evidence of dismissal.
+  event.waitUntil(reportPushEvent(event.notification.data?.tracking, "closed"));
 });
 
 function dashboardWindows() {
@@ -131,14 +222,14 @@ function openTarget(target) {
       try {
         const focused = await open.focus();
         if (focused && "navigate" in focused) {
-          await focused.navigate(target);
-          return;
+          const navigated = await focused.navigate(target);
+          return Boolean(navigated);
         }
       } catch {
         // Neki pregledači ne dozvoljavaju `navigate`; otvara se nova kartica.
       }
     }
 
-    await self.clients.openWindow(target);
+    return Boolean(await self.clients.openWindow(target));
   });
 }

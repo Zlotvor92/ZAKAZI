@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState, useTransition } from "react";
+import { reportPushInteraction } from "@/lib/push-diagnostics-client";
 import { Button } from "@/components/ui/button";
 import { classifyPushFailure } from "@/lib/domain/push-failure";
 import { sr } from "@/lib/i18n/sr";
@@ -107,6 +108,7 @@ export function PushToggle({
       }
 
       const check = await onCheck(subscription.endpoint);
+      reportPushInteraction("check_result",{result:check});
       setState(check === "unknown" ? "unverified" : check);
     } catch {
       setState("unverified");
@@ -116,6 +118,7 @@ export function PushToggle({
   useEffect(() => {
     // Tek ovde, ne pri prvom crtanju: server ne zna koji je telefon u pitanju,
     // pa bi se prvi otisak razlikovao od onog u pregledaču.
+    reportPushInteraction("browser_state");
     setApple(isApplePhone());
     setAndroid(/Android/.test(navigator.userAgent));
 
@@ -138,6 +141,7 @@ export function PushToggle({
   }, [verify]);
 
   function enable() {
+    reportPushInteraction("enable_clicked");
     setMessage(null);
     startTransition(async () => {
       let subscription: PushSubscription;
@@ -147,6 +151,7 @@ export function PushToggle({
       // slučajeva — i nije davalo ništa što bi se moglo javiti dalje.
       try {
         const permission = await Notification.requestPermission();
+        reportPushInteraction("permission_result",{result:permission});
         if (permission !== "granted") {
           setState(permission === "denied" ? "blocked" : "off");
           return;
@@ -164,6 +169,7 @@ export function PushToggle({
         // servisa od pogrešnog ključa, a ona nema prevod koji bi značio
         // više — zato ide u zagradi, da može da se pročita i javi.
         const failure = classifyPushFailure(cause);
+        reportPushInteraction("subscription_error",{errorName:failure.name?.slice(0,80) || "Error"});
         const text =
           failure.kind === "service"
             ? sr.settings.pushServiceFailed
@@ -197,11 +203,13 @@ export function PushToggle({
         return;
       }
 
+      reportPushInteraction("subscription_saved");
       setState("on");
     });
   }
 
   function disable() {
+    reportPushInteraction("disable_clicked");
     setMessage(null);
     startTransition(async () => {
       try {
@@ -226,6 +234,7 @@ export function PushToggle({
           await subscription.unsubscribe();
         }
 
+        reportPushInteraction("subscription_removed");
         setState("off");
       } catch {
         setMessage(sr.settings.pushDisableFailed);
@@ -234,10 +243,12 @@ export function PushToggle({
   }
 
   function sendTest() {
+    reportPushInteraction("test_clicked");
     setMessage(null);
     startTransition(async () => {
       try {
         const result = await onTest();
+        reportPushInteraction("test_result",{result});
         setMessage(
           {
             accepted: sr.settings.pushTestAccepted,
