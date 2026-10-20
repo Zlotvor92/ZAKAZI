@@ -25,7 +25,6 @@ vi.mock("@/lib/messaging/push", () => ({ notifyTenant: notify }));
 vi.mock("@/lib/proof-cookie", () => ({ rememberProof: remember }));
 
 import { submitBooking } from "@/app/(public)/[tenantSlug]/actions";
-import { sr } from "@/lib/i18n/sr";
 
 const REQUEST_ID = "6f1c3a52-0a9e-4a2e-9f0e-0d5b4c1f7a11";
 const PROOF = "P".repeat(43);
@@ -118,49 +117,12 @@ describe("submitBooking", () => {
   });
 });
 
-describe("submitBooking: tajna termina", () => {
-  it("prosleđuje tajnu bazi i pamti je u kolačiću ovog salona", async () => {
+describe("submitBooking without a management secret", () => {
+  it("accepts booking without a secret and writes no proof cookie", async () => {
     book.mockResolvedValue({ ok: true, appointment });
-
-    await submitBooking(form({ requestId: REQUEST_ID }));
-
-    expect(book).toHaveBeenCalledWith(
-      expect.objectContaining({ manageProof: PROOF }),
-    );
-    expect(remember).toHaveBeenCalledWith("studio", PROOF);
-  });
-
-  it("i ponovljen zahtev postavlja kolačić, jer se prvi odgovor izgubio", async () => {
-    book.mockResolvedValue({ ok: true, replayed: true, appointment });
-
-    await submitBooking(form({ requestId: REQUEST_ID }));
-
-    expect(remember).toHaveBeenCalledWith("studio", PROOF);
-  });
-
-  it("odbijeno zakazivanje ne pamti tajnu", async () => {
-    book.mockResolvedValue({ ok: false, reason: "slot_taken" });
-
-    await submitBooking(form());
-
-    expect(remember).not.toHaveBeenCalled();
-  });
-
-  it("bez tajne se zahtev odbija pre poziva baze", async () => {
     const data = form();
     data.delete("manageProof");
-
-    const result = await submitBooking(data);
-
-    expect(result).toEqual({ status: "error", message: sr.booking.refreshPage });
-    expect(book).not.toHaveBeenCalled();
+    expect((await submitBooking(data)).status).toBe("booked");
     expect(remember).not.toHaveBeenCalled();
-  });
-
-  it("tajna pogrešnog oblika se odbija pre poziva baze", async () => {
-    const result = await submitBooking(form({ manageProof: "kratka" }));
-
-    expect(result).toEqual({ status: "error", message: sr.booking.refreshPage });
-    expect(book).not.toHaveBeenCalled();
   });
 });

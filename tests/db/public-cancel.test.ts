@@ -282,7 +282,7 @@ describe("ime i boje salona za otkazivanje", () => {
   });
 });
 
-describe("spisak termina: broj telefona i dokaz zajedno", () => {
+describe("spisak termina: phone-only access", () => {
   it("vraća budući termin kad se poklope broj i tajna", async () => {
     await withRollback(async (db) => {
       const phone = "+381645551001";
@@ -295,16 +295,14 @@ describe("spisak termina: broj telefona i dokaz zajedno", () => {
     });
   });
 
-  it("sam broj telefona ne otvara ništa: bez dokaza i sa tuđim dokazom", async () => {
+  it("phone alone finds an appointment regardless of cookie or secret", async () => {
     await withRollback(async (db) => {
       const phone = "+381645551002";
       const base = await salonWithAppointment(db, phone);
-
-      expect(await upcoming(db, base.slug, phone, [])).toEqual([]);
-      expect(await upcoming(db, base.slug, phone, [newSecret()])).toEqual([]);
-      expect(await upcoming(db, base.slug, phone, [], "nepoznat-uredjaj")).toEqual(
-        [],
-      );
+      for (const device of [null, "", "another-browser"]) {
+        const list = await upcoming(db, base.slug, phone, [], device);
+        expect(list!.map(row => row.id)).toEqual([base.appointmentId]);
+      }
     });
   });
 
@@ -318,26 +316,15 @@ describe("spisak termina: broj telefona i dokaz zajedno", () => {
     });
   });
 
-  it("odgovor je isti za pogrešan broj, tuđu tajnu i izostanak dokaza", async () => {
-    // Razlika u odgovoru bi bila pitanje „postoji li termin za ovaj broj".
+  it("an incorrect phone still returns no appointments", async () => {
     await withRollback(async (db) => {
-      const phone = "+381645551004";
-      const base = await salonWithAppointment(db, phone);
-
-      const answers = [
-        await upcoming(db, base.slug, "+381645559999", [base.secret]),
-        await upcoming(db, base.slug, phone, [newSecret()]),
-        await upcoming(db, base.slug, phone, []),
-        await upcoming(db, base.slug, "+381645559999", []),
-      ];
-
-      for (const answer of answers) {
-        expect(answer).toEqual([]);
-      }
+      const base = await salonWithAppointment(db, "+381645551004");
+      expect(await upcoming(db, base.slug, "+381645559999", [base.secret])).toEqual([]);
+      expect(await upcoming(db, base.slug, "+381645559999", [])).toEqual([]);
     });
   });
 
-  it("tajna jednog termina ne otvara drugi termin istog broja", async () => {
+  it("phone finds all appointments for that salon", async () => {
     await withRollback(async (db) => {
       const phone = "+381645551005";
       const base = await salonWithAppointment(db, phone);
@@ -357,7 +344,7 @@ describe("spisak termina: broj telefona i dokaz zajedno", () => {
       );
 
       const onlyFirst = await upcoming(db, base.slug, phone, [base.secret]);
-      expect(onlyFirst!.map((row) => row.id)).toEqual([base.appointmentId]);
+      expect(onlyFirst!.map((row) => row.id)).toEqual([base.appointmentId, second.id]);
 
       const both = await upcoming(db, base.slug, phone, [
         secondSecret,
@@ -433,25 +420,17 @@ describe("spisak termina: broj telefona i dokaz zajedno", () => {
     });
   });
 
-  it("gleda samo prvih deset tajni", async () => {
-    // Zahtev ne sme da natera bazu na proizvoljno mnogo poređenja.
+  it("legacy secrets no longer affect lookup", async () => {
     await withRollback(async (db) => {
       const phone = "+381645551010";
       const base = await salonWithAppointment(db, phone);
-      const filler = Array.from({ length: 10 }, () => newSecret());
-
-      expect(
-        await upcoming(db, base.slug, phone, [...filler, base.secret]),
-      ).toEqual([]);
-      expect(
-        (await upcoming(db, base.slug, phone, [...filler.slice(1), base.secret]))!
-          .length,
-      ).toBe(1);
+      expect(await upcoming(db, base.slug, phone, Array.from({ length: 11 }, newSecret))).toHaveLength(1);
     });
   });
+
 });
 
-describe("otkazivanje: broj telefona i dokaz zajedno", () => {
+describe("otkazivanje: phone-only access", () => {
   it("prebacuje termin u cancelled_by_client i ostavlja trag u istoriji", async () => {
     await withRollback(async (db) => {
       const phone = "+381645552001";
@@ -525,28 +504,12 @@ describe("otkazivanje: broj telefona i dokaz zajedno", () => {
     });
   });
 
-  it("sam broj telefona ne otkazuje tuđ termin", async () => {
+  it("phone alone cancels without a device or secret", async () => {
     await withRollback(async (db) => {
       const phone = "+381645552003";
       const base = await salonWithAppointment(db, phone);
-
-      for (const secrets of [[], [newSecret()]]) {
-        const result = await asAnon(db, () =>
-          cancel(db, {
-            slug: base.slug,
-            phone,
-            appointmentId: base.appointmentId,
-            secrets,
-          }),
-        );
-        expect(result).toEqual({ ok: false, reason: "not_found" });
-      }
-
-      const row = await db.query<{ status: string }>(
-        "select status from appointments where id = $1",
-        [base.appointmentId],
-      );
-      expect(row.rows[0]!.status).toBe("confirmed");
+      const result = await cancel(db, { slug: base.slug, phone, appointmentId: base.appointmentId, secrets: [] });
+      expect(result.ok).toBe(true);
     });
   });
 
@@ -572,7 +535,7 @@ describe("otkazivanje: broj telefona i dokaz zajedno", () => {
     });
   });
 
-  it("tajna drugog termina istog broja ne otkazuje ovaj termin", async () => {
+  it("legacy secrets do not restrict cancellation by phone", async () => {
     await withRollback(async (db) => {
       const phone = "+381645552005";
       const base = await salonWithAppointment(db, phone);
@@ -600,7 +563,7 @@ describe("otkazivanje: broj telefona i dokaz zajedno", () => {
         }),
       );
 
-      expect(result).toEqual({ ok: false, reason: "not_found" });
+      expect(result.ok).toBe(true);
     });
   });
 
@@ -777,7 +740,7 @@ describe("otkazivanje: broj telefona i dokaz zajedno", () => {
     });
   });
 
-  it("prijavljena vlasnica ne dobija ništa više od dokaza", async () => {
+  it("phone lookup does not depend on a signed-in salon session", async () => {
     await withRollback(async (db) => {
       const phone = "+381645552014";
       const base = await salonWithAppointment(db, phone);
@@ -791,7 +754,7 @@ describe("otkazivanje: broj telefona i dokaz zajedno", () => {
           secrets: [],
         }),
       );
-      expect(without).toEqual({ ok: false, reason: "not_found" });
+      expect(without.ok).toBe(true);
 
       const withProof = await asUser(db, userId, () =>
         cancel(db, {
@@ -801,7 +764,7 @@ describe("otkazivanje: broj telefona i dokaz zajedno", () => {
           secrets: [base.secret],
         }),
       );
-      expect(withProof.ok).toBe(true);
+      expect(withProof).toEqual({ ok: false, reason: "already_cancelled" });
     });
   });
 });
@@ -842,9 +805,7 @@ describe("zakazivanje čuva samo heš tajne", () => {
     });
   });
 
-  it("zakazan termin se otvara brojem i tajnom, ne brojem i uređajem", async () => {
-    // Uređaj je isti u svim salonima i čita ga svaki član salona iz istorije;
-    // novi termin zato ne sme da se otvara njime.
+  it("new appointments are found by phone without a secret", async () => {
     await withRollback(async (db) => {
       const salon = await bookingSalon(db);
       const phone = "+381645123482";
@@ -861,7 +822,7 @@ describe("zakazivanje čuva samo heš tajne", () => {
       expect(
         (await upcoming(db, salon.slug, phone, [secret], "uredjaj-b"))!.length,
       ).toBe(1);
-      expect(await upcoming(db, salon.slug, phone, [], "uredjaj-b")).toEqual([]);
+      expect(await upcoming(db, salon.slug, phone, [], "uredjaj-b")).toHaveLength(1);
     });
   });
 
@@ -942,7 +903,7 @@ describe("prelazna grana: termini zakazani pre tajne", () => {
     });
   });
 
-  it("drugi uređaj, prazan uređaj i izostanak uređaja ne otvaraju termin", async () => {
+  it("all browsers can find old appointments by phone", async () => {
     await withRollback(async (db) => {
       const salon = await bookingSalon(db);
       const phone = "+381645123486";
@@ -955,7 +916,7 @@ describe("prelazna grana: termini zakazani pre tajne", () => {
       expect(booked.ok).toBe(true);
 
       for (const device of ["uredjaj-drugi", "", null]) {
-        expect(await upcoming(db, salon.slug, phone, [], device)).toEqual([]);
+        expect(await upcoming(db, salon.slug, phone, [], device)).toHaveLength(1);
       }
     });
   });
@@ -977,10 +938,7 @@ describe("prelazna grana: termini zakazani pre tajne", () => {
     });
   });
 
-  it("termin koji je upisala vlasnica se ne otvara njenim uređajem", async () => {
-    // Vlasnica i klijentkinja mogu da imaju isti uređaj u istoriji (vlasnica
-    // zakazuje na telefonu sa kog je i sama klijentkinja); događaj sa akterom
-    // `user` nije dokaz da je termin klijentkinjin.
+  it("manually entered appointments can be found by phone", async () => {
     await withRollback(async (db) => {
       const salon = await bookingSalon(db);
       const phone = "+381645123488";
@@ -1008,11 +966,11 @@ describe("prelazna grana: termini zakazani pre tajne", () => {
 
       expect(
         await upcoming(db, salon.slug, phone, [], "uredjaj-vlasnice"),
-      ).toEqual([]);
+      ).toHaveLength(1);
     });
   });
 
-  it("termin koji je upisala vlasnica nema ni tajnu ni uređaj, pa se ne otkazuje preko sajta", async () => {
+  it("manually entered appointments can be cancelled by phone", async () => {
     await withRollback(async (db) => {
       const phone = "+381645552020";
       const tenantId = await createTenant(db);
@@ -1038,7 +996,7 @@ describe("prelazna grana: termini zakazani pre tajne", () => {
         }),
       );
 
-      expect(result).toEqual({ ok: false, reason: "not_found" });
+      expect(result.ok).toBe(true);
     });
   });
 });

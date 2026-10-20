@@ -796,15 +796,7 @@ export const sr = {
       eyebrow: "Cenovnik",
       back: "Nazad na zakazivanje",
     },
-    /** Posle zakazivanja: link za otkazivanje sa drugog telefona. */
-    saveLink: {
-      title: "Otkazivanje sa drugog telefona",
-      body: "Termin možeš da otkažeš na ovom telefonu, preko „Pronađi svoj termin“. Zakazuješ li u Instagramu ili ćeš otkazivati sa drugog telefona, sačuvaj link.",
-      button: "Sačuvaj link za otkazivanje",
-      copied: "Link je kopiran. Sačuvaj ga u poruke ili beleške.",
-      manual: "Pritisni i drži link da ga kopiraš:",
-      shareTitle: "Link za otkazivanje termina",
-    },
+
   },
   blog: {
     navLabel: "Blog",
@@ -864,7 +856,7 @@ export const sr = {
           {
             heading: "Ako ne možeš da dođeš",
             paragraphs: [
-              "Na stranici salona pritisni „Pronađi svoj termin“, upiši isti broj telefona sa kog si zakazala i izaberi termin koji otkazuješ. Radi na telefonu na kom si zakazala; sa drugog telefona otvori link koji si sačuvala pri zakazivanju. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
+              "Na stranici salona pritisni „Pronađi svoj termin“, upiši broj telefona koji si navela pri zakazivanju i izaberi termin koji otkazuješ. Možeš da koristiš bilo koji telefon ili pregledač. Pre otkazivanja te aplikacija još jednom pita da li si sigurna.",
               "Ako si termin dodala u kalendar telefona, obriši ga i odatle, da ti podsetnik ne zvoni za termin koji više ne postoji.",
             ],
           },
@@ -1100,15 +1092,13 @@ export const sr = {
     title: "Pronađi svoj termin",
     back: "Nazad na zakazivanje",
     intro:
-      "Upiši broj telefona sa kog si zakazala. Prikazaćemo tvoje zakazane termine, a svaki možeš i da otkažeš — na telefonu na kom si zakazala ili preko linka koji si sačuvala.",
-    introLink:
-      "Otvorila si link za otkazivanje. Upiši broj telefona sa kog si zakazala.",
+      "Upiši broj telefona koji si navela pri zakazivanju. Prikazaćemo tvoje zakazane termine, a svaki možeš i da otkažeš.",
     submit: "Pronađi termine",
     submitting: "Tražim…",
     changePhone: "Drugi broj",
-    empty: "Nismo našli termin za taj broj na ovom telefonu.",
+    empty: "Nismo našli zakazan termin za taj broj.",
     emptyHelp:
-      "Proveri da li si dobro upisala broj. Otkazivanje radi na telefonu na kom si zakazala ili preko linka koji si sačuvala pri zakazivanju. Zakazivala si iz Instagrama? Otvori stranicu salona iz iste aplikacije. Ako ne možeš da pronađeš termin, javi se salonu na Instagramu — salon vidi sve zakazane termine.",
+      "Proveri da li si unela broj koji si navela pri zakazivanju. Ako i dalje ne možeš da pronađeš termin, javi se salonu na Instagramu.",
     cancelButton: "Otkaži",
     lateWarning:
       "Do termina je manje od 24 sata. Ako ga otkažeš, računa se kao kasno otkazivanje — posle dva takva ne možeš sama da zakažeš preko sajta.",

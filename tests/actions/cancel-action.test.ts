@@ -18,7 +18,7 @@ vi.mock("next/server", () => ({
 }));
 vi.mock("@/lib/db/public-cancel", () => ({
   cancelPublicAppointment: cancel,
-  getAppointmentsForProof: lookup,
+  getAppointmentsForPhone: lookup,
 }));
 vi.mock("@/lib/device", () => ({
   deviceId: async () => "device-1",
@@ -39,7 +39,6 @@ import { sr } from "@/lib/i18n/sr";
 
 const APPOINTMENT_ID = "3b1d1c86-3d3c-4b0a-8a16-6f1f5c0a9d33";
 const COOKIE_SECRET = "C".repeat(43);
-const LINK_SECRET = "L".repeat(43);
 
 function form(extra: Record<string, string> = {}): FormData {
   const data = new FormData();
@@ -147,129 +146,30 @@ describe("cancelAppointment: ponavljanje", () => {
   });
 });
 
-describe("cancelAppointment: dokaz", () => {
-  it("uz broj šalje bazi tajne iz kolačića i uređaj", async () => {
-    cancel.mockResolvedValue({ ok: false, reason: "not_found" });
-
-    await cancelAppointment(form());
-
-    expect(cancel).toHaveBeenCalledWith(
-      expect.objectContaining({
-        phoneE164: "+381645123480",
-        secrets: [COOKIE_SECRET],
-        deviceId: "device-1",
-      }),
-    );
-  });
-
-  it("tajnu iz linka dodaje ispred onih iz kolačića", async () => {
-    cancel.mockResolvedValue({ ok: false, reason: "not_found" });
-
-    await cancelAppointment(form({ linkSecret: LINK_SECRET }));
-
-    expect(cancel).toHaveBeenCalledWith(
-      expect.objectContaining({ secrets: [LINK_SECRET, COOKIE_SECRET] }),
-    );
-  });
-
-  it("tajnu pogrešnog oblika iz linka ne šalje bazi", async () => {
-    cancel.mockResolvedValue({ ok: false, reason: "not_found" });
-
-    await cancelAppointment(form({ linkSecret: "nije-tajna" }));
-
-    expect(cancel).toHaveBeenCalledWith(
-      expect.objectContaining({ secrets: [COOKIE_SECRET] }),
-    );
-  });
-
-  it("bez kolačića i linka šalje prazan spisak, ne broj samostalno", async () => {
-    proofs.current = [];
-    cancel.mockResolvedValue({ ok: false, reason: "not_found" });
-
-    const result = await cancelAppointment(form());
-
-    expect(cancel).toHaveBeenCalledWith(
-      expect.objectContaining({ secrets: [] }),
-    );
-    expect(result).toEqual({
-      status: "error",
-      message: sr.cancel.rejected.not_found,
-    });
-    expect(notify).not.toHaveBeenCalled();
-  });
-});
-
-describe("lookupAppointments", () => {
-  it("traži po broju, tajnama iz kolačića i uređaju", async () => {
+describe("phone-only appointment management", () => {
+  it("looks up a phone without reading cookies or a link", async () => {
     lookup.mockResolvedValue(found);
-
     const result = await lookupAppointments(lookupForm());
-
-    expect(lookup).toHaveBeenCalledTimes(1);
-    expect(lookup).toHaveBeenCalledWith({
-      slug: "studio",
-      phoneE164: "+381645123480",
-      secrets: [COOKIE_SECRET],
-      deviceId: "device-1",
+    expect(lookup).toHaveBeenCalledExactlyOnceWith({
+      slug: "studio", phoneE164: "+381645123480",
     });
-    expect(result).toEqual({
-      status: "found",
-      phone: "+381645123480",
-      appointments: found,
-    });
+    expect(result).toEqual({ status: "found", phone: "+381645123480", appointments: found });
     expect(remember).not.toHaveBeenCalled();
   });
 
-  it("bez dokaza vraća prazan spisak kao i za pogrešan broj", async () => {
-    proofs.current = [];
-    lookup.mockResolvedValue([]);
-
-    const result = await lookupAppointments(lookupForm());
-
-    expect(result).toEqual({
-      status: "found",
-      phone: "+381645123480",
-      appointments: [],
+  it("normalizes the cancellation phone and needs no secret", async () => {
+    cancel.mockResolvedValue({ ok: false, reason: "already_cancelled" });
+    expect(await cancelAppointment(form({ phone: "064 512 3480" }))).toEqual({ status: "cancelled" });
+    expect(cancel).toHaveBeenCalledExactlyOnceWith({
+      slug: "studio", phoneE164: "+381645123480", appointmentId: APPOINTMENT_ID,
+      deviceId: "device-1", networkHash: "net-hash",
     });
   });
 
-  it("tajnu iz linka pamti tek kad sama otvara termin tog broja", async () => {
+  it("ignores old link secrets", async () => {
     lookup.mockResolvedValue(found);
-
-    await lookupAppointments(lookupForm({ linkSecret: LINK_SECRET }));
-
-    expect(lookup).toHaveBeenNthCalledWith(1, {
-      slug: "studio",
-      phoneE164: "+381645123480",
-      secrets: [LINK_SECRET],
-      deviceId: null,
-    });
-    expect(remember).toHaveBeenCalledWith("studio", LINK_SECRET);
-    expect(lookup).toHaveBeenNthCalledWith(2, {
-      slug: "studio",
-      phoneE164: "+381645123480",
-      secrets: [LINK_SECRET, COOKIE_SECRET],
-      deviceId: "device-1",
-    });
-  });
-
-  it("izmišljen link ne ulazi u kolačić i ne istiskuje prave tajne", async () => {
-    lookup.mockResolvedValueOnce([]).mockResolvedValueOnce(found);
-
-    const result = await lookupAppointments(
-      lookupForm({ linkSecret: LINK_SECRET }),
-    );
-
-    expect(remember).not.toHaveBeenCalled();
-    expect(result.status).toBe("found");
-  });
-
-  it("link pogrešnog oblika se ne pita u bazi", async () => {
-    lookup.mockResolvedValue(found);
-
-    await lookupAppointments(lookupForm({ linkSecret: "nije-tajna" }));
-
-    expect(lookup).toHaveBeenCalledTimes(1);
+    await lookupAppointments(lookupForm({ linkSecret: "old-link" }));
+    expect(lookup).toHaveBeenCalledExactlyOnceWith({ slug: "studio", phoneE164: "+381645123480" });
     expect(remember).not.toHaveBeenCalled();
   });
 

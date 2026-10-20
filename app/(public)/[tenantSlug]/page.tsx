@@ -132,8 +132,7 @@ export function SalonHeader({
 /**
  * Ulaz za klijentkinju koja već ima termin. Stoji odmah ispod zaglavlja, ne u
  * podnožju: ko dođe da vidi ili otkaže termin ne sme da pretražuje celu stranu
- * za sitan link. Termin se otvara brojem telefona i dokazom da je zakazan sa
- * ovog pregledača (ili linkom koji je sačuvan); vidi `lib/domain/manage-proof.ts`.
+ * za sitan link. Termin se pronalazi brojem telefona navedenim pri zakazivanju.
  */
 export function FindAppointmentLink({ slug }: { slug: string }) {
   return (

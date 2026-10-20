@@ -114,8 +114,6 @@ export async function bookPublicAppointment(input: {
   deviceId: string | null;
   networkHash: string | null;
   requestId: string | null;
-  /** Tajna termina; baza čuva samo njen heš. Vidi `lib/domain/manage-proof.ts`. */
-  manageProof: string;
 }): Promise<BookResult> {
   const supabase = createAdminClient();
 
@@ -128,7 +126,7 @@ export async function bookPublicAppointment(input: {
     p_device_id: input.deviceId,
     p_network_hash: input.networkHash,
     p_request_id: input.requestId,
-    p_manage_proof: input.manageProof,
+    p_manage_proof: null,
   });
 
   if (error) {
