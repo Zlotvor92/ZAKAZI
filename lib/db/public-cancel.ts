@@ -45,31 +45,18 @@ const upcomingAppointmentSchema = z.object({
 
 export type UpcomingAppointment = z.infer<typeof upcomingAppointmentSchema>;
 
-/**
- * Pretraga i otkazivanje idu preko `service_role`, iz istog razloga kao
- * zakazivanje: hash mreže i uređaj mora da određuje server, ne pozivalac.
- *
- * Budući termini datog broja telefona u salonu, ali samo oni koje otvara i
- * dokaz: tajna termina iz kolačića ili linka, ili (za termine zakazane pre
- * tajne) uređaj sa kog su zakazani. Sam broj telefona ne otvara ništa.
- *
- * `null` kad salon ne postoji ili je suspendovan; prazan niz u svakom drugom
- * slučaju — pogrešan broj, nema dokaza, nema termina — jedna poruka na strani,
- * da odgovor ne otkrije šta postoji.
- */
-export async function getAppointmentsForProof(input: {
+/** Phone matching is scoped to the salon; cookies and links are not required. */
+export async function getAppointmentsForPhone(input: {
   slug: string;
   phoneE164: string;
-  secrets: string[];
-  deviceId: string | null;
 }): Promise<UpcomingAppointment[] | null> {
   const supabase = createAdminClient();
 
   const { data, error } = await supabase.rpc("public_appointments_for_proof", {
     p_slug: input.slug,
     p_phone_e164: input.phoneE164,
-    p_secrets: input.secrets,
-    p_device_id: input.deviceId,
+    p_secrets: [],
+    p_device_id: null,
   });
 
   if (error) {
@@ -101,7 +88,6 @@ export async function cancelPublicAppointment(input: {
   slug: string;
   phoneE164: string;
   appointmentId: string;
-  secrets: string[];
   deviceId: string | null;
   networkHash: string | null;
 }): Promise<CancelResult> {
@@ -111,7 +97,7 @@ export async function cancelPublicAppointment(input: {
     p_slug: input.slug,
     p_phone_e164: input.phoneE164,
     p_appointment_id: input.appointmentId,
-    p_secrets: input.secrets,
+    p_secrets: [],
     p_device_id: input.deviceId,
     p_network_hash: input.networkHash,
   });
