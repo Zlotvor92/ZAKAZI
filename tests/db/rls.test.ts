@@ -61,7 +61,7 @@ describe("pokrivenost", () => {
 
       // Broj je namerno zakucan: nova tabela obara ovaj test i tera da se
       // politika napiše sada, a ne kad se primeti da nešto curi.
-      expect(result.rows.length).toBe(18);
+      expect(result.rows.length).toBe(21);
 
       // Tabele bez ijedne politike, i to je najstroža moguća postavka: uz
       // uključen RLS bez politike im kroz API ne pristupa niko, samo

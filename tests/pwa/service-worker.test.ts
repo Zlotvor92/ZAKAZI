@@ -36,7 +36,7 @@ function fakeWindow(
   return self;
 }
 
-function loadWorker(windows: FakeWindow[]) {
+function loadWorker(windows: FakeWindow[], tracked = false, outbox?: Map<string, unknown>) {
   const listeners: Record<string, (event: unknown) => void> = {};
   const showNotification = vi.fn(async () => {});
   const openWindow = vi.fn(async () => null);
@@ -55,13 +55,36 @@ function loadWorker(windows: FakeWindow[]) {
     },
   };
 
-  const networkFetch = vi.fn();
+  const networkFetch = vi.fn(async () => new Response(null,{status:204}));
 
   vm.runInNewContext(source, {
     self: scope,
     URL,
     Response,
     fetch: networkFetch,
+    ...(outbox ? {indexedDB:{
+      open:()=>{
+        const db={
+          createObjectStore:()=>{},
+          close:()=>{},
+          transaction:()=>{
+            const tx:{oncomplete?:()=>void;objectStore:()=>unknown}={
+              objectStore:()=>({
+                put:(row:{eventId:string})=>{outbox.set(row.eventId,row);return {result:row.eventId};},
+                getAll:()=>({result:[...outbox.values()]}),
+                delete:(id:string)=>{outbox.delete(id);return {result:undefined};},
+              }),
+            };
+            queueMicrotask(()=>tx.oncomplete?.());
+            return tx;
+          },
+        };
+        const request:{result:typeof db;onsuccess?:()=>void}={result:db};
+        queueMicrotask(()=>request.onsuccess?.());
+        return request;
+      },
+    }} : {}),
+    ...(tracked ? { crypto, AbortController, setTimeout, clearTimeout, Notification:{permission:"granted"}, navigator:{userAgent:"test",onLine:true} } : {}),
   });
 
   async function dispatch(name: string, event: Record<string, unknown>) {
@@ -203,4 +226,54 @@ describe("otvaranje bez veze", () => {
     expect(result).toEqual([]);
     expect(worker.networkFetch).not.toHaveBeenCalled();
   });
+});
+
+const tracking={attemptId:"f3c86798-64a2-4f9d-8e95-b70bf6a80bb1",token:"x".repeat(43)};
+describe("push lifecycle diagnostics",()=>{
+ it("reports worker receipt and display API resolution separately",async()=>{
+ const worker=loadWorker([],true);
+ await worker.dispatch("push",{data:{json:()=>({...payload,tracking})}});
+ const receipts=worker.networkFetch.mock.calls.map(call=>JSON.parse(String((call as unknown as [string,RequestInit])[1].body)));
+ expect(receipts.map(r=>r.kind)).toEqual(expect.arrayContaining(["received","show_resolved"]));
+ expect(receipts.every(r=>r.attemptId===tracking.attemptId)).toBe(true);
+ expect(worker.showNotification.mock.calls[0]).toEqual([payload.title,expect.objectContaining({data:{url:payload.url,tracking}})]);
+ });
+ it("network failure cannot suppress display",async()=>{
+ const worker=loadWorker([],true);worker.networkFetch.mockRejectedValue(new TypeError("offline"));
+ await worker.dispatch("push",{data:{json:()=>({...payload,tracking})}});
+ expect(worker.showNotification).toHaveBeenCalledOnce();
+ });
+ it("captures display API errors without falsely recording success",async()=>{
+ const worker=loadWorker([],true);
+ worker.showNotification.mockRejectedValue(Object.assign(new Error("blocked"),{name:"NotAllowedError"}));
+ await worker.dispatch("push",{data:{json:()=>({...payload,tracking})}});
+ const receipts=worker.networkFetch.mock.calls.map(call=>JSON.parse(String((call as unknown as [string,RequestInit])[1].body)));
+ expect(receipts.map(r=>r.kind)).toContain("show_failed");
+ expect(receipts.map(r=>r.kind)).not.toContain("show_resolved");
+ });
+ it("records clicks and browser-reported close separately",async()=>{
+ const worker=loadWorker([],true);
+ const notification={close:vi.fn(),data:{url:payload.url,tracking}};
+ await worker.dispatch("notificationclick",{notification,action:""});
+ await worker.dispatch("notificationclose",{notification});
+ const kinds=worker.networkFetch.mock.calls.map(call=>JSON.parse(String((call as unknown as [string,RequestInit])[1].body)).kind);
+ expect(kinds).toEqual(expect.arrayContaining(["clicked","click_opened","closed"]));
+ });
+});
+
+describe("durable notification receipts",()=>{
+ it("replays offline receipts on the next worker wake without generating new events",async()=>{
+ const outbox=new Map<string,unknown>();
+ const offline=loadWorker([],true,outbox);
+ offline.networkFetch.mockRejectedValue(new TypeError("offline"));
+ await offline.dispatch("push",{data:{json:()=>({...payload,tracking})}});
+ expect(offline.showNotification).toHaveBeenCalledOnce();
+ expect(outbox.size).toBe(2);
+ const ids=[...outbox.keys()];
+ const online=loadWorker([],true,outbox);
+ await online.dispatch("message",{data:{type:"flush-push-receipts"}});
+ expect(outbox.size).toBe(0);
+ const sentIds=online.networkFetch.mock.calls.map(call=>JSON.parse(String((call as unknown as [string,RequestInit])[1].body)).eventId);
+ expect(sentIds.sort()).toEqual(ids.sort());
+ });
 });
