@@ -30,6 +30,7 @@ function fakeWindow(
       if (options.navigateFails) {
         throw new TypeError("navigate nije dozvoljen");
       }
+      return self;
     }),
     postMessage: vi.fn(),
   };
@@ -252,7 +253,7 @@ describe("push lifecycle diagnostics",()=>{
  expect(receipts.map(r=>r.kind)).not.toContain("show_resolved");
  });
  it("records clicks and browser-reported close separately",async()=>{
- const worker=loadWorker([],true);
+ const worker=loadWorker([fakeWindow("/dashboard")],true);
  const notification={close:vi.fn(),data:{url:payload.url,tracking}};
  await worker.dispatch("notificationclick",{notification,action:""});
  await worker.dispatch("notificationclose",{notification});
@@ -275,5 +276,14 @@ describe("durable notification receipts",()=>{
  expect(outbox.size).toBe(0);
  const sentIds=online.networkFetch.mock.calls.map(call=>JSON.parse(String((call as unknown as [string,RequestInit])[1].body)).eventId);
  expect(sentIds.sort()).toEqual(ids.sort());
+ });
+});
+
+describe("notification navigation failures",()=>{
+ it("does not claim a window opened when the browser returns null",async()=>{
+ const worker=loadWorker([],true);
+ await worker.dispatch("notificationclick",{notification:{close:vi.fn(),data:{url:payload.url,tracking}},action:""});
+ const kinds=worker.networkFetch.mock.calls.map(call=>JSON.parse(String((call as unknown as [string,RequestInit])[1].body)).kind);
+ expect(kinds).toContain("click_failed");expect(kinds).not.toContain("click_opened");
  });
 });

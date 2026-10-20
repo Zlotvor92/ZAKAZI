@@ -180,7 +180,7 @@ self.addEventListener("notificationclick", (event) => {
   // A notification must never navigate outside this app.
   if (target.origin !== self.location.origin) target.href = self.location.origin + "/dashboard";
   const opening = openTarget(target.href).then(
-    () => reportPushEvent(tracking,"click_opened"),
+    (opened) => reportPushEvent(tracking,opened ? "click_opened" : "click_failed",opened ? {} : {errorName:"WindowNotOpened"}),
     (error) => reportPushEvent(tracking,"click_failed",{errorName:String(error?.name || "Error").slice(0,80)}),
   );
   event.waitUntil(Promise.allSettled([clicked, opening]));
@@ -222,14 +222,14 @@ function openTarget(target) {
       try {
         const focused = await open.focus();
         if (focused && "navigate" in focused) {
-          await focused.navigate(target);
-          return;
+          const navigated = await focused.navigate(target);
+          return Boolean(navigated);
         }
       } catch {
         // Neki pregledači ne dozvoljavaju `navigate`; otvara se nova kartica.
       }
     }
 
-    await self.clients.openWindow(target);
+    return Boolean(await self.clients.openWindow(target));
   });
 }
