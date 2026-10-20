@@ -79,7 +79,8 @@ jobs:
 
   e2e:
     name: Kritični tok
-    runs-on: ubuntu-latest
+    # Playwright WebKit uses Ubuntu 24.04 libraries; ubuntu-latest can move ahead.
+    runs-on: ubuntu-24.04
 
     env:
       # Lokalni Supabase uvek ispisuje iste ključeve; ovo nisu tajne.
@@ -136,7 +137,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/ms-playwright
-          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: playwright-${{ runner.os }}-ubuntu24-${{ hashFiles('package-lock.json') }}
 
       - name: Instalacija pregledača
         if: steps.browser-cache.outputs.cache-hit != 'true'
