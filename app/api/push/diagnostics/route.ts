@@ -17,7 +17,17 @@ export async function POST(request:Request):Promise<Response>{
  const origin=request.headers.get("origin");
  if(!origin||origin!==new URL(request.url).origin)return new Response(null,{status:403});
  if(Number(request.headers.get("content-length")??0)>4096)return new Response(null,{status:413});
- const raw=await request.text();if(raw.length>4096)return new Response(null,{status:413});
+ const reader=request.body?.getReader();
+ if(!reader)return new Response(null,{status:400});
+ const chunks:Uint8Array[]=[];let length=0;
+ while(true){
+ const {value,done}=await reader.read();if(done)break;
+ length+=value.byteLength;if(length>4096){await reader.cancel();return new Response(null,{status:413});}
+ chunks.push(value);
+ }
+ const bytes=new Uint8Array(length);let offset=0;
+ for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+ const raw=new TextDecoder().decode(bytes);
  const parsed=schema.safeParse(JSON.parse(raw));
  if(!parsed.success)return new Response(null,{status:400});
  const supabase=await createClient();const {data}=await supabase.auth.getUser();

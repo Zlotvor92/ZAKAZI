@@ -171,7 +171,7 @@ async function deliver(input: {
           body,
           SEND_OPTIONS,
         );
-        await finishPushAttempt(tracking,"accepted",{httpStatus:response.statusCode,durationMs:Date.now()-started});
+        await finishPushAttempt(tracking,"accepted",{httpStatus:response.statusCode,durationMs:Date.now()-started,payloadBytes:Buffer.byteLength(body)});
         return "sent";
       } catch (sendError) {
         if (isGone(sendError)) {
@@ -183,7 +183,7 @@ async function deliver(input: {
         // Razlog je jedino što govori da li je pao servis pregledača (5xx),
         // ključ (401/403) ili poruka (413); u `messages` stoji samo „failed".
         const code = (sendError as { statusCode?: number }).statusCode;
-        await finishPushAttempt(tracking,"failed",{httpStatus:code,errorCode:code?"push_service_rejected":"network_or_timeout",durationMs:Date.now()-started});
+        await finishPushAttempt(tracking,"failed",{httpStatus:code,errorCode:code?"push_service_rejected":"network_or_timeout",durationMs:Date.now()-started,payloadBytes:Buffer.byteLength(body),errorName:(sendError as {name?:string}).name,transportCode:(sendError as {code?:string}).code});
         await logError({
           source: "server",
           message: `Push nije isporučen: ${code ? `HTTP ${code}` : "bez odgovora servisa"}.`,

@@ -22,7 +22,7 @@ export async function startPushAttempt(input: AttemptInput): Promise<PushTrackin
  subscription_id:input.target?.id??null,user_id:input.target?.user_id??null,
  endpoint_hash:input.target?fingerprint(input.target.endpoint):null,
  provider:input.target?new URL(input.target.endpoint).hostname:null,
- template:input.template,tag:input.tag,receipt_token_hash:input.target?fingerprint(token):null,
+ template:input.template,tag:input.tag,server_version:process.env["VERCEL_GIT_COMMIT_SHA"]?.slice(0,80)??null,receipt_token_hash:input.target?fingerprint(token):null,
  });
  if(error) throw error;
  return {attemptId,token};
@@ -30,13 +30,16 @@ export async function startPushAttempt(input: AttemptInput): Promise<PushTrackin
 }
 export async function finishPushAttempt(
  tracking: PushTracking | null, status:"accepted"|"failed"|"expired"|"skipped"|"unavailable",
- options:{httpStatus?:number;errorCode?:string;durationMs?:number}={}
+ options:{httpStatus?:number | undefined;errorCode?:string | undefined;durationMs?:number | undefined;errorName?:string | undefined;transportCode?:string | undefined;payloadBytes?:number | undefined}={}
 ):Promise<void>{
  if(!tracking)return;
  try {
  const {error}=await createAdminClient().from("push_delivery_attempts").update({
  send_status:status,finished_at:new Date().toISOString(),http_status:options.httpStatus??null,
  error_code:options.errorCode??null,duration_ms:options.durationMs??null,
+ error_name:options.errorName?.replace(/[^A-Za-z0-9_.-]/g,"").slice(0,80)??null,
+ transport_code:options.transportCode?.replace(/[^A-Za-z0-9_.-]/g,"").slice(0,80)??null,
+ payload_bytes:options.payloadBytes??null,
  }).eq("id",tracking.attemptId);
  if(error)throw error;
  } catch {await telemetryError();}
