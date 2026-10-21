@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { withFetchDiagnostics } from "@/lib/supabase/diagnostic-fetch";
 import { requireEnv, requireUrlEnv } from "@/lib/env";
 
 /**
@@ -16,7 +17,10 @@ export function createAdminClient() {
   return createSupabaseClient(
     requireUrlEnv("NEXT_PUBLIC_SUPABASE_URL"),
     requireEnv("SUPABASE_SERVICE_ROLE_KEY"),
-    { auth: { persistSession: false, autoRefreshToken: false } },
+    {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: withFetchDiagnostics((input, init) => fetch(input, init)) },
+    },
   );
 }
 

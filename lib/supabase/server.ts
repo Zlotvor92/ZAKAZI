@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { requireEnv, requireUrlEnv } from "@/lib/env";
+import { withFetchDiagnostics } from "@/lib/supabase/diagnostic-fetch";
 import { withClockSkewRetry } from "@/lib/supabase/clock-skew";
 
 export async function createClient() {
@@ -12,7 +13,7 @@ export async function createClient() {
     {
       // Svaki upit ka bazi prolazi ovuda, pa čekanje na zaostao sat PostgREST-a
       // stoji na jednom mestu umesto u svakoj funkciji u `lib/db/`.
-      global: { fetch: withClockSkewRetry() },
+      global: { fetch: withFetchDiagnostics(withClockSkewRetry()) },
       cookies: {
         getAll() {
           return cookieStore.getAll();
