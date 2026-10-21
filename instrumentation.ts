@@ -22,6 +22,7 @@ function userAgent(value: string | string[] | null | undefined): string | null {
 export const onRequestError: Instrumentation.onRequestError = async (
   error,
   request,
+  context,
 ) => {
   const { logError } = await import("@/lib/db/errors");
 
@@ -32,7 +33,11 @@ export const onRequestError: Instrumentation.onRequestError = async (
     message: cause.message,
     digest: "digest" in cause ? String(cause.digest) : null,
     path: request.path,
-    stack: cause.stack ?? null,
+    stack: [
+      `Route: ${context.routePath}`,
+      `Router: ${context.routerKind}; type: ${context.routeType}`,
+      cause.stack ?? cause.message,
+    ].join("\n"),
     userAgent: userAgent(request.headers["user-agent"]),
   });
 };

@@ -16,6 +16,7 @@ function when(value: string): string {
   const time = date.toLocaleTimeString("sr-RS", {
     hour: "2-digit",
     minute: "2-digit",
+    second: "2-digit",
   });
 
   return `${day}.${month}. ${time}`;
@@ -65,7 +66,7 @@ function Row({ row }: { row: ErrorRow }) {
             {open ? sr.admin.errors.hide : sr.admin.errors.show}
           </button>
           {open ? (
-            <pre className="bg-muted mt-1 overflow-x-auto rounded-md p-2 text-[11px] leading-relaxed">
+            <pre className="bg-muted mt-1 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md p-2 text-[11px] leading-relaxed">
               {row.stack}
             </pre>
           ) : null}
