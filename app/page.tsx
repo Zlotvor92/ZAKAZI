@@ -107,6 +107,9 @@ export default function HomePage() {
 
           `priority` stoji zato što je ovo najveći element u prvom ekranu:
           bez njega Next je učitava tek posle skripti i strana vidno poskoči.
+          Next 15 uz `priority` ne dodaje i `fetchPriority`, pa pregledač sliku
+          skida istim prioritetom kao fontove i skripte; Lighthouse je zato
+          merio skoro sekundu čekanja pre nego što je preuzimanje počelo.
 
           Adresa je upisana kao putanja, a ne uvezena kao modul: `next-env.d.ts`
           koji opisuje tip uvezene slike pravi tek `next build`, pa `tsc` na
@@ -120,6 +123,7 @@ export default function HomePage() {
           height={960}
           sizes="(max-width: 448px) 100vw, 448px"
           priority
+          fetchPriority="high"
           className="-mx-6 w-[calc(100%+3rem)] max-w-none"
         />
 
