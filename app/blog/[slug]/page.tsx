@@ -141,6 +141,27 @@ export default async function BlogPostPage({ params }: PageProps) {
           </p>
         </div>
 
+        <nav
+          aria-label={sr.blog.professionsTitle}
+          className="flex flex-col gap-2"
+        >
+          <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+            {sr.blog.professionsTitle}
+          </span>
+          <ul className="flex flex-wrap gap-x-4">
+            {Object.entries(sr.seo.professions).map(([key, profession]) => (
+              <li key={key}>
+                <Link
+                  href={`/${sr.seo.pathPrefix}/${key}`}
+                  className="inline-block py-2 text-[13.5px] text-[#8C1D3F] underline"
+                >
+                  {profession.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         <Link
           href="/blog"
           className="inline-block py-2 text-[13.5px] text-[#8C1D3F] underline"

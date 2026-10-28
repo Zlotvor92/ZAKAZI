@@ -179,6 +179,27 @@ export default async function ProfessionPage({ params }: PageProps) {
           </ul>
         </nav>
 
+        <nav
+          aria-label={sr.seo.blogTitle}
+          className="flex flex-col gap-2 border-t border-[#DED5C7] pt-4"
+        >
+          <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+            {sr.seo.blogTitle}
+          </span>
+          <ul className="flex flex-col">
+            {Object.entries(sr.blog.posts).map(([slug, post]) => (
+              <li key={slug}>
+                <Link
+                  href={`/blog/${slug}`}
+                  className="inline-block py-2 text-[13.5px] text-[#8C1D3F] underline"
+                >
+                  {post.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
         <p className="mt-auto border-t border-[#DED5C7] pt-1 text-center text-xs text-[#7A6F63]">
           <Link
             href="/uslovi-koriscenja"

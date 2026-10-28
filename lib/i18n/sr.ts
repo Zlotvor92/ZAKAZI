@@ -817,6 +817,7 @@ export const sr = {
     readMinutes: "min čitanja",
     back: "Svi tekstovi",
     ctaTitle: "Hoćeš da probaš?",
+    professionsTitle: "Program za zakazivanje po zanimanju",
     posts: {
       "kako-da-zakazes-termin-preko-linka": {
         title: "Kako da zakažeš termin preko linka salona",
@@ -970,6 +971,7 @@ export const sr = {
       },
     ],
     otherTitle: "Za druge usluge",
+    blogTitle: "Sa bloga",
     professions: {
       nokti: {
         label: "Nokti",
