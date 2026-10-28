@@ -3,8 +3,17 @@ export const sr = {
     name: "Doteraj Me",
     description: "Zakazivanje termina za beauty profesionalce",
   },
+  og: {
+    alt: "Doteraj Me — klijentkinje same zakazuju preko linka, od 1.590 RSD mesečno.",
+  },
   home: {
     tagline: "Zakazivanje termina za male salone lepote u Srbiji.",
+    /**
+     * Opis u rezultatima pretrage. Duži je od slogana jer Google prikazuje do
+     * ~155 znakova, a slogan sam ne kaže ni za koga je ni koliko košta.
+     */
+    metaDescription:
+      "Program za zakazivanje termina za nokte, trepavice, obrve, kozmetičke tretmane i berbere. Klijenti zakazuju preko linka, bez dopisivanja. Od 1.590 RSD.",
     eyebrow: "Zakazivanje termina · Srbija",
     heroImageAlt: "Ruke sa svežim manikirom na lanenoj tkanini.",
     video: {

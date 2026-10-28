@@ -5,6 +5,7 @@ import { display } from "@/app/fonts";
 import { JsonLd } from "@/components/json-ld";
 import { articleJsonLd, breadcrumbJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
+import { PLATFORM_OG_IMAGE } from "@/lib/site";
 
 type PostKey = keyof typeof sr.blog.posts;
 type PageProps = { params: Promise<{ slug: string }> };
@@ -40,6 +41,7 @@ export async function generateMetadata({
       description: post.description,
       locale: "sr_RS",
       publishedTime: post.dateIso,
+      images: [{ ...PLATFORM_OG_IMAGE, alt: sr.og.alt }],
     },
   };
 }

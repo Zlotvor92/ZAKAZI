@@ -5,6 +5,7 @@ import { display } from "@/app/fonts";
 import { JsonLd } from "@/components/json-ld";
 import { softwareJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
+import { PLATFORM_OG_IMAGE } from "@/lib/site";
 
 /**
  * Naslov je golo ime aplikacije, bez dodatka posle crte.
@@ -16,15 +17,16 @@ import { sr } from "@/lib/i18n/sr";
  */
 export const metadata: Metadata = {
   title: sr.app.name,
-  description: sr.home.tagline,
+  description: sr.home.metaDescription,
   applicationName: sr.app.name,
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: sr.app.name,
     title: sr.app.name,
-    description: sr.home.tagline,
+    description: sr.home.metaDescription,
     locale: "sr_RS",
+    images: [{ ...PLATFORM_OG_IMAGE, alt: sr.og.alt }],
   },
 };
 

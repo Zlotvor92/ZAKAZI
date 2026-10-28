@@ -5,6 +5,7 @@ import { display } from "@/app/fonts";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
+import { PLATFORM_OG_IMAGE } from "@/lib/site";
 
 type Profession = keyof typeof sr.seo.professions;
 type PageProps = { params: Promise<{ zanimanje: string }> };
@@ -42,6 +43,7 @@ export async function generateMetadata({
       title: page.metaTitle,
       description: page.metaDescription,
       locale: "sr_RS",
+      images: [{ ...PLATFORM_OG_IMAGE, alt: sr.og.alt }],
     },
   };
 }
