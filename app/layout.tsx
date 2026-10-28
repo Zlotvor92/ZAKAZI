@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Geist } from "next/font/google";
 import { sr } from "@/lib/i18n/sr";
-import { SITE_URL } from "@/lib/site";
+import { PLATFORM_OG_IMAGE, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 /**
@@ -22,6 +22,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: sr.app.name,
   description: sr.app.description,
+  openGraph: {
+    images: [{ ...PLATFORM_OG_IMAGE, alt: sr.og.alt }],
+  },
 };
 
 export const viewport: Viewport = {

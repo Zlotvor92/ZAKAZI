@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getIndexableSalons } from "@/lib/db/sitemap";
+import { priceListFor } from "@/lib/domain/price-list";
 import { sr } from "@/lib/i18n/sr";
 import { absoluteUrl } from "@/lib/site";
 
@@ -27,10 +28,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...posts,
     { url: absoluteUrl("/politika-privatnosti"), priority: 0.2 },
     { url: absoluteUrl("/uslovi-koriscenja"), priority: 0.2 },
-    ...salons.map((salon) => ({
-      url: absoluteUrl(`/${salon.slug}`),
-      lastModified: salon.updatedAt,
-      priority: 0.6,
-    })),
+    ...salons.flatMap((salon) => [
+      {
+        url: absoluteUrl(`/${salon.slug}`),
+        lastModified: salon.updatedAt,
+        priority: 0.6,
+      },
+      ...(priceListFor(salon.slug)
+        ? [{ url: absoluteUrl(`/${salon.slug}/cenovnik`), priority: 0.5 }]
+        : []),
+    ]),
   ];
 }

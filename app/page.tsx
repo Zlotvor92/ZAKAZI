@@ -5,6 +5,7 @@ import { display } from "@/app/fonts";
 import { JsonLd } from "@/components/json-ld";
 import { softwareJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
+import { PLATFORM_OG_IMAGE } from "@/lib/site";
 
 /**
  * Naslov je golo ime aplikacije, bez dodatka posle crte.
@@ -16,15 +17,16 @@ import { sr } from "@/lib/i18n/sr";
  */
 export const metadata: Metadata = {
   title: sr.app.name,
-  description: sr.home.tagline,
+  description: sr.home.metaDescription,
   applicationName: sr.app.name,
   alternates: { canonical: "/" },
   openGraph: {
     type: "website",
     siteName: sr.app.name,
     title: sr.app.name,
-    description: sr.home.tagline,
+    description: sr.home.metaDescription,
     locale: "sr_RS",
+    images: [{ ...PLATFORM_OG_IMAGE, alt: sr.og.alt }],
   },
 };
 
@@ -50,6 +52,7 @@ export default function HomePage() {
           description: sr.home.tagline,
           priceRsd: 1590,
           instagramUrl: sr.home.instagram.url,
+          logoPath: "/icon-512.png",
         })}
       />
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-7 px-6 pb-8">
@@ -105,6 +108,9 @@ export default function HomePage() {
 
           `priority` stoji zato što je ovo najveći element u prvom ekranu:
           bez njega Next je učitava tek posle skripti i strana vidno poskoči.
+          Next 15 uz `priority` ne dodaje i `fetchPriority`, pa pregledač sliku
+          skida istim prioritetom kao fontove i skripte; Lighthouse je zato
+          merio skoro sekundu čekanja pre nego što je preuzimanje počelo.
 
           Adresa je upisana kao putanja, a ne uvezena kao modul: `next-env.d.ts`
           koji opisuje tip uvezene slike pravi tek `next build`, pa `tsc` na
@@ -118,6 +124,7 @@ export default function HomePage() {
           height={960}
           sizes="(max-width: 448px) 100vw, 448px"
           priority
+          fetchPriority="high"
           className="-mx-6 w-[calc(100%+3rem)] max-w-none"
         />
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { display } from "@/app/fonts";
 import { sr } from "@/lib/i18n/sr";
+import { PLATFORM_OG_IMAGE } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: sr.blog.metaTitle,
@@ -13,6 +14,7 @@ export const metadata: Metadata = {
     title: sr.blog.metaTitle,
     description: sr.blog.metaDescription,
     locale: "sr_RS",
+    images: [{ ...PLATFORM_OG_IMAGE, alt: sr.og.alt }],
   },
 };
 

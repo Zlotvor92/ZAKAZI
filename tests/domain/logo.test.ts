@@ -18,7 +18,9 @@ vi.mock("@/lib/supabase/admin", () => ({
 import nextConfig from "@/next.config";
 import { uploadLogo } from "@/lib/db/logo";
 import {
+  LOGO_EDGE_PX,
   LOGO_MAX_BYTES,
+  logoTargetSize,
   SERVER_ACTION_BODY_LIMIT_BYTES,
 } from "@/lib/domain/logo";
 
@@ -73,5 +75,22 @@ describe("uploadLogo", () => {
     });
 
     expect(result).toEqual({ ok: false, reason: "wrong_type" });
+  });
+});
+describe("logoTargetSize", () => {
+  it("kvadrat sa telefona staje na ivicu", () => {
+    expect(logoTargetSize(4000, 4000)).toEqual({
+      width: LOGO_EDGE_PX,
+      height: LOGO_EDGE_PX,
+    });
+  });
+
+  it("kraća stranica pokriva krug, duža se ne seče pre vremena", () => {
+    expect(logoTargetSize(1000, 300)).toEqual({ width: 960, height: 288 });
+    expect(logoTargetSize(300, 1000)).toEqual({ width: 288, height: 960 });
+  });
+
+  it("manja slika se ne uvećava", () => {
+    expect(logoTargetSize(200, 120)).toEqual({ width: 200, height: 120 });
   });
 });

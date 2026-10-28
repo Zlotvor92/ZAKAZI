@@ -94,9 +94,8 @@ export function SalonHeader({
   return (
     <header className="flex flex-col gap-3 pt-7">
       {logoUrl ? (
-        // Obična slika, ne `next/image`: logo je jedna mala datoteka fiksne
-        // veličine, pa optimizacija ne bi uštedela ništa a tražila bi
-        // podešavanje spoljnog domena.
+        // Obična slika, ne `next/image`: logo se smanjuje pre slanja
+        // (`shrinkLogo`), pa Vercel-ova optimizacija ne bi uštedela ništa.
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={logoUrl}

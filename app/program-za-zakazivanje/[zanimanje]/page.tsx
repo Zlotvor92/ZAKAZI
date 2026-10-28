@@ -5,6 +5,7 @@ import { display } from "@/app/fonts";
 import { JsonLd } from "@/components/json-ld";
 import { breadcrumbJsonLd } from "@/lib/domain/seo";
 import { sr } from "@/lib/i18n/sr";
+import { PLATFORM_OG_IMAGE } from "@/lib/site";
 
 type Profession = keyof typeof sr.seo.professions;
 type PageProps = { params: Promise<{ zanimanje: string }> };
@@ -42,6 +43,7 @@ export async function generateMetadata({
       title: page.metaTitle,
       description: page.metaDescription,
       locale: "sr_RS",
+      images: [{ ...PLATFORM_OG_IMAGE, alt: sr.og.alt }],
     },
   };
 }
@@ -171,6 +173,27 @@ export default async function ProfessionPage({ params }: PageProps) {
                   className="inline-block py-2 text-[13.5px] text-[#8C1D3F] underline"
                 >
                   {sr.seo.professions[key].label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <nav
+          aria-label={sr.seo.blogTitle}
+          className="flex flex-col gap-2 border-t border-[#DED5C7] pt-4"
+        >
+          <span className="text-[10.5px] font-bold tracking-[0.18em] text-[#6B6055] uppercase">
+            {sr.seo.blogTitle}
+          </span>
+          <ul className="flex flex-col">
+            {Object.entries(sr.blog.posts).map(([slug, post]) => (
+              <li key={slug}>
+                <Link
+                  href={`/blog/${slug}`}
+                  className="inline-block py-2 text-[13.5px] text-[#8C1D3F] underline"
+                >
+                  {post.title}
                 </Link>
               </li>
             ))}

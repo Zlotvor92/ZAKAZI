@@ -3,6 +3,7 @@ import {
   salonDescription,
   salonJsonLd,
   serializeJsonLd,
+  softwareJsonLd,
   truncateAtWord,
 } from "@/lib/domain/seo";
 
@@ -116,5 +117,34 @@ describe("articleJsonLd", () => {
     });
     expect(out.datePublished).toBe("2026-10-04");
     expect(out.mainEntityOfPage).toBe("https://doterajme.rs/blog/x");
+  });
+});
+
+describe("softwareJsonLd", () => {
+  const out = softwareJsonLd({
+    name: "Doteraj Me",
+    description: "d",
+    priceRsd: 1590,
+    instagramUrl: "https://www.instagram.com/doterajme/",
+    logoPath: "/icon-512.png",
+  });
+
+  it("ime sajta nosi WebSite sa kanonskom adresom", () => {
+    expect(out["@graph"]).toContainEqual(
+      expect.objectContaining({
+        "@type": "WebSite",
+        name: "Doteraj Me",
+        url: "https://doterajme.rs/",
+      }),
+    );
+  });
+
+  it("logo organizacije je apsolutna adresa", () => {
+    expect(out["@graph"]).toContainEqual(
+      expect.objectContaining({
+        "@type": "Organization",
+        logo: "https://doterajme.rs/icon-512.png",
+      }),
+    );
   });
 });
