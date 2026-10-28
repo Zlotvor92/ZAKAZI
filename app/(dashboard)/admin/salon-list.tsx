@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import type { AdminSalon } from "@/lib/db/admin";
 import { LOGO_MAX_BYTES } from "@/lib/domain/logo";
 import { pluralize } from "@/lib/domain/plural";
+import { shrinkLogo } from "@/lib/shrink-logo";
 import { subscriptionState } from "@/lib/domain/subscription";
 import { sr } from "@/lib/i18n/sr";
 import { cn, isRedirect } from "@/lib/utils";
@@ -101,9 +102,8 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
     <li className="border-border rounded-xl border p-4">
       <div className="flex items-start justify-between gap-3">
         {salon.logo_url ? (
-          // Obična slika, ne `next/image`: logo je jedna mala datoteka fiksne
-          // veličine, pa optimizacija ne bi uštedela ništa a tražila bi
-          // podešavanje spoljnog domena.
+          // Obična slika, ne `next/image`: logo se smanjuje pre slanja
+          // (`shrinkLogo`), pa Vercel-ova optimizacija ne bi uštedela ništa.
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={salon.logo_url}
@@ -242,12 +242,13 @@ function Row({ salon, today }: { salon: AdminSalon; today: string }) {
             name="logo"
             accept="image/png,image/jpeg,image/webp"
             className="sr-only"
-            onChange={(event) => {
-              const file = event.target.files?.[0];
+            onChange={async (event) => {
+              const picked = event.target.files?.[0];
               event.target.value = "";
-              if (!file) {
+              if (!picked) {
                 return;
               }
+              const file = await shrinkLogo(picked);
               // Prevelika slika ne treba ni da krene: transport je odbija pre
               // akcije, bez poruke koja kaže zašto.
               if (file.size > LOGO_MAX_BYTES) {
