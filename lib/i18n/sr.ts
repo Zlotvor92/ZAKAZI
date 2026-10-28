@@ -802,6 +802,8 @@ export const sr = {
       hint: "Pogledaj cene svih usluga.",
       /** Naslov kartice i pregleda linka: „Cenovnik — Salon Smiley". */
       title: (salon: string) => `Cenovnik — ${salon}`,
+      description: (salon: string) =>
+        `${salon} — cenovnik usluga. Pogledaj cene i zakaži termin online, bez dopisivanja.`,
       eyebrow: "Cenovnik",
       back: "Nazad na zakazivanje",
     },

@@ -25,13 +25,16 @@ export async function generateMetadata({
   }
 
   const title = sr.booking.priceList.title(salon.name);
+  const description = sr.booking.priceList.description(salon.name);
 
   return {
     title,
+    description,
     alternates: { canonical: `/${tenantSlug}/cenovnik` },
     openGraph: {
       type: "website",
       title,
+      description,
       locale: "sr_RS",
       images: [images[0]!.src],
     },
