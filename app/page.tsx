@@ -52,6 +52,7 @@ export default function HomePage() {
           description: sr.home.tagline,
           priceRsd: 1590,
           instagramUrl: sr.home.instagram.url,
+          logoPath: "/icon-512.png",
         })}
       />
       <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-7 px-6 pb-8">

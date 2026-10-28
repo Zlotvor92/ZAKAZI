@@ -52,10 +52,19 @@ export function softwareJsonLd(input: {
   description: string;
   priceRsd: number;
   instagramUrl: string;
+  logoPath: string;
 }) {
   return {
     "@context": "https://schema.org",
     "@graph": [
+      // Iz `WebSite` Google uzima ime sajta koje piše iznad rezultata; bez
+      // njega ga pogađa iz naslova ili domena.
+      {
+        "@type": "WebSite",
+        name: input.name,
+        url: absoluteUrl("/"),
+        inLanguage: "sr-Latn-RS",
+      },
       {
         "@type": "SoftwareApplication",
         name: input.name,
@@ -74,6 +83,7 @@ export function softwareJsonLd(input: {
         "@type": "Organization",
         name: input.name,
         url: absoluteUrl("/"),
+        logo: absoluteUrl(input.logoPath),
         sameAs: [input.instagramUrl],
       },
     ],
